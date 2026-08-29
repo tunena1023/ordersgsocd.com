@@ -867,7 +867,11 @@ async function createDraft() {
         ClientID: session.clientId,
         BusinessName: session.businessName,
         Division: currentDiv,
-        Services: buildServicesString(),
+        Services: Object.entries(selected).flatMap(([cat, svcs]) =>
+          Object.entries(svcs).map(([svcName, subOption]) => ({
+            Category: cat, ServiceName: svcName, SubOption: subOption, Division: currentDiv
+          }))
+        ),
         /* FIX: Pasamos null para campos numéricos/fechas vacíos (saneamiento estricto para SharePoint) */
         DirtLevel: '',
         BuildingNumber: '',
