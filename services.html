@@ -519,7 +519,7 @@ async function serviceImageURL(cat, svc, sub) {
     } catch (e) { url = null; }
   } else {
     try {
-      const res = await fetch('/.netlify/functions/site-image?svc=' + encodeURIComponent(name));
+      const res = await fetch('/api/site-image?svc=' + encodeURIComponent(name));
       if (res.ok) url = URL.createObjectURL(await res.blob());
     } catch (e) { url = null; }
   }
@@ -551,7 +551,7 @@ async function galleryFileURL(cat, file) {
     } catch (e) {}
   } else {
     try {
-      const res = await fetch('/.netlify/functions/site-image?gallery=' + encodeURIComponent(cat) + '&file=' + encodeURIComponent(file));
+      const res = await fetch('/api/site-image?gallery=' + encodeURIComponent(cat) + '&file=' + encodeURIComponent(file));
       if (res.ok) url = URL.createObjectURL(await res.blob());
     } catch (e) {}
   }
@@ -581,7 +581,7 @@ function demoGalleryFiles(cat) {
 async function galleryList(cat) {
   if (IS_DEMO) return demoGalleryFiles(cat);
   try {
-    const res = await fetch('/.netlify/functions/site-image?gallery-list=' + encodeURIComponent(cat));
+    const res = await fetch('/api/site-image?gallery-list=' + encodeURIComponent(cat));
     if (!res.ok) return [];
     const data = await res.json();
     return data.files || [];
@@ -867,15 +867,7 @@ async function createDraft() {
         ClientID: session.clientId,
         BusinessName: session.businessName,
         Division: currentDiv,
-                Services: Object.entries(selected).flatMap(([cat, svcs]) =>
-          Object.entries(svcs).map(([svcName, subOption]) => ({
-            Category: cat, ServiceName: svcName, SubOption: subOption, Division: currentDiv
-          }))
-        ),
-
-
-
-
+        Services: buildServicesString(),
         /* FIX: Pasamos null para campos numéricos/fechas vacíos (saneamiento estricto para SharePoint) */
         DirtLevel: '',
         BuildingNumber: '',

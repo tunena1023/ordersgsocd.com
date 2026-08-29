@@ -131,14 +131,7 @@ exports.handler = async (event) => {
       City:            f.City || '',
       Zip:             f.Zip || '',
       Contact:         f.Contact || '',
-      Notes:           f.Notes || '',
-      Supervisor:       f.Supervisor || '',
-      ServiceWindow:    f.ServiceWindow || '',
-      DispatchDate:     f.DispatchDate || '',
-      InspectionDate:   f.InspectionDate || '',
-      DelayReasonType:  f.DelayReasonType || '',
-      DelayReasonNotes: f.DelayReasonNotes || '',
-      Archived:         f.Archived === true || f.Archived === 'true'
+      Notes:           f.Notes || ''
     };
 
     const services = svcRows
@@ -154,8 +147,13 @@ exports.handler = async (event) => {
         NotCompletedReason: it.fields.NotCompletedReason || ''
       }));
 
+    /* Internal-only history rows are recorded in SharePoint but must not be
+       exposed to the client (e.g. internal notes about the job). */
+    const INTERNAL_ONLY_CHANGE_TYPES = ['Notes Changed'];
+
     const history = histRows
       .filter(it => it.fields)
+      .filter(it => INTERNAL_ONLY_CHANGE_TYPES.indexOf(it.fields.ChangeType || '') < 0)
       .sort((a, b) =>
         String(a.createdDateTime || '').localeCompare(String(b.createdDateTime || '')))
       .map(it => ({
