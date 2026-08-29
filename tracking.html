@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GS Solutions – Order Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black:   #111111;
+    --gold:    #C9A84C;
+    --gold-lt: #E2C97E;
+    --gold-dk: #8C6F2A;
+    --white:   #FFFFFF;
+    --off:     #F7F6F3;
+    --gray:    #6B6B6B;
+    --border:  #E0D9CC;
+  }
+
+  body { font-family: 'Inter', sans-serif; background: var(--white); color: var(--black); min-height: 100vh; }
+
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 48px; min-height: 72px;
+    border-bottom: 1px solid var(--border);
+    background: var(--white); position: sticky; top: 0; z-index: 100;
+  }
+  .logo-wrap { display: flex; align-items: center; gap: 12px; }
+  .logo-diamond { width: 80px; height: 80px; }
+  .nav-right { display: flex; align-items: center; gap: 24px; }
+  .nav-link { font-size: 13px; color: var(--gray); text-decoration: none; letter-spacing: .04em; transition: color .2s; }
+  .nav-link:hover { color: var(--gold); }
+
+  .portal-header {
+    background: var(--off); border-bottom: 1px solid var(--border);
+    padding: 16px 48px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .portal-header p { font-size: 12px; color: var(--gray); }
+  .portal-header strong { color: var(--black); }
+  .btn-signout { font-size: 11px; color: var(--gray); background: none; border: none; cursor: pointer; letter-spacing: .06em; text-decoration: underline; }
+
+  .tabs { display: flex; border-bottom: 1px solid var(--border); padding: 0 48px; background: var(--white); }
+  .tab { padding: 16px 20px; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--gray); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color .2s, border-color .2s; text-decoration: none; display: inline-block; }
+  .tab.active { color: var(--black); border-bottom-color: var(--gold); }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .history-wrap { padding: 40px 48px; }
+  .history-wrap h2 { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 600; margin-bottom: 6px; }
+  .history-wrap .list-sub { font-size: 12px; color: var(--gray); margin-bottom: 24px; line-height: 1.6; }
+  .list-section-title { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold-dk); font-weight: 700; margin: 28px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  .list-section-title:first-of-type { margin-top: 0; }
+
+  .order-card { border: 1px solid var(--border); margin-bottom: 14px; background: var(--white); }
+  .order-card-header { padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); cursor: pointer; transition: background .15s; }
+  .order-card-header:hover { background: var(--off); }
+  .order-num { font-size: 12px; font-weight: 700; letter-spacing: .06em; }
+  .order-date { font-size: 11px; color: var(--gray); margin-top: 2px; }
+  .order-status { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; padding: 4px 12px; font-weight: 600; white-space: nowrap; }
+  .status-pending    { background: #FFF8E6; color: #8C6F2A; }
+  .status-review     { background: #F0EAFE; color: #6B3FA0; }
+  .status-assigned   { background: #EEF4FF; color: #2A5AC9; }
+  .status-working    { background: #E6F4FB; color: #1F6E96; }
+  .status-changereq  { background: #FDECEC; color: #B33A3A; }
+  .status-cancelreq  { background: #FBEAEA; color: #B33A3A; }
+  .status-delayed    { background: #FFF0E6; color: #B06A2A; }
+  .status-updated    { background: #EEF9F0; color: #2A7A4A; }
+  /* Aviso de retraso y de posible cargo */
+  .notice { margin-top: 14px; padding: 12px 14px; border-left: 3px solid #B06A2A;
+            background: #FFF6EE; font-size: 12px; line-height: 1.6; color: #6B4415; }
+  .notice b { color: #8A4E12; }
+  .print-hint { display: block; font-size: 11px; color: var(--gray); margin-top: 6px; }
+  .btn-action[disabled] { opacity: .45; cursor: not-allowed; }
+  .dialog-panel .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 560px) { .dialog-panel .field-row { grid-template-columns: 1fr; } }
+  .dialog-note { font-size: 11px; color: var(--gray); line-height: 1.6; margin-top: 4px; }
+  .status-incomplete { background: #F0EFEA; color: #6B6B6B; }
+  .status-confirmed  { background: #F0FAF0; color: #2A7A2A; }
+  .order-card-body { padding: 20px; display: none; }
+  .order-card-body.open { display: block; animation: bodyIn .3s ease both; }
+  @keyframes bodyIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 20px; }
+  .detail-label { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--gray); margin-bottom: 10px; }
+  .svc-line { font-size: 12px; color: var(--black); line-height: 1.9; }
+  .svc-line b { color: var(--gold-dk); }
+  .meta-line { font-size: 11px; color: var(--gray); line-height: 1.9; }
+
+  .hist-item { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .hist-item:last-child { border-bottom: none; }
+  .hist-date { color: var(--gray); white-space: nowrap; min-width: 110px; }
+  .hist-type { font-weight: 600; color: var(--black); }
+  .hist-notes { color: var(--gray); }
+  .hist-rev { font-weight: 700; color: var(--gold-dk); letter-spacing: .04em; }
+
+  .order-actions { display: flex; gap: 10px; padding-top: 16px; border-top: 1px solid var(--border); flex-wrap: wrap; align-items: flex-start; }
+  /* El boton del PDF lleva su aviso debajo cuando todavia no hay documento */
+  .print-wrap { display: inline-flex; flex-direction: column; }
+  .btn-action {
+    background: var(--white); border: 1.5px solid var(--border); color: var(--black);
+    padding: 10px 18px; font-size: 10px; font-family: 'Inter', sans-serif;
+    letter-spacing: .12em; text-transform: uppercase; font-weight: 700;
+    cursor: pointer; transition: border-color .2s, background .2s, color .2s;
+  }
+  .btn-action:hover { border-color: var(--gold); background: #FFFDF5; }
+  .btn-action.danger:hover { border-color: #B33A3A; color: #B33A3A; background: #FFF5F5; }
+  .btn-action.primary { background: var(--gold); border-color: var(--gold); color: var(--black); }
+  .btn-action.primary:hover { background: var(--gold-dk); border-color: var(--gold-dk); color: var(--white); }
+  .btn-action:disabled { opacity: .5; cursor: not-allowed; }
+
+  .tracker-steps { display: flex; flex-direction: column; }
+  .t-step { display: flex; align-items: flex-start; gap: 14px; padding-bottom: 20px; position: relative; }
+  .t-step:not(:last-child)::before { content: ''; position: absolute; left: 10px; top: 22px; bottom: 0; width: 1px; background: var(--border); }
+  .t-step.done::before { background: var(--gold); }
+  .t-dot { width: 22px; height: 22px; border: 2px solid var(--border); border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--white); position: relative; z-index: 1; }
+  .t-step.done .t-dot { border-color: var(--gold); background: var(--gold); }
+  .t-step.done .t-dot::after { content: ''; width: 8px; height: 4px; border-left: 1.5px solid white; border-bottom: 1.5px solid white; transform: rotate(-45deg) translateY(-1px); }
+  .t-step.active .t-dot { border-color: var(--gold); }
+  .t-step.active .t-dot::after { content: ''; width: 8px; height: 8px; background: var(--gold); border-radius: 50%; }
+  .t-name { font-size: 12px; font-weight: 600; }
+  .t-step:not(.done):not(.active) .t-name { color: var(--gray); }
+  .t-detail { font-size: 11px; color: var(--gray); margin-top: 2px; }
+
+  .empty-note { font-size: 12px; color: #bbb; font-style: italic; padding: 12px 0; }
+
+  footer { background: var(--black); padding: 24px 48px; display: flex; align-items: center; justify-content: space-between; }
+  footer p { font-size: 11px; color: #555; letter-spacing: .06em; }
+  footer span { color: var(--gold); }
+
+  .contact-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(17,17,17,.55);
+    z-index: 200; align-items: flex-start; justify-content: center; padding: 60px 20px;
+    overflow-y: auto;
+  }
+  .contact-overlay.open { display: flex; }
+  .contact-panel {
+    background: var(--white); border: 1px solid var(--border);
+    max-width: 460px; width: 100%; padding: 40px; position: relative;
+  }
+  .contact-close {
+    position: absolute; top: 12px; right: 16px; background: none; border: none;
+    font-size: 20px; color: var(--gray); cursor: pointer; line-height: 1;
+  }
+  .contact-close:hover { color: var(--black); }
+  .contact-logo-slot { display: flex; justify-content: center; margin-bottom: 12px; }
+  .contact-logo-slot img { width: 72px; height: 72px; object-fit: contain; }
+  .contact-panel h2 { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 600; text-align: center; margin-bottom: 6px; }
+  .contact-panel .contact-sub { font-size: 12px; color: var(--gray); text-align: center; margin-bottom: 24px; line-height: 1.6; }
+  .field label { display: block; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--gray); font-weight: 600; margin-bottom: 8px; }
+  .field select { width: 100%; border: 1.5px solid var(--border); padding: 13px 14px; font-size: 14px;
+    font-family: 'Inter', sans-serif; outline: none; background: #fff; }
+  .field select:focus { border-color: var(--gold); }
+  .field input, .field textarea { width: 100%; border: 1.5px solid var(--border); padding: 13px 14px; font-size: 14px; font-family: 'Inter', sans-serif; outline: none; transition: border-color .2s; }
+  .field input:focus, .field textarea:focus { border-color: var(--gold); }
+  .field textarea { resize: vertical; min-height: 90px; }
+
+  .dialog-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(17,17,17,.55);
+    z-index: 210; align-items: center; justify-content: center; padding: 20px;
+  }
+  .dialog-overlay.open { display: flex; }
+  .dialog-panel {
+    background: var(--white); border: 1px solid var(--border); max-width: 460px;
+    width: 100%; padding: 36px 32px;
+    animation: dialogIn .3s cubic-bezier(.22,.9,.28,1) both;
+  }
+  @keyframes dialogIn { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
+  .dialog-panel h3 { font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 600; margin-bottom: 8px; }
+  .dialog-panel p { font-size: 13px; color: var(--gray); line-height: 1.7; margin-bottom: 20px; }
+  .dialog-panel .field { margin-bottom: 18px; }
+  .dialog-btns { display: flex; gap: 10px; }
+  .btn-ghost {
+    flex: 1; background: none; border: 1.5px solid var(--border); color: var(--black);
+    padding: 14px; font-size: 11px; font-family: 'Inter', sans-serif;
+    letter-spacing: .14em; text-transform: uppercase; font-weight: 700; cursor: pointer;
+    transition: border-color .2s;
+  }
+  .btn-ghost:hover { border-color: var(--gold); }
+  .dialog-btns .btn-gold, .dialog-btns .btn-danger {
+    flex: 1; border: none; padding: 14px; font-size: 11px; font-family: 'Inter', sans-serif;
+    letter-spacing: .14em; text-transform: uppercase; font-weight: 700; cursor: pointer;
+    transition: background .2s;
+  }
+  .dialog-btns .btn-gold { background: var(--gold); color: var(--black); }
+  .dialog-btns .btn-gold:hover { background: var(--gold-dk); color: var(--white); }
+  .dialog-btns .btn-danger { background: #B33A3A; color: var(--white); }
+  .dialog-btns .btn-danger:hover { background: #8F2D2D; }
+  .dialog-error { font-size: 11px; color: #B33A3A; margin-top: 10px; min-height: 14px; }
+
+  .toast {
+    position: fixed; bottom: 32px; right: 32px; z-index: 300;
+    background: var(--black); color: var(--white); padding: 18px 24px;
+    border-left: 3px solid var(--gold); max-width: 380px;
+    font-size: 13px; line-height: 1.6; box-shadow: 0 10px 30px rgba(0,0,0,.3);
+    display: none; animation: toastIn .35s cubic-bezier(.22,.9,.28,1) both;
+  }
+  .toast.show { display: block; }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+
+  @media (max-width: 860px) {
+    nav { padding: 0 20px; }
+    .portal-header { padding: 14px 20px; }
+    .tabs { padding: 0 20px; }
+    .history-wrap { padding: 28px 20px; }
+    .detail-grid { grid-template-columns: 1fr; }
+    footer { flex-direction: column; gap: 8px; padding: 20px; }
+    .toast { left: 20px; right: 20px; bottom: 20px; max-width: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo-wrap">
+    <img src="" alt="GS Solutions Inc." class="logo-diamond" style="object-fit:contain">
+  </div>
+  <div class="nav-right">
+    <a href="https://gsocd.com" class="nav-link">Home</a>
+    <a href="services.html" class="nav-link">Services</a>
+    <a href="#" class="nav-link" onclick="openContact(); return false;">Contact</a>
+  </div>
+</nav>
+
+<div class="portal-header">
+  <p>Welcome back, <strong id="client-name">Client</strong> &nbsp;·&nbsp; <span id="client-num-display"></span></p>
+  <button class="btn-signout" onclick="doSignout()">Sign out</button>
+</div>
+
+<div class="tabs">
+  <a class="tab" href="customer.html">New Order</a>
+  <a class="tab" id="tab-processing" href="#processing" onclick="showSection('processing'); return false;">Processing</a>
+  <a class="tab" id="tab-history" href="#history" onclick="showSection('history'); return false;">History</a>
+</div>
+
+<div id="processing" class="tab-panel active">
+  <div class="history-wrap">
+    <h2>Processing</h2>
+    <p class="list-sub">Orders in progress and unfinished drafts. Click an order to see its details and tracker.</p>
+    <div id="processing-container"><p class="empty-note">Loading…</p></div>
+  </div>
+</div>
+
+<div id="history" class="tab-panel">
+  <div class="history-wrap">
+    <h2>History</h2>
+    <p class="list-sub">Completed orders.</p>
+    <div id="history-container"><p class="empty-note">Loading…</p></div>
+  </div>
+</div>
+
+<footer>
+  <p>© 2026 <span>GS Solutions Inc.</span> — Des Moines, Iowa</p>
+  <p>orders@gsocd.com · (515) 473-5990</p>
+</footer>
+
+<div class="contact-overlay" id="contact-overlay" onclick="if(event.target===this) closeContact();">
+  <div class="contact-panel">
+    <button class="contact-close" onclick="closeContact()">✕</button>
+    <div class="contact-logo-slot" id="contact-logo-slot"></div>
+    <h2>Contact Us</h2>
+    <p class="contact-sub">Send us a message and our team will get back to you.</p>
+    <div class="field" style="margin-bottom:14px">
+      <label>Your Name</label>
+      <input type="text" id="contact-name" placeholder="Full name" />
+    </div>
+    <div class="field" style="margin-bottom:14px">
+      <label>Email</label>
+      <input type="text" id="contact-email" placeholder="you@email.com" />
+    </div>
+    <div class="field" style="margin-bottom:14px">
+      <label>Message</label>
+      <textarea id="contact-message" placeholder="How can we help?"></textarea>
+    </div>
+    <button class="btn-gold" onclick="sendContact()">Send Message</button>
+    <p id="contact-error" style="font-size:11px;color:#B33A3A;margin-top:10px;text-align:center"></p>
+    <p id="contact-ok" style="font-size:12px;color:#2A7A2A;margin-top:10px;text-align:center;display:none">Message sent. We'll be in touch shortly.</p>
+  </div>
+</div>
+
+<div class="dialog-overlay" id="cancel-dialog">
+  <div class="dialog-panel">
+    <h3>Cancel this order?</h3>
+    <p>Requesting cancellation of order <strong id="cancel-order-id"></strong>.<br><br>
+       <strong style="color:#B33A3A">A cancelled order cannot be recovered.</strong> Our office will review your request and confirm the cancellation.</p>
+    <div class="dialog-btns">
+      <button class="btn-ghost" onclick="closeCancelDialog()">Go Back</button>
+      <button class="btn-danger" id="cancel-confirm-btn" onclick="confirmCancel()">Request Cancellation</button>
+    </div>
+    <p class="dialog-error" id="cancel-error"></p>
+  </div>
+</div>
+
+<div class="dialog-overlay" id="change-dialog">
+  <div class="dialog-panel">
+    <h3>Request a change</h3>
+    <p>Tell us what you'd like to change about order <strong id="change-order-id"></strong>. Our office will review your request and contact you.</p>
+    <div class="field">
+      <label>Describe the change</label>
+      <textarea id="change-text" placeholder="e.g. I need to reschedule the entry date..."></textarea>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>New entry date (optional)</label>
+        <input type="date" id="change-entry">
+      </div>
+      <div class="field">
+        <label>New due date (optional)</label>
+        <input type="date" id="change-due">
+      </div>
+    </div>
+    <div class="field">
+      <label>Preferred service window (optional)</label>
+      <select id="change-window"></select>
+    </div>
+    <p class="dialog-note">Dates and service windows are a request only. Nothing changes until our
+      office approves it, and you will receive the confirmed dates by email.</p>
+    <div class="dialog-btns">
+      <button class="btn-ghost" onclick="closeChangeDialog()">Cancel</button>
+      <button class="btn-gold" id="change-submit-btn" onclick="submitChange()">Send Request</button>
+    </div>
+    <p class="dialog-error" id="change-error"></p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="shared.js"></script>
+<script>
+const client = GS.requireSession();
+if (client) {
+
+  const $ = id => document.getElementById(id);
+  let ordersCache = [];
+
+  $('client-name').textContent = client.businessName || client.clientId;
+  $('client-num-display').textContent = client.clientId;
+  GS.applyLogo();
+
+  const hash = (location.hash || '').replace('#', '');
+  showSection(hash === 'history' ? 'history' : 'processing');
+  loadOrders();
+
+  function showSection(which) {
+    $('processing').classList.toggle('active', which === 'processing');
+    $('history').classList.toggle('active', which === 'history');
+    $('tab-processing').classList.toggle('active', which === 'processing');
+    $('tab-history').classList.toggle('active', which === 'history');
+  }
+
+  function doSignout() {
+    GS.session.clear();
+    location.href = 'index.html';
+  }
+
+  function showToast(msg) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 6000);
+  }
+
+  async function loadOrders() {
+    try {
+      const data = await GS.api('/get-orders', { method: 'POST', body: { clientId: client.clientId } });
+      ordersCache = data.orders || [];
+      renderProcessing();
+      renderHistory();
+    } catch (e) {
+      $('processing-container').innerHTML = '<p class="empty-note">Could not load orders: ' + esc(e.message) + '</p>';
+      $('history-container').innerHTML = '<p class="empty-note">Could not load orders.</p>';
+    }
+  }
+
+  function renderProcessing() {
+    const box = $('processing-container');
+    const drafts = ordersCache.filter(o => (o.Status || '') === 'Incomplete');
+    const active = ordersCache.filter(o => {
+      const s = o.Status || 'Pending';
+      return s !== 'Completed' && s !== 'Incomplete' && s !== 'Cancelled';
+    });
+
+    let html = '<div class="list-section-title">Unfinished drafts</div>';
+    html += drafts.length ? drafts.map(renderDraftCard).join('') : '<p class="empty-note">No drafts.</p>';
+    html += '<div class="list-section-title">Active orders</div>';
+    html += active.length ? active.map(renderActiveCard).join('') : '<p class="empty-note">No active orders yet.</p>';
+    box.innerHTML = html;
+  }
+
+  function renderHistory() {
+    const box = $('history-container');
+    const done = ordersCache.filter(o => (o.Status || '') === 'Completed');
+    box.innerHTML = done.length ? done.map(renderCompletedCard).join('') : '<p class="empty-note">No completed orders yet.</p>';
+  }
+
+  /* Los cuatro bloques de servicio. Tienen que decir EXACTAMENTE lo mismo
+     que la columna Orders.ServiceWindow de SharePoint y que la copia del
+     panel de administracion. */
+  const SERVICE_WINDOWS = [
+    '5:00 AM - 8:00 AM',
+    '8:00 AM - 11:00 AM',
+    '11:00 AM - 2:00 PM',
+    '2:00 PM - 5:00 PM'
+  ];
+
+  function dateInputValue(iso) {
+    if (!iso) return '';
+    const m = String(iso).match(/^(\d{4}-\d{2}-\d{2})/);
+    if (m) return m[1];
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+  }
+
+  function parseSvcPayload(value) {
+    const raw = String(value == null ? '' : value).trim();
+    if (!raw) return null;
+    const body = raw.indexOf('SERVICES:') === 0 ? raw.slice('SERVICES:'.length) : raw;
+    if (body.charAt(0) !== '[' && body.charAt(0) !== '{') return null;
+    try {
+      const obj = JSON.parse(body);
+      if (Array.isArray(obj)) return { services: obj, dirtLevel: '' };
+      if (obj && Array.isArray(obj.services)) return { services: obj.services, dirtLevel: obj.dirtLevel || '' };
+      return null;
+    } catch (e) { return null; }
+  }
+
+  function parseDatesPayload(value) {
+    const raw = String(value == null ? '' : value).trim();
+    if (raw.charAt(0) !== '{') return null;
+    try {
+      const o = JSON.parse(raw);
+      if (o && (o.entryDate || o.dueDate || o.serviceWindow)) return o;
+      return null;
+    } catch (e) { return null; }
+  }
+
+  function datesPayloadText(o) {
+    if (!o) return '';
+    const parts = [];
+    if (o.entryDate) parts.push('Entry ' + fmtDate(o.entryDate));
+    if (o.dueDate) parts.push('Due ' + fmtDate(o.dueDate));
+    if (o.serviceWindow) parts.push(o.serviceWindow);
+    return parts.join(' · ');
+  }
+
+  /* Un estatus con solicitud abierta: el cliente solo puede deshacerla */
+  function hasOpenRequest(status) {
+    return status === 'Updated' || status === 'Change Requested' || status === 'Cancellation Requested';
+  }
+
+  function statusClass(s) {
+    switch (s) {
+      case 'Pending': return 'status-pending';
+      case 'Review': case 'Change Review': return 'status-review';
+      case 'Assigned': return 'status-assigned';
+      case 'Working': return 'status-working';
+      case 'Change Requested': return 'status-changereq';
+      case 'Cancellation Requested': case 'Cancelled': return 'status-cancelreq';
+      case 'Delayed': return 'status-delayed';
+      case 'Updated': return 'status-updated';
+      case 'Incomplete': return 'status-incomplete';
+      case 'Completed': return 'status-confirmed';
+      default: return 'status-pending';
+    }
+  }
+
+  function renderDraftCard(o) {
+    return `
+      <div class="order-card">
+        <div class="order-card-header" onclick="toggleOrder(this)">
+          <div>
+            <div class="order-num">Draft · ${esc(o.OrderID || '')}</div>
+            <div class="order-date">${esc(o.Division || '')} · saved ${fmtDate(o.createdDateTime)}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px">
+            <span class="order-status status-incomplete">Incomplete</span>
+            <span style="font-size:11px;color:var(--gray)">▼</span>
+          </div>
+        </div>
+        <div class="order-card-body">
+          <p class="empty-note">This order was started but not submitted. Continue where you left off or delete it.</p>
+          <div class="order-actions">
+            <button class="btn-action primary" onclick="continueDraft('${escAttr(o.OrderID || '')}')">Continue</button>
+            <button class="btn-action danger" onclick="openDeleteDraft('${escAttr(o.OrderID || '')}')">Delete draft</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  /* LIMPIEZA: aquí había una variable "actions" que armaba botones que
+     nunca se imprimían (los reales se generan al expandir, vía
+     actionButtonsFor). Eliminada — esta tarjeta es solo el contenedor. */
+  function renderActiveCard(o) {
+    const status = o.Status || 'Pending';
+    return `
+      <div class="order-card" data-order="${escAttr(o.OrderID)}">
+        <div class="order-card-header" onclick="expandOrder(this, '${escAttr(o.OrderID)}')">
+          <div>
+            <div class="order-num">Order #${esc(o.OrderID || '')}</div>
+            <div class="order-date">${esc(o.Division || '')} · submitted ${fmtDate(o.createdDateTime)}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px">
+            <span class="order-status ${statusClass(status)}">${esc(status)}</span>
+            <span style="font-size:11px;color:var(--gray)">▼</span>
+          </div>
+        </div>
+        <div class="order-card-body"><p class="empty-note">Loading details…</p></div>
+      </div>`;
+  }
+
+  function renderCompletedCard(o) {
+    return `
+      <div class="order-card" data-order="${escAttr(o.OrderID)}">
+        <div class="order-card-header" onclick="expandOrder(this, '${escAttr(o.OrderID)}')">
+          <div>
+            <div class="order-num">Order #${esc(o.OrderID || '')}</div>
+            <div class="order-date">${esc(o.Division || '')} · submitted ${fmtDate(o.createdDateTime)}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px">
+            <span class="order-status status-confirmed">Completed</span>
+            <span style="font-size:11px;color:var(--gray)">▼</span>
+          </div>
+        </div>
+        <div class="order-card-body"><p class="empty-note">Loading details…</p></div>
+      </div>`;
+  }
+
+  async function expandOrder(headerEl, orderId) {
+    const body = headerEl.nextElementSibling;
+    if (body.classList.contains('open')) { body.classList.remove('open'); return; }
+    body.classList.add('open');
+
+    try {
+           const data = await GS.api('/get-order-detail', { method: 'POST', body: { orderId: orderId, clientId: client.clientId } });
+      const o = data.order || {};
+      const services = data.services || [];
+      const history = data.history || [];
+
+      const byCat = {};
+      (services || []).forEach(s => {
+        const cat = s.Category || 'General';
+        if (!byCat[cat]) byCat[cat] = [];
+        byCat[cat].push(s);
+      });
+      const svcHtml = Object.entries(byCat).map(([cat, list]) =>
+        `<div class="svc-line"><b>${esc(cat)}:</b> ${list.map(s => {
+          const nc = (s.NotCompleted === true || String(s.NotCompleted) === 'true');
+          return esc(s.ServiceName) + ' — ' + esc(s.SubOption) + ' (Level ' + levelOf(s.SubOption) + ')' +
+            (nc ? ' <b style="color:#B06A2A">· not completed' +
+                  (s.NotCompletedReason ? ': ' + esc(s.NotCompletedReason) : '') + '</b>' : '');
+        }).join(' · ')}</div>`
+      ).join('') || '<p class="empty-note">No services recorded.</p>';
+
+      const noticeHtml = delayNoticeHtml(o);
+
+      const dirtLine = o.DirtLevel ? `<p class="meta-line">Overall condition: <strong style="color:var(--black)">${esc(o.DirtLevel)}</strong></p>` : '';
+
+      /* NUEVO: las solicitudes numeradas muestran su código de revisión
+         (GS-6060-1001-1 para cambios, -1C para cancelaciones) */
+      const histHtml = (history || []).map((h, idx) => {
+        const detailId = 'hd-' + o.OrderID.replace(/[^a-z0-9]/gi,'_') + '-' + idx;
+        let detail = '';
+
+        /* OldValue / NewValue pueden venir como array de servicios (formato
+           viejo), como 'SERVICES:{services,dirtLevel}' (formato actual) o
+           como fechas propuestas. parseSvcPayload normaliza los dos
+           primeros; datesOf, el tercero. */
+        const oldPay = parseSvcPayload(h.OldValue);
+        const newPay = parseSvcPayload(h.NewValue);
+        const oldSvcs = oldPay ? oldPay.services : null;
+        const newSvcs = newPay ? newPay.services : null;
+        const oldDates = parseDatesPayload(h.OldValue);
+        const newDates = parseDatesPayload(h.NewValue);
+
+        if (oldDates || newDates) {
+          const from = datesPayloadText(oldDates), to = datesPayloadText(newDates);
+          detail = '<div id="' + detailId + '" style="display:none;margin-top:8px;padding:10px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
+            '<div style="font-size:12px;margin:3px 0">📅 ' + esc(from || '(none)') + ' → ' + esc(to || '(none)') + '</div>' +
+            (h.Notes ? '<div style="font-size:12px;margin:3px 0">' + esc(h.Notes) + '</div>' : '') +
+            '</div>';
+        } else if (Array.isArray(oldSvcs) && Array.isArray(newSvcs)) {
+          /* Comparar servicios: agregados, quitados, modificados */
+          const isNC = s => s.NotCompleted === true || String(s.NotCompleted) === 'true';
+          const oldMap = {};
+          oldSvcs.forEach(s => { oldMap[s.Category + '|' + s.ServiceName] = s; });
+          const newMap = {};
+          newSvcs.forEach(s => { newMap[s.Category + '|' + s.ServiceName] = s; });
+
+          const lines = [];
+          /* Agregados y modificados */
+          newSvcs.forEach(s => {
+            const key = s.Category + '|' + s.ServiceName;
+            const prev = oldMap[key];
+            if (!prev) { lines.push('✅ Added: <b>' + esc(s.ServiceName) + '</b> — ' + esc(s.SubOption)); return; }
+            if ((prev.SubOption || '') !== (s.SubOption || ''))
+              lines.push('🔄 Changed: <b>' + esc(s.ServiceName) + '</b> from ' + esc(prev.SubOption || '(none)') + ' to ' + esc(s.SubOption || '(none)'));
+            if (isNC(prev) !== isNC(s))
+              lines.push(isNC(s)
+                ? '⚠️ Marked as not completed: <b>' + esc(s.ServiceName) + '</b>' + (s.NotCompletedReason ? ' — ' + esc(s.NotCompletedReason) : '')
+                : '✅ No longer marked as not completed: <b>' + esc(s.ServiceName) + '</b>');
+          });
+          /* Quitados */
+          oldSvcs.forEach(s => {
+            const key = s.Category + '|' + s.ServiceName;
+            if (!newMap[key]) lines.push('❌ Removed: <b>' + esc(s.ServiceName) + '</b> — ' + esc(s.SubOption));
+          });
+          const dOld = (oldPay && oldPay.dirtLevel) || '', dNew = (newPay && newPay.dirtLevel) || '';
+          if (dOld !== dNew && (dOld || dNew))
+            lines.push('🔄 Overall condition: ' + esc(dOld || '(none)') + ' → ' + esc(dNew || '(none)'));
+
+          if (lines.length) {
+            detail = '<div id="' + detailId + '" style="display:none;margin-top:8px;padding:10px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
+              lines.map(l => '<div style="font-size:12px;margin:3px 0">' + l + '</div>').join('') +
+              '</div>';
+          }
+        } else if (h.Notes && h.Notes.indexOf('SERVICES:') !== 0) {
+          detail = '<div id="' + detailId + '" style="display:none;margin-top:8px;padding:10px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
+            '<div style="font-size:12px">' + esc(h.Notes) + '</div></div>';
+        }
+
+        const hasDetail = detail.length > 0;
+        return '<div class="hist-item" style="flex-direction:column;align-items:flex-start;cursor:' + (hasDetail?'pointer':'default') + '"' +
+          (hasDetail ? ' onclick="var d=document.getElementById(\'' + detailId + '\');d.style.display=d.style.display===\'none\'?\'block\':\'none\'"' : '') + '>' +
+          '<div><span class="hist-date">' + fmtDateTime(h.ChangeDate) + '</span>' +
+          (h.Title ? '<span class="hist-rev">' + esc(h.Title) + '</span> — ' : '') +
+          '<span class="hist-type">' + esc(h.ChangeType || '') + '</span>' +
+          (hasDetail ? ' <span style="font-size:10px;color:var(--gold-dk)">▼ details</span>' : '') +
+          '</div>' + detail + '</div>';
+      }).join('') || '<p class="empty-note">No events recorded.</p>';
+
+      body.innerHTML = `
+        <div class="detail-grid">
+          <div>
+            <p class="detail-label">Services Requested</p>
+            ${svcHtml}
+            ${dirtLine}
+            <p class="meta-line" style="margin-top:10px">
+              Entry: ${fmtDateTime(o.EntryDate)}<br>
+              Due: ${fmtDate(o.DueDate)}<br>
+              Service window: ${esc(o.ServiceWindow || 'to be confirmed')}<br>
+              Building/Unit: ${esc(o.BuildingNumber || '—')} / ${esc(o.UnitNumber || '—')} · Bed/Bath: ${esc(o.Bedrooms || '—')} / ${esc(o.Bathrooms || '—')}
+            </p>
+            ${o.Notes ? '<p class="meta-line" style="margin-top:8px">Notes: ' + esc(o.Notes) + '</p>' : ''}
+            ${noticeHtml}
+          </div>
+          <div>
+            <p class="detail-label">Order Tracker</p>
+            <div class="tracker-steps">${trackerStepsFor(o, history)}</div>
+          </div>
+        </div>
+        <div>
+          <p class="detail-label">History</p>
+          ${histHtml}
+        </div>
+        <div class="order-actions">${actionButtonsFor(o, history, data.document || null)}</div>`;
+
+      bindActions(body, o);
+    } catch (e) {
+      body.innerHTML = '<p class="empty-note">Could not load details: ' + esc(e.message) + '</p>';
+    }
+  }
+
+  function levelOf(sub) {
+    const s = (sub || '').toLowerCase();
+    if (/(deep|full|heavy|two|replace|repair)/.test(s)) return 3;
+    if (/(wipe|scrub|disinfect|detail|medium|one|mop|spot)/.test(s)) return 2;
+    return 1;
+  }
+
+  /* ===== Tracker SIN regresión =====
+     El paso actual es el MÁXIMO hito alcanzado, combinando:
+       1) el índice del estatus actual (si es un estatus del mapa)
+       2) los estatus que aparecen en el historial (OldValue/NewValue)
+     Así, un evento especial (Delayed, Updated, Change Requested,
+     Cancellation Requested...) registra su nota pero JAMÁS hace
+     retroceder la línea: una orden Working→Delayed sigue en el paso 4. */
+
+  function milestoneOf(status) {
+    const map = {
+      'Pending': 1, 'Received': 1,
+      'Review': 2, 'Change Review': 2,
+      'Assigned': 3,
+      'Working': 4,
+      'Completed': 5
+    };
+    return map[status] || 0;
+  }
+
+  function maxMilestone(o, history) {
+    let m = milestoneOf(o.Status || '');
+    (history || []).forEach(h => {
+      // NewValue puede ser un snapshot "SERVICES:{...}" → milestoneOf devuelve 0, inofensivo
+      m = Math.max(m, milestoneOf(h.OldValue || ''), milestoneOf(h.NewValue || ''));
+    });
+    return m || 1;
+  }
+
+  function trackerStepsFor(o, history) {
+    const status = o.Status || 'Pending';
+    const current = maxMilestone(o, history);
+
+    const steps = [
+      { name: 'Order received',  idx: 1 },
+      { name: 'Under review',    idx: 2 },
+      { name: 'Assigned',        idx: 3 },
+      { name: 'In progress',     idx: 4 },
+      { name: 'Completed',       idx: 5 }
+    ];
+
+    return steps.map(s => {
+      const cls = s.idx < current ? 'done' : (s.idx === current ? 'active' : '');
+      let detail = 'Pending';
+      if (s.idx === 1) detail = fmtDateTime(o.createdDateTime);
+      if (s.idx === 2 && current >= 2) detail = (status === 'Review' || status === 'Change Review') ? 'In review' : 'Reviewed';
+      if (s.idx === 3 && current >= 3) detail = o.Supervisor || 'Assigned';
+      if (s.idx === 4 && current >= 4) detail = (status === 'Working') ? 'Active' : ((status === 'Completed') ? 'Done' : 'In progress');
+      if (s.idx === 5 && current >= 5) detail = 'Done';
+      return `<div class="t-step ${cls}"><div class="t-dot"></div><div><div class="t-name">${s.name}</div><div class="t-detail">${esc(detail)}</div></div></div>`;
+    }).join('');
+  }
+
+  /* ===== Aviso de retraso =====
+     Es un AVISO, nada mas. No cobra, no calcula y no compromete un monto:
+     dice lo que paso y le pide al cliente que llame a la oficina.
+     El cargo lo decide la oficina, nunca el portal. */
+  function delayNoticeHtml(o) {
+    const type = o.DelayReasonType || '';
+    if (!type) return '';
+    const feeCause = (type === 'Site not ready' || type === 'Rescheduled by client');
+    let what = '';
+    if (type === 'Site not ready') what = 'Our crew could not start because the unit was not ready.';
+    else if (type === 'Rescheduled by client') what = 'This visit was rescheduled at your request.';
+    else if (type === 'Rescheduled by us') what = 'We had to move this visit. We are sorry for the change.';
+    else if (type === 'Weather') what = 'This visit was affected by weather conditions.';
+    else what = 'This visit was delayed.';
+
+    return '<div class="notice"><b>' + esc(type) + '.</b> ' + esc(what) +
+      (o.DelayReasonNotes ? '<br>' + esc(o.DelayReasonNotes) : '') +
+      (feeCause
+        ? '<br><br>A delay fee may apply to this visit. Please call our office if you have any questions about it.'
+        : '<br><br>Please call our office if you have any questions.') +
+      '</div>';
+  }
+
+  /* ===== Botones por estatus (regla aprobada) =====
+     - Con solicitud pendiente (Change/Cancellation Requested) → SOLO Undo Request
+     - Sin solicitud:  Edit (solo Pending) + Request Change,
+                       y Cancel Request SOLO si la orden realmente pasó
+                       por Assigned o después (mismo cálculo de hito:
+                       mirar el historial, no solo el estatus actual)
+     - Completed → añade Print PDF                                    */
+  function actionButtonsFor(o, history, storedDoc) {
+    const status = o.Status || 'Pending';
+    const reachedAssignment = maxMilestone(o, history) >= 3;
+
+    let html = '';
+    if (hasOpenRequest(status)) {
+      html += `<button class="btn-action" data-act="undo">Undo Request</button>`;
+    } else if (status !== 'Completed' && status !== 'Cancelled') {
+      if (status === 'Pending') html += `<button class="btn-action primary" data-act="edit">Edit Order</button>`;
+      html += `<button class="btn-action" data-act="change">Request Change</button>`;
+      if (reachedAssignment) html += `<button class="btn-action danger" data-act="cancel">Cancel Request</button>`;
+    }
+    /* El PDF es el documento GUARDADO de la orden, el mismo que llega por
+       correo. Existe desde que la oficina aprueba la orden, no solo al
+       terminarla; antes de eso el boton se ve pero no se puede usar. */
+    if (storedDoc) {
+      html += `<button class="btn-action" data-act="print" title="Open ${escAttr(storedDoc.name || '')}">Print PDF</button>`;
+    } else {
+      html += `<span class="print-wrap"><button class="btn-action" data-act="print" disabled
+        title="Available once the order is approved">Print PDF</button>
+        <span class="print-hint">Available once the order is approved</span></span>`;
+    }     
+return html;
+  }
+
+  function bindActions(container, o) {
+    container.querySelectorAll('[data-act]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const act = btn.dataset.act;
+        if (act === 'edit') editOrder(o.OrderID);
+        if (act === 'change') openChangeDialog(o.OrderID);
+        if (act === 'cancel') openCancelDialog(o.OrderID);
+        if (act === 'undo') undoRequest(o.OrderID);
+        if (act === 'print') openOrderDocument(o.OrderID);
+        if (act === 'printhist') printOrder(o.OrderID);
+      });
+    });
+  }
+
+  /* ===== Undo Request: regresa la orden a su estatus/servicios previos ===== */
+  async function undoRequest(orderId) {
+    if (!confirm('Undo your pending request? The order will go back to its previous state. Our office will be notified that you cancelled your request.')) return;
+    try {
+      await GS.api('/undo-request', { method: 'POST', body: { orderId: orderId } });
+      showToast('Your request was cancelled. The order went back to its previous state. Our office has been notified.');
+      loadOrders();
+    } catch (e) {
+      alert('Error undoing request: ' + e.message);
+    }
+  }
+
+  /* ===== Drafts ===== */
+  function continueDraft(orderId) {
+    location.href = 'customer.html?continue=' + encodeURIComponent(orderId);
+  }
+
+  function openDeleteDraft(orderId) {
+    if (!confirm('Delete this draft? Its order number will be released.')) return;
+    GS.api('/delete-draft', { method: 'POST', body: { orderId: orderId } })
+      .then(() => loadOrders())
+      .catch(e => alert('Error deleting draft: ' + e.message));
+  }
+
+  function editOrder(orderId) {
+    location.href = 'customer.html?edit=' + encodeURIComponent(orderId);
+  }
+
+  /* ===== Cancel request ===== */
+  function openCancelDialog(orderId) {
+    $('cancel-order-id').textContent = orderId;
+    $('cancel-error').textContent = '';
+    $('cancel-dialog').classList.add('open');
+  }
+  function closeCancelDialog() { $('cancel-dialog').classList.remove('open'); }
+  async function confirmCancel() {
+    const orderId = $('cancel-order-id').textContent;
+    const btn = $('cancel-confirm-btn');
+    btn.disabled = true; btn.textContent = 'Sending…';
+    try {
+      await GS.api('/request-change', { method: 'POST', body: { orderId: orderId, type: 'cancel', description: 'Client requested order cancellation.' } });
+      closeCancelDialog();
+      showToast('Cancellation request sent. Our office will review it and contact you.');
+      loadOrders();
+    } catch (e) {
+      $('cancel-error').textContent = 'Error: ' + e.message;
+    } finally {
+      btn.disabled = false; btn.textContent = 'Request Cancellation';
+    }
+  }
+
+  /* ===== Change request ===== */
+  function openChangeDialog(orderId) {
+    $('change-order-id').textContent = orderId;
+    $('change-text').value = '';
+    $('change-error').textContent = '';
+
+    /* Las fechas llegan prellenadas con las que la orden tiene hoy, para
+       que el cliente vea de donde parte. Si no las toca, no pide cambio
+       de fecha: solo se manda lo que realmente sea distinto. */
+    const o = (ordersCache || []).find(x => x.OrderID === orderId) || {};
+    $('change-entry').value = dateInputValue(o.EntryDate);
+    $('change-due').value = dateInputValue(o.DueDate);
+    $('change-entry').dataset.original = dateInputValue(o.EntryDate);
+    $('change-due').dataset.original = dateInputValue(o.DueDate);
+
+    const sel = $('change-window');
+    const current = o.ServiceWindow || '';
+    sel.innerHTML = ['<option value="">Keep the current window' + (current ? ' (' + current + ')' : '') + '</option>']
+      .concat(SERVICE_WINDOWS.map(w => '<option value="' + escAttr(w) + '"' +
+        (w === current ? ' selected' : '') + '>' + esc(w) + '</option>')).join('');
+    if (!current) sel.value = '';
+
+    $('change-dialog').classList.add('open');
+  }
+  function closeChangeDialog() { $('change-dialog').classList.remove('open'); }
+  async function submitChange() {
+    const orderId = $('change-order-id').textContent;
+    const txt = $('change-text').value.trim();
+    if (!txt) { $('change-error').textContent = 'Please describe the change.'; return; }
+
+    const entryEl = $('change-entry'), dueEl = $('change-due');
+    const entryDate = entryEl.value !== (entryEl.dataset.original || '') ? entryEl.value : '';
+    const dueDate   = dueEl.value !== (dueEl.dataset.original || '') ? dueEl.value : '';
+    const serviceWindow = $('change-window').value;
+
+    if (entryDate && dueDate && entryDate > dueDate) {
+      $('change-error').textContent = 'The due date cannot be earlier than the entry date.';
+      return;
+    }
+
+    const btn = $('change-submit-btn');
+    btn.disabled = true; btn.textContent = 'Sending…';
+    try {
+      await GS.api('/request-change', { method: 'POST', body: {
+        orderId: orderId, type: 'change', description: txt,
+        entryDate: entryDate, dueDate: dueDate, serviceWindow: serviceWindow
+      } });
+      closeChangeDialog();
+      showToast('Your request was sent. Our office will review it and you will receive the confirmed dates by email.');
+      loadOrders();
+    } catch (e) {
+      $('change-error').textContent = 'Error: ' + e.message;
+    } finally {
+      btn.disabled = false; btn.textContent = 'Send Request';
+    }
+  }
+
+  /* ===== PDF guardado de la orden =====
+     Nunca se genera aqui: se abre el archivo que ya vive en SharePoint,
+     idéntico al que el cliente recibió por correo. */
+  function openOrderDocument(orderId) {
+    window.open('/.netlify/functions/get-order-document?orderId=' + encodeURIComponent(orderId) +
+                '&clientId=' + encodeURIComponent(client.clientId || ''), '_blank');
+  }
+
+  /* ===== Print PDF (History) — CONECTADO al botón de las Completed.
+     Formato provisional mientras se define el definitivo
+     (réplica del Excel con Nivel 1/2/3 + X en la celda contigua). */
+  async function printOrder(orderId) {
+    try {
+            const data = await GS.api('/get-order-detail', { method: 'POST', body: { orderId: orderId, clientId: client.clientId } });
+      const o = data.order || {};
+      const services = data.services || [];
+
+      const byCat = {};
+      services.forEach(s => {
+        const cat = s.Category || 'General';
+        if (!byCat[cat]) byCat[cat] = [];
+        byCat[cat].push(s);
+      });
+
+      const w = window.open('', '_blank');
+      w.document.write(`<!DOCTYPE html><html><head><title>Order ${esc(orderId)}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 40px; color: #111; }
+          h1 { font-size: 20px; border-bottom: 2px solid #C9A84C; padding-bottom: 8px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+          td { padding: 6px 8px; border-bottom: 1px solid #ddd; font-size: 13px; }
+          td:first-child { font-weight: bold; width: 180px; }
+          .cat { margin-top: 14px; font-size: 13px; }
+          .cat b { color: #8C6F2A; }
+        </style></head><body>
+        <h1>GS Solutions Inc. — Order ${esc(orderId)}</h1>
+        <table>
+          <tr><td>Status</td><td>${esc(o.Status || '')}</td></tr>
+          <tr><td>Division</td><td>${esc(o.Division || '')}</td></tr>
+          <tr><td>Client</td><td>${esc(o.BusinessName || '')} (${esc(o.ClientID || '')})</td></tr>
+          <tr><td>Address</td><td>${esc([o.Address, o.Suite, o.City, o.Zip].filter(Boolean).join(', '))}</td></tr>
+          <tr><td>Building/Unit</td><td>${esc(o.BuildingNumber || '—')} / ${esc(o.UnitNumber || '—')}</td></tr>
+          <tr><td>Bed/Bath</td><td>${esc(o.Bedrooms || '—')} / ${esc(o.Bathrooms || '—')}</td></tr>
+          <tr><td>Entry</td><td>${fmtDateTime(o.EntryDate)}</td></tr>
+          <tr><td>Due</td><td>${fmtDate(o.DueDate)}</td></tr>
+          ${o.DirtLevel ? `<tr><td>Overall condition</td><td>${esc(o.DirtLevel)}</td></tr>` : ''}
+          ${o.Notes ? `<tr><td>Notes</td><td>${esc(o.Notes)}</td></tr>` : ''}
+        </table>
+        ${Object.entries(byCat).map(([cat, list]) =>
+          `<div class="cat"><b>${esc(cat)}:</b> ${list.map(s => esc(s.ServiceName) + ' — ' + esc(s.SubOption)).join(' · ')}</div>`
+        ).join('')}
+        </body></html>`);
+      w.document.close();
+      w.focus();
+      setTimeout(() => { w.print(); }, 400);
+    } catch (e) {
+      alert('Could not prepare the print view: ' + e.message);
+    }
+  }
+
+  /* ===== Helpers ===== */
+  function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+  function escAttr(s) { return esc(s).replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+  function fmtDateTime(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  }
+
+  window.toggleOrder = function (el) { el.nextElementSibling.classList.toggle('open'); };
+  window.expandOrder = expandOrder;
+  window.continueDraft = continueDraft;
+  window.openDeleteDraft = openDeleteDraft;
+  window.editOrder = editOrder;
+  window.openCancelDialog = openCancelDialog;
+  window.closeCancelDialog = closeCancelDialog;
+  window.confirmCancel = confirmCancel;
+  window.openChangeDialog = openChangeDialog;
+  window.closeChangeDialog = closeChangeDialog;
+  window.submitChange = submitChange;
+  window.undoRequest = undoRequest;
+  window.printOrder = printOrder;
+  window.openOrderDocument = openOrderDocument;
+  window.doSignout = doSignout;
+  window.showSection = showSection;
+
+}
+</script>
+</body>
+</html>
