@@ -153,13 +153,6 @@ exports.handler = async (event) => {
       );
 
       try {
-        await updateListItemByItemId(DRAFTS_LIST, draftHeader.id, {
-          Status:  'Order',
-          OrderID: orderId
-        });
-      } catch (e) { console.error('Draft header update failed:', e.message); }
-
-      try {
         await Promise.all([
           ...draftServiceRows.map(row =>
             createListItem(ORDER_SERVICES_LIST, {
@@ -184,8 +177,16 @@ exports.handler = async (event) => {
         ]);
       } catch (e) { console.error('Post-order write failed:', e.message); }
 
+      /* Borrar el borrador COMPLETO (encabezado + servicios), no solo
+         marcarlo como convertido. Si antes el PATCH de Status fallaba
+         (por ejemplo por un eTag ya viejo), el encabezado se quedaba con
+         Status='Draft' para siempre y get-orders.js lo seguia mostrando
+         en "Unfinished Drafts" aunque la orden ya existiera. Borrarlo de
+         raiz no deja ningun estado intermedio en el que se pueda quedar. */
       try {
-        await Promise.all(draftServiceRows.map(row => deleteListItem(DRAFTS_LIST, row.id)));
+        await Promise.all(
+          [draftHeader, ...draftServiceRows].map(row => deleteListItem(DRAFTS_LIST, row.id))
+        );
       } catch (e) { console.error('Draft cleanup failed:', e.message); }
 
       return jsonResponse(200, { success: true, orderId, id: result.id });
