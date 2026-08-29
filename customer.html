@@ -1280,7 +1280,7 @@ if (client) {
     try {
             const data = await GS.api('/get-order-detail', { method: 'POST', body: { orderId: orderId, clientId: client.clientId } });
       const o = data.order;
-      if (!o || (o.Status || 'Pending') !== 'Pending') {
+        if (!o || (o.Status || 'Received') !== 'Received') {
         alert('This order can no longer be edited directly.');
         location.href = 'tracking.html';
         return;
@@ -1368,7 +1368,7 @@ if (client) {
       Zip: client.zip,
       Contact: client.contact || '',
       Notes: $('notes').value.trim(),
-      Status: editOrderId ? 'Change Requested' : 'Pending',
+      Status: editOrderId ? 'Change Requested' : 'Received',
       BuildingNumber: buildingNumber,
       UnitNumber: unitNumber,
       Bedrooms: bedrooms,
