@@ -144,7 +144,7 @@ exports.handler = async (event) => {
     }
 
     /* Regresar la orden a su estatus previo + evento en paralelo */
-    const newStatus = prevStatus || 'Pending';
+        const newStatus = prevStatus || 'Received';
     await Promise.all([
       updateListItemByItemId(ORDERS_LIST, orderItem.id, { Status: newStatus }),
       createListItem(ORDER_HISTORY_LIST, {

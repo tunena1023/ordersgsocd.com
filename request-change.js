@@ -92,7 +92,7 @@ exports.handler = async (event) => {
         error: 'This order is ' + oldStatus.toLowerCase() + '. Please call our office.'
       });
     }
-    if (oldStatus === 'Updated' || oldStatus === 'Change Requested'
+       if (oldStatus === 'Change Requested'
         || oldStatus === 'Cancellation Requested') {
       return jsonResponse(409, {
         error: 'There is already a request waiting for our office on this order.'
@@ -100,7 +100,7 @@ exports.handler = async (event) => {
     }
 
     /* 'Updated' para un cambio; la cancelacion conserva su propio estatus */
-    const newStatus = isCancel ? 'Cancellation Requested' : 'Updated';
+        const newStatus = isCancel ? 'Cancellation Requested' : 'Change Requested';
 
     /* Numero de revision: cuenta las solicitudes anteriores del cliente */
     const REQUEST_TYPES = ['Change Requested', 'Cancellation Requested', 'Updated'];
