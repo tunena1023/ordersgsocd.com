@@ -111,18 +111,21 @@
   .btn-action.primary:hover { background: var(--gold-dk); border-color: var(--gold-dk); color: var(--white); }
   .btn-action:disabled { opacity: .5; cursor: not-allowed; }
 
-  .tracker-steps { display: flex; flex-direction: column; }
-  .t-step { display: flex; align-items: flex-start; gap: 14px; padding-bottom: 20px; position: relative; }
-  .t-step:not(:last-child)::before { content: ''; position: absolute; left: 10px; top: 22px; bottom: 0; width: 1px; background: var(--border); }
-  .t-step.done::before { background: var(--gold); }
-  .t-dot { width: 22px; height: 22px; border: 2px solid var(--border); border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--white); position: relative; z-index: 1; }
-  .t-step.done .t-dot { border-color: var(--gold); background: var(--gold); }
-  .t-step.done .t-dot::after { content: ''; width: 8px; height: 4px; border-left: 1.5px solid white; border-bottom: 1.5px solid white; transform: rotate(-45deg) translateY(-1px); }
-  .t-step.active .t-dot { border-color: var(--gold); }
-  .t-step.active .t-dot::after { content: ''; width: 8px; height: 8px; background: var(--gold); border-radius: 50%; }
-  .t-name { font-size: 12px; font-weight: 600; }
-  .t-step:not(.done):not(.active) .t-name { color: var(--gray); }
-  .t-detail { font-size: 11px; color: var(--gray); margin-top: 2px; }
+  .h-tracker { position: relative; display: flex; justify-content: space-between; margin-top: 10px; padding-top: 16px; }
+  .h-tracker::before { content: ''; position: absolute; top: 15px; left: 18px; right: 18px; height: 2px; background: var(--border); }
+  .h-tracker-fill { position: absolute; top: 15px; left: 18px; height: 2px; background: var(--gold); transition: width .3s; }
+  .h-step { position: relative; z-index: 1; flex: 1; text-align: center; padding: 0 4px; }
+  .h-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border); background: var(--white); margin: 0 auto; display: flex; align-items: center; justify-content: center; }
+  .h-step.done .h-dot { border-color: var(--gold); background: var(--gold); }
+  .h-step.done .h-dot::after { content: ''; width: 7px; height: 4px; border-left: 1.5px solid white; border-bottom: 1.5px solid white; transform: rotate(-45deg) translateY(-1px); }
+  .h-step.active .h-dot { border-color: var(--gold); }
+  .h-step.active .h-dot::after { content: ''; width: 8px; height: 8px; background: var(--gold); border-radius: 50%; }
+  .h-name { font-size: 11px; font-weight: 600; margin-top: 8px; }
+  .h-step:not(.done):not(.active) .h-name { color: var(--gray); }
+  .h-detail { font-size: 10px; color: var(--gray); margin-top: 2px; }
+  .h-pending-note { font-size: 12px; color: var(--gold-dk); background: var(--off); border-left: 3px solid var(--gold-dk); padding: 8px 12px; border-radius: 4px; margin-bottom: 14px; }
+  .h-cancelled-banner { font-size: 13px; color: #B33A3A; background: #FBEAEA; border-left: 3px solid #B33A3A; padding: 10px 14px; border-radius: 4px; }
+  @media (max-width: 480px) { .h-name { font-size: 10px; } .h-detail { display: none; } }
 
   .empty-note { font-size: 12px; color: #bbb; font-style: italic; padding: 12px 0; }
 
@@ -378,7 +381,7 @@ if (client) {
     const box = $('processing-container');
     const drafts = ordersCache.filter(o => (o.Status || '') === 'Incomplete');
     const active = ordersCache.filter(o => {
-      const s = o.Status || 'Pending';
+      const s = o.Status || 'Received';
       return s !== 'Completed' && s !== 'Incomplete' && s !== 'Cancelled';
     });
 
@@ -452,7 +455,7 @@ if (client) {
 
   function statusClass(s) {
     switch (s) {
-      case 'Pending': return 'status-pending';
+      case 'Received': return 'status-pending';
       case 'Review': case 'Change Review': return 'status-review';
       case 'Assigned': return 'status-assigned';
       case 'Working': return 'status-working';
@@ -493,7 +496,7 @@ if (client) {
      nunca se imprimían (los reales se generan al expandir, vía
      actionButtonsFor). Eliminada — esta tarjeta es solo el contenedor. */
   function renderActiveCard(o) {
-    const status = o.Status || 'Pending';
+    const status = o.Status || 'Received';
     return `
       <div class="order-card" data-order="${escAttr(o.OrderID)}">
         <div class="order-card-header" onclick="expandOrder(this, '${escAttr(o.OrderID)}')">
@@ -615,6 +618,14 @@ if (client) {
               lines.map(l => '<div style="font-size:12px;margin:3px 0">' + l + '</div>').join('') +
               '</div>';
           }
+        } else if (h.FieldChanged && (h.OldValue || h.NewValue)) {
+          /* Cambios de un solo campo (Dispatch Date, Service Window,
+             Supervisor, Due Date...): antes no se veia nada aqui. */
+          detail = '<div id="' + detailId + '" style="display:none;margin-top:8px;padding:10px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
+            '<div style="font-size:12px;margin:3px 0">🔄 <b>' + esc(h.FieldChanged) + ':</b> ' +
+            esc(h.OldValue || '(empty)') + ' → ' + esc(h.NewValue || '(empty)') + '</div>' +
+            (h.Notes ? '<div style="font-size:12px;margin:3px 0">' + esc(h.Notes) + '</div>' : '') +
+            '</div>';
         } else if (h.Notes && h.Notes.indexOf('SERVICES:') !== 0) {
           detail = '<div id="' + detailId + '" style="display:none;margin-top:8px;padding:10px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
             '<div style="font-size:12px">' + esc(h.Notes) + '</div></div>';
@@ -677,48 +688,70 @@ if (client) {
      Cancellation Requested...) registra su nota pero JAMÁS hace
      retroceder la línea: una orden Working→Delayed sigue en el paso 4. */
 
-  function milestoneOf(status) {
-    const map = {
-      'Pending': 1, 'Received': 1,
-      'Review': 2, 'Change Review': 2,
-      'Assigned': 3,
-      'Working': 4,
-      'Completed': 5
-    };
-    return map[status] || 0;
+  /* Cuatro etapas reales, sin inventar ninguna: coinciden uno a uno con
+     los estatus que de verdad existen en el sistema.
+       1 Order Received   -> Status = Received
+       2 Assigned         -> Status = Assigned/Updated, fecha de despacho
+                              todavia no llega
+       3 In Progress      -> Status = Assigned/Updated, fecha de despacho
+                              ya llego o paso (mismo calculo que el admin,
+                              nunca se escribe "Working" en ningun lado)
+       4 Completed        -> Status = Completed
+     Cancelled es un estado aparte, no una etapa mas: corta el avance. */
+  function isPastDispatch(o) {
+    if (!o.DispatchDate) return false;
+    const d = new Date(o.DispatchDate); d.setHours(0, 0, 0, 0);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    return d <= today;
   }
 
-  function maxMilestone(o, history) {
-    let m = milestoneOf(o.Status || '');
-    (history || []).forEach(h => {
-      // NewValue puede ser un snapshot "SERVICES:{...}" → milestoneOf devuelve 0, inofensivo
-      m = Math.max(m, milestoneOf(h.OldValue || ''), milestoneOf(h.NewValue || ''));
-    });
-    return m || 1;
+  function currentStage(o) {
+    const status = o.Status || 'Received';
+    if (status === 'Completed') return 4;
+    if (status === 'Assigned' || status === 'Updated' ||
+        status === 'Change Requested' || status === 'Cancellation Requested') {
+      return isPastDispatch(o) ? 3 : 2;
+    }
+    return 1;
   }
 
   function trackerStepsFor(o, history) {
-    const status = o.Status || 'Pending';
-    const current = maxMilestone(o, history);
+    if ((o.Status || '') === 'Cancelled') {
+      return '<div class="h-cancelled-banner">This order was cancelled.</div>';
+    }
 
+    const stage = currentStage(o);
     const steps = [
-      { name: 'Order received',  idx: 1 },
-      { name: 'Under review',    idx: 2 },
-      { name: 'Assigned',        idx: 3 },
-      { name: 'In progress',     idx: 4 },
-      { name: 'Completed',       idx: 5 }
+      { name: 'Order Received', detail: fmtDateTime(o.createdDateTime) },
+      { name: 'Assigned',       detail: o.Supervisor ? ('Supervisor: ' + o.Supervisor) : 'Awaiting dispatch date' },
+      { name: 'In Progress',    detail: o.DispatchDate ? ('Dispatch ' + fmtDate(o.DispatchDate)) : 'In progress' },
+      { name: 'Completed',      detail: 'Done' }
     ];
 
-    return steps.map(s => {
-      const cls = s.idx < current ? 'done' : (s.idx === current ? 'active' : '');
-      let detail = 'Pending';
-      if (s.idx === 1) detail = fmtDateTime(o.createdDateTime);
-      if (s.idx === 2 && current >= 2) detail = (status === 'Review' || status === 'Change Review') ? 'In review' : 'Reviewed';
-      if (s.idx === 3 && current >= 3) detail = o.Supervisor || 'Assigned';
-      if (s.idx === 4 && current >= 4) detail = (status === 'Working') ? 'Active' : ((status === 'Completed') ? 'Done' : 'In progress');
-      if (s.idx === 5 && current >= 5) detail = 'Done';
-      return `<div class="t-step ${cls}"><div class="t-dot"></div><div><div class="t-name">${s.name}</div><div class="t-detail">${esc(detail)}</div></div></div>`;
+    const pendingNote = (o.Status === 'Change Requested' || o.Status === 'Cancellation Requested')
+      ? '<div class="h-pending-note">' +
+        (o.Status === 'Cancellation Requested'
+          ? 'A cancellation request is being reviewed by our office.'
+          : 'A change request is being reviewed by our office.') +
+        '</div>'
+      : '';
+
+    const fillPct = ((stage - 1) / (steps.length - 1)) * 100;
+    const stepsHtml = steps.map((s, i) => {
+      const idx = i + 1;
+      const cls = idx < stage ? 'done' : (idx === stage ? 'active' : '');
+      return '<div class="h-step ' + cls + '">' +
+        '<div class="h-dot"></div>' +
+        '<div class="h-name">' + esc(s.name) + '</div>' +
+        '<div class="h-detail">' + (idx <= stage ? esc(s.detail) : 'Pending') + '</div>' +
+        '</div>';
     }).join('');
+
+    return pendingNote +
+      '<div class="h-tracker">' +
+      '<div class="h-tracker-fill" style="width:' + fillPct + '%"></div>' +
+      stepsHtml +
+      '</div>';
   }
 
   /* ===== Aviso de retraso =====
@@ -752,14 +785,14 @@ if (client) {
                        mirar el historial, no solo el estatus actual)
      - Completed → añade Print PDF                                    */
   function actionButtonsFor(o, history, storedDoc) {
-    const status = o.Status || 'Pending';
-    const reachedAssignment = maxMilestone(o, history) >= 3;
+    const status = o.Status || 'Received';
+    const reachedAssignment = currentStage(o) >= 2;
 
     let html = '';
     if (hasOpenRequest(status)) {
       html += `<button class="btn-action" data-act="undo">Undo Request</button>`;
     } else if (status !== 'Completed' && status !== 'Cancelled') {
-      if (status === 'Pending') html += `<button class="btn-action primary" data-act="edit">Edit Order</button>`;
+      if (status === 'Received') html += `<button class="btn-action primary" data-act="edit">Edit Order</button>`;
       html += `<button class="btn-action" data-act="change">Request Change</button>`;
       if (reachedAssignment) html += `<button class="btn-action danger" data-act="cancel">Cancel Request</button>`;
     }
