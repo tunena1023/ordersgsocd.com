@@ -43,7 +43,7 @@ const GS = {
   /* Wrapper de functions. En modo demo resuelve local. */
   async api(path, opts = {}) {
     if (DEMO.active) return DEMO.handle(path, opts || {});
-    const res = await fetch('/.netlify/functions' + path, {
+    const res = await fetch('/api' + path, {
       method: opts.method || 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined
