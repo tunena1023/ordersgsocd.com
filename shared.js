@@ -62,7 +62,7 @@ const GS = {
       return blob ? DEMO.objectURL(key, blob) : null;
     }
     try {
-      const res = await fetch('/.netlify/functions/site-image?cat=' + encodeURIComponent(name));
+      const res = await fetch('/api/site-image?cat=' + encodeURIComponent(name));
       if (!res.ok) return null;
       return DEMO.objectURL(key, await res.blob());
     } catch (e) { return null; }
@@ -83,7 +83,7 @@ const GS = {
       if (blob) url = DEMO.objectURL('logo', blob);
     } else {
       try {
-        const res = await fetch('/.netlify/functions/site-image?name=' + encodeURIComponent('Logo.png'));
+        const res = await fetch('/api/site-image?name=' + encodeURIComponent('Logo.png'));
         if (res.ok) url = DEMO.objectURL('logo', await res.blob());
       } catch (e) { /* sin logo */ }
     }
