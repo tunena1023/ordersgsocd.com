@@ -1,5 +1,5 @@
 {
-  "name": "gs-solutions-client-portal",
+  "name": "gs-solutions-admin-portal",
   "version": "1.0.0",
   "private": true,
   "dependencies": {

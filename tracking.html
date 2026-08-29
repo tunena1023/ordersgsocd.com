@@ -111,16 +111,24 @@
   .btn-action.primary:hover { background: var(--gold-dk); border-color: var(--gold-dk); color: var(--white); }
   .btn-action:disabled { opacity: .5; cursor: not-allowed; }
 
-  .h-tracker { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-  .h-chip { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 20px; background: var(--off); border: 1px solid var(--border); }
-  .h-chip.done { border-color: var(--border); }
-  .h-chip.active { border-color: var(--gold); background: rgba(201,168,76,0.10); }
-  .h-chip-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); flex-shrink: 0; }
-  .h-chip-text { display: flex; flex-direction: column; line-height: 1.25; }
-  .h-chip-name { font-size: 12px; font-weight: 600; color: var(--black); }
-  .h-chip-date { font-size: 10px; color: var(--gray); }
+  .h-tracker { position: relative; display: flex; justify-content: space-between; margin-top: 10px; padding-top: 16px; }
+  .h-tracker::before { content: ''; position: absolute; top: 15px; left: 18px; right: 18px; height: 2px; background: var(--border); }
+  .h-tracker-fill { position: absolute; top: 15px; left: 18px; height: 2px; background: var(--gold); transition: width .3s; }
+  .h-tracker-scroll { overflow-x: auto; padding-bottom: 4px; }
+  .h-tracker-scroll .h-step { flex: 0 0 auto; min-width: 90px; }
+  .h-tracker-scroll::before { left: 18px; right: auto; width: calc(100% - 36px); }
+  .h-step { position: relative; z-index: 1; flex: 1; text-align: center; padding: 0 4px; }
+  .h-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border); background: var(--white); margin: 0 auto; display: flex; align-items: center; justify-content: center; }
+  .h-step.done .h-dot { border-color: var(--gold); background: var(--gold); }
+  .h-step.done .h-dot::after { content: ''; width: 7px; height: 4px; border-left: 1.5px solid white; border-bottom: 1.5px solid white; transform: rotate(-45deg) translateY(-1px); }
+  .h-step.active .h-dot { border-color: var(--gold); }
+  .h-step.active .h-dot::after { content: ''; width: 8px; height: 8px; background: var(--gold); border-radius: 50%; }
+  .h-name { font-size: 11px; font-weight: 600; margin-top: 8px; }
+  .h-step:not(.done):not(.active) .h-name { color: var(--gray); }
+  .h-detail { font-size: 10px; color: var(--gray); margin-top: 2px; }
   .h-pending-note { font-size: 12px; color: var(--gold-dk); background: var(--off); border-left: 3px solid var(--gold-dk); padding: 8px 12px; border-radius: 4px; margin-bottom: 14px; }
-  .h-cancelled-banner { font-size: 13px; color: #B33A3A; background: #FBEAEA; border-left: 3px solid #B33A3A; padding: 10px 14px; border-radius: 4px; margin-bottom: 10px; }
+  .h-cancelled-banner { font-size: 13px; color: #B33A3A; background: #FBEAEA; border-left: 3px solid #B33A3A; padding: 10px 14px; border-radius: 4px; }
+  @media (max-width: 480px) { .h-name { font-size: 10px; } .h-detail { display: none; } }
 
   .empty-note { font-size: 12px; color: #bbb; font-style: italic; padding: 12px 0; }
 
@@ -557,7 +565,7 @@ if (client) {
 
       /* NUEVO: las solicitudes numeradas muestran su código de revisión
          (GS-6060-1001-1 para cambios, -1C para cancelaciones) */
-      const histHtml = (history || []).filter(h => !isHiddenFromClient(h)).map((h, idx) => {
+      const histHtml = (history || []).map((h, idx) => {
         const detailId = 'hd-' + o.OrderID.replace(/[^a-z0-9]/gi,'_') + '-' + idx;
         let detail = '';
 
@@ -572,18 +580,7 @@ if (client) {
         const oldDates = parseDatesPayload(h.OldValue);
         const newDates = parseDatesPayload(h.NewValue);
 
-        if (h.ChangeType === 'Created') {
-          /* La orden recien creada: mostrar los servicios que se pidieron,
-             nunca el marcador interno (Office Order/empty) que solo sirve
-             para que el admin sepa el origen, no para que lo lea nadie. */
-          const svcLines = (services || []).map(s =>
-            '<div style="font-size:12px;margin:3px 0">' + esc(s.Category || '') + ': ' +
-            esc(s.ServiceName || '') + (s.SubOption ? ' — ' + esc(s.SubOption) : '') + '</div>'
-          ).join('');
-          detail = '<div id="' + detailId + '" style="display:none;margin-top:8px;padding:10px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
-            (svcLines || '<div style="font-size:12px">No services recorded.</div>') +
-            '</div>';
-        } else if (oldDates || newDates) {
+        if (oldDates || newDates) {
           const from = datesPayloadText(oldDates), to = datesPayloadText(newDates);
           detail = '<div id="' + detailId + '" style="display:none;margin-top:8px;padding:10px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
             '<div style="font-size:12px;margin:3px 0">📅 ' + esc(from || '(none)') + ' → ' + esc(to || '(none)') + '</div>' +
@@ -663,13 +660,13 @@ if (client) {
             ${noticeHtml}
           </div>
           <div>
-            <p class="detail-label">History</p>
-            ${histHtml}
+            <p class="detail-label">Order Tracker</p>
+            <div class="tracker-steps">${trackerStepsFor(o, history)}</div>
           </div>
         </div>
-        <div style="margin-top:8px">
-          <p class="detail-label">Order Tracker</p>
-          ${trackerStepsFor(o, history)}
+        <div>
+          <p class="detail-label">History</p>
+          ${histHtml}
         </div>
         <div class="order-actions">${actionButtonsFor(o, history, data.document || null)}</div>`;
 
@@ -701,15 +698,6 @@ if (client) {
     if (fc === 'Delay Reason' || fc === 'Delay Reason Notes') return true;
     if (ct === 'Document Generated' || ct === 'Document Failed') return true;
     if (ct === 'Archived') return true;
-    if (ct === 'Order Details Set') return true;
-    /* Formato viejo (antes de consolidar): un renglon suelto por cada
-       campo que se guardo al aprobar por primera vez (Supervisor,
-       Service Window, Dispatch Date, Due Date, Inspection Date...).
-       El chip "Order Approved" ya cubre ese momento; estos renglones
-       sueltos solo quedan en ordenes ya creadas antes del cambio. */
-    if (/ Changed$/.test(ct) &&
-        ['Supervisor', 'Service Window', 'Dispatch Date', 'Due Date',
-         'Inspection Date', 'Notes'].indexOf(fc) !== -1) return true;
     return false;
   }
 
@@ -744,24 +732,25 @@ if (client) {
       .sort((a, b) => String(a.ChangeDate || '').localeCompare(String(b.ChangeDate || '')));
 
     if (!events.length) {
-      return cancelledBanner + '<div class="h-tracker"><div class="h-chip active">' +
-        '<div class="h-chip-dot"></div><div class="h-chip-text">' +
-        '<span class="h-chip-name">Order Received</span>' +
-        '<span class="h-chip-date">' + esc(fmtDateTime(o.createdDateTime)) + '</span>' +
-        '</div></div></div>';
+      return cancelledBanner + '<div class="h-tracker"><div class="h-step active">' +
+        '<div class="h-dot"></div><div class="h-name">Order Received</div>' +
+        '<div class="h-detail">' + esc(fmtDateTime(o.createdDateTime)) + '</div></div></div>';
     }
 
-    const chipsHtml = events.map((h, i) => {
+    const stepsHtml = events.map((h, i) => {
       const cls = (i < events.length - 1) ? 'done' : 'active';
-      return '<div class="h-chip ' + cls + '">' +
-        '<div class="h-chip-dot"></div>' +
-        '<div class="h-chip-text">' +
-        '<span class="h-chip-name">' + esc(shortLabel(h)) + '</span>' +
-        '<span class="h-chip-date">' + esc(fmtDate(h.ChangeDate)) + '</span>' +
-        '</div></div>';
+      return '<div class="h-step ' + cls + '">' +
+        '<div class="h-dot"></div>' +
+        '<div class="h-name">' + esc(shortLabel(h)) + '</div>' +
+        '<div class="h-detail">' + esc(fmtDate(h.ChangeDate)) + '</div>' +
+        '</div>';
     }).join('');
 
-    return cancelledBanner + '<div class="h-tracker">' + chipsHtml + '</div>';
+    return cancelledBanner +
+      '<div class="h-tracker h-tracker-scroll">' +
+      '<div class="h-tracker-fill" style="width:100%"></div>' +
+      stepsHtml +
+      '</div>';
   }
   /* ===== Aviso de retraso =====
      Es un AVISO, nada mas. No cobra, no calcula y no compromete un monto:

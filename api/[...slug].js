@@ -4,6 +4,7 @@
 const { toVercel } = require('../lib/vercel-adapter');
 
 const handlers = {
+  'confirm-change':     require('../confirm-change').handler,
   'delete-draft':       require('../delete-draft').handler,
   'get-order-detail':   require('../get-order-detail').handler,
   'get-order-document': require('../get-order-document').handler,
@@ -22,7 +23,7 @@ const handlers = {
 
 module.exports = async (req, res) => {
   const pathOnly = (req.url || '').split('?')[0];
-  const parts = pathOnly.split('/').filter(Boolean); // ['api', 'validate-client']
+  const parts = pathOnly.split('/').filter(Boolean); // ['api', 'confirm-change']
   const slug = parts[parts.length - 1];
   const h = handlers[slug];
   if (!h) {

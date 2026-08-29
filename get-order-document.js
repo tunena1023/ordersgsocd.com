@@ -6,7 +6,7 @@
    revision). Si no existe, la orden no ha sido aprobada y se
    responde 404 para que el front deshabilite el boton.
 
-   GET /api/get-order-document?orderId=GS-6062-1010
+   GET /.netlify/functions/get-order-document?orderId=GS-6062-1010
        &clientId=GS-6062   (opcional; si viene, se valida el dueno)
        &meta=1             (solo datos, sin bajar el archivo)
 ============================================================ */
@@ -15,7 +15,7 @@ const {
 } = require('./lib/graph');
 const { latestOrderPdf } = require('./lib/orderpdf');
 
-const MAX_BYTES = 4.5 * 1024 * 1024;
+const MAX_BYTES = 4.5 * 1024 * 1024;   /* tope de Netlify Functions */
 
 async function findOrder(orderId) {
   const filter = encodeURIComponent(`fields/OrderID eq '${orderId}'`);
