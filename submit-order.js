@@ -25,6 +25,18 @@ async function fetchAll(listName) {
   return out;
 }
 
+async function fetchByField(listName, fieldName, value) {
+  const filter = encodeURIComponent(`fields/${fieldName} eq '${value}'`);
+  let url = siteListPath(listName) + `?$expand=fields&$top=200&$filter=${filter}`;
+  const out = [];
+  while (url) {
+    const data = await graphFetch(url);
+    out.push(...(data.value || []));
+    url = data['@odata.nextLink'] || null;
+  }
+  return out;
+}
+
 async function fetchAllOrderIds() {
   let url = siteListPath(ORDERS_LIST) + '?$expand=fields($select=OrderID,Title,Status)&$top=500';
   const out = [];
@@ -305,6 +317,27 @@ exports.handler = async (event) => {
       NewValue:   b.Status || 'Received'
     });
 } catch (e) { console.error('Post-order write failed:', e.message); }
+
+    /* Limpiar el borrador automatico que se pudo haber guardado solo
+       mientras el cliente llenaba el formulario, si nunca se convirtio
+       formalmente (Flujo A). Sin esto, ese borrador se queda huerfano
+       y sigue apareciendo en "View Drafts" aunque la orden ya se mando. */
+    try {
+      const clientDraftRows = await fetchByField(DRAFTS_LIST, 'ClientID', b.ClientID);
+      const staleHeader = clientDraftRows.find(it =>
+        it.fields && !it.fields.ServiceName &&
+        it.fields.Status === 'Draft' &&
+        String(it.fields.Division || '').toLowerCase() === String(b.Division).toLowerCase()
+      );
+      if (staleHeader) {
+        const staleId = String(staleHeader.fields.OrderID || '');
+        const staleServiceRows = clientDraftRows.filter(it =>
+          it.fields && it.fields.ServiceName && String(it.fields.OrderID || '') === staleId
+        );
+        await Promise.all([staleHeader, ...staleServiceRows].map(row => deleteListItem(DRAFTS_LIST, row.id)));
+      }
+    } catch (e) { console.error('Stale draft cleanup failed:', e.message); }
+
     return jsonResponse(200, { success: true, orderId, id: result.id });
 
   } catch (err) {
