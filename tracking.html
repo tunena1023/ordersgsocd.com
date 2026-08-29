@@ -114,6 +114,9 @@
   .h-tracker { position: relative; display: flex; justify-content: space-between; margin-top: 10px; padding-top: 16px; }
   .h-tracker::before { content: ''; position: absolute; top: 15px; left: 18px; right: 18px; height: 2px; background: var(--border); }
   .h-tracker-fill { position: absolute; top: 15px; left: 18px; height: 2px; background: var(--gold); transition: width .3s; }
+  .h-tracker-scroll { overflow-x: auto; padding-bottom: 4px; }
+  .h-tracker-scroll .h-step { flex: 0 0 auto; min-width: 90px; }
+  .h-tracker-scroll::before { left: 18px; right: auto; width: calc(100% - 36px); }
   .h-step { position: relative; z-index: 1; flex: 1; text-align: center; padding: 0 4px; }
   .h-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border); background: var(--white); margin: 0 auto; display: flex; align-items: center; justify-content: center; }
   .h-step.done .h-dot { border-color: var(--gold); background: var(--gold); }
@@ -680,80 +683,75 @@ if (client) {
     return 1;
   }
 
-  /* ===== Tracker SIN regresión =====
-     El paso actual es el MÁXIMO hito alcanzado, combinando:
-       1) el índice del estatus actual (si es un estatus del mapa)
-       2) los estatus que aparecen en el historial (OldValue/NewValue)
-     Así, un evento especial (Delayed, Updated, Change Requested,
-     Cancellation Requested...) registra su nota pero JAMÁS hace
-     retroceder la línea: una orden Working→Delayed sigue en el paso 4. */
-
-  /* Cuatro etapas reales, sin inventar ninguna: coinciden uno a uno con
-     los estatus que de verdad existen en el sistema.
-       1 Order Received   -> Status = Received
-       2 Assigned         -> Status = Assigned/Updated, fecha de despacho
-                              todavia no llega
-       3 In Progress      -> Status = Assigned/Updated, fecha de despacho
-                              ya llego o paso (mismo calculo que el admin,
-                              nunca se escribe "Working" en ningun lado)
-       4 Completed        -> Status = Completed
-     Cancelled es un estado aparte, no una etapa mas: corta el avance. */
-  function isPastDispatch(o) {
-    if (!o.DispatchDate) return false;
-    const d = new Date(o.DispatchDate); d.setHours(0, 0, 0, 0);
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    return d <= today;
+  /* ===== Tracker dinamico: un punto por cada evento REAL relevante,
+     en el orden en que paso. Nada de etapas inventadas: si a la orden
+     nunca le pidieron un cambio, el tracker solo tiene 1 o 2 puntos.
+     Se ocultan los eventos puramente internos (Supervisor, Inspection
+     Date, PDFs, Archived) para que el cliente solo vea lo que a el le
+     importa. */
+  function isHiddenFromClient(h) {
+    const fc = String(h.FieldChanged || '');
+    const ct = String(h.ChangeType || '');
+    if (fc === 'Office Change (Internal)') return true;
+    if (fc === 'Supervisor') return true;
+    if (fc === 'Inspection Date') return true;
+    if (fc === 'Delay Reason' || fc === 'Delay Reason Notes') return true;
+    if (ct === 'Document Generated' || ct === 'Document Failed') return true;
+    if (ct === 'Archived') return true;
+    return false;
   }
 
-  function currentStage(o) {
-    const status = o.Status || 'Received';
-    if (status === 'Completed') return 4;
-    if (status === 'Assigned' || status === 'Updated' ||
-        status === 'Change Requested' || status === 'Cancellation Requested') {
-      return isPastDispatch(o) ? 3 : 2;
-    }
-    return 1;
+  function shortLabel(h) {
+    const map = {
+      'Created':                     'Order created',
+      'Change Requested':            'Change requested',
+      'Cancellation Requested':      'Cancellation requested',
+      'Change Approved':             'Change approved',
+      'Change Rejected':             'Change not approved',
+      'Cancellation Approved':       'Cancellation approved',
+      'Cancellation Rejected':       'Cancellation not approved',
+      'Cancellation Reversed':       'Order active again',
+      'Dates Confirmed':             'Schedule confirmed',
+      'Request Cancelled by Client': 'Request withdrawn',
+      'Requested Dates Rejected':    'Requested dates not approved',
+      'Requested Dates Withdrawn':   'Requested dates withdrawn',
+      'Reschedule Requested':        'New dates requested',
+      'Services Updated':            'Services updated',
+      'Completed':                   'Order completed'
+    };
+    return map[h.ChangeType] || h.ChangeType || 'Update';
   }
 
   function trackerStepsFor(o, history) {
-    if ((o.Status || '') === 'Cancelled') {
-      return '<div class="h-cancelled-banner">This order was cancelled.</div>';
-    }
-
-    const stage = currentStage(o);
-    const steps = [
-      { name: 'Order Received', detail: fmtDateTime(o.createdDateTime) },
-      { name: 'Assigned',       detail: o.Supervisor ? ('Supervisor: ' + o.Supervisor) : 'Awaiting dispatch date' },
-      { name: 'In Progress',    detail: o.DispatchDate ? ('Dispatch ' + fmtDate(o.DispatchDate)) : 'In progress' },
-      { name: 'Completed',      detail: 'Done' }
-    ];
-
-    const pendingNote = (o.Status === 'Change Requested' || o.Status === 'Cancellation Requested')
-      ? '<div class="h-pending-note">' +
-        (o.Status === 'Cancellation Requested'
-          ? 'A cancellation request is being reviewed by our office.'
-          : 'A change request is being reviewed by our office.') +
-        '</div>'
+    const cancelledBanner = (o.Status || '') === 'Cancelled'
+      ? '<div class="h-cancelled-banner">This order was cancelled.</div>'
       : '';
 
-    const fillPct = ((stage - 1) / (steps.length - 1)) * 100;
-    const stepsHtml = steps.map((s, i) => {
-      const idx = i + 1;
-      const cls = idx < stage ? 'done' : (idx === stage ? 'active' : '');
+    const events = (history || [])
+      .filter(h => !isHiddenFromClient(h))
+      .sort((a, b) => String(a.ChangeDate || '').localeCompare(String(b.ChangeDate || '')));
+
+    if (!events.length) {
+      return cancelledBanner + '<div class="h-tracker"><div class="h-step active">' +
+        '<div class="h-dot"></div><div class="h-name">Order Received</div>' +
+        '<div class="h-detail">' + esc(fmtDateTime(o.createdDateTime)) + '</div></div></div>';
+    }
+
+    const stepsHtml = events.map((h, i) => {
+      const cls = (i < events.length - 1) ? 'done' : 'active';
       return '<div class="h-step ' + cls + '">' +
         '<div class="h-dot"></div>' +
-        '<div class="h-name">' + esc(s.name) + '</div>' +
-        '<div class="h-detail">' + (idx <= stage ? esc(s.detail) : 'Pending') + '</div>' +
+        '<div class="h-name">' + esc(shortLabel(h)) + '</div>' +
+        '<div class="h-detail">' + esc(fmtDate(h.ChangeDate)) + '</div>' +
         '</div>';
     }).join('');
 
-    return pendingNote +
-      '<div class="h-tracker">' +
-      '<div class="h-tracker-fill" style="width:' + fillPct + '%"></div>' +
+    return cancelledBanner +
+      '<div class="h-tracker h-tracker-scroll">' +
+      '<div class="h-tracker-fill" style="width:100%"></div>' +
       stepsHtml +
       '</div>';
   }
-
   /* ===== Aviso de retraso =====
      Es un AVISO, nada mas. No cobra, no calcula y no compromete un monto:
      dice lo que paso y le pide al cliente que llame a la oficina.
@@ -786,7 +784,7 @@ if (client) {
      - Completed → añade Print PDF                                    */
   function actionButtonsFor(o, history, storedDoc) {
     const status = o.Status || 'Received';
-    const reachedAssignment = currentStage(o) >= 2;
+    const reachedAssignment = status !== 'Received';
 
     let html = '';
     if (hasOpenRequest(status)) {
