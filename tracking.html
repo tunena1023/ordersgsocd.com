@@ -557,7 +557,7 @@ if (client) {
 
       /* NUEVO: las solicitudes numeradas muestran su código de revisión
          (GS-6060-1001-1 para cambios, -1C para cancelaciones) */
-      const histHtml = (history || []).map((h, idx) => {
+      const histHtml = (history || []).filter(h => !isHiddenFromClient(h)).map((h, idx) => {
         const detailId = 'hd-' + o.OrderID.replace(/[^a-z0-9]/gi,'_') + '-' + idx;
         let detail = '';
 
@@ -702,6 +702,14 @@ if (client) {
     if (ct === 'Document Generated' || ct === 'Document Failed') return true;
     if (ct === 'Archived') return true;
     if (ct === 'Order Details Set') return true;
+    /* Formato viejo (antes de consolidar): un renglon suelto por cada
+       campo que se guardo al aprobar por primera vez (Supervisor,
+       Service Window, Dispatch Date, Due Date, Inspection Date...).
+       El chip "Order Approved" ya cubre ese momento; estos renglones
+       sueltos solo quedan en ordenes ya creadas antes del cambio. */
+    if (/ Changed$/.test(ct) &&
+        ['Supervisor', 'Service Window', 'Dispatch Date', 'Due Date',
+         'Inspection Date', 'Notes'].indexOf(fc) !== -1) return true;
     return false;
   }
 
