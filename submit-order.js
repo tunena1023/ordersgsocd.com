@@ -134,7 +134,7 @@ exports.handler = async (event) => {
 
       const suffix = nextGlobalSuffix(allOrderRows);
       const orderId = String(b.ClientID).trim() + '-' + suffix;
-      const newStatus = b.Status || 'Received';
+      const newStatus = b.Status || 'Pending';
 
       const result = await createListItem(ORDERS_LIST,
         Object.assign({}, orderFields, { OrderID: orderId, Status: newStatus })
@@ -278,7 +278,7 @@ exports.handler = async (event) => {
     const orderId = String(b.ClientID).trim() + '-' + suffix;
 
     const result = await createListItem(ORDERS_LIST,
-      Object.assign({}, orderFields, { OrderID: orderId, Status: b.Status || 'Received' })
+      Object.assign({}, orderFields, { OrderID: orderId, Status: b.Status || 'Pending' })
     );
 
     try {
@@ -302,7 +302,7 @@ exports.handler = async (event) => {
       ChangeDate: new Date().toISOString(),
       Notes:      '',
       OldValue:   '',
-      NewValue:   b.Status || 'Received'
+      NewValue:   b.Status || 'Pending'
     });
 } catch (e) { console.error('Post-order write failed:', e.message); }
     return jsonResponse(200, { success: true, orderId, id: result.id });

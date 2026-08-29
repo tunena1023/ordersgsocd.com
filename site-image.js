@@ -75,11 +75,12 @@ async function serveCategory(cat) {
   return binaryResponse(await downloadById(item.id), typeOf(item.name));
 }
 
-/* ?name=Logo.png — archivo en la raíz del drive buscado por ruta directa */
+/* ?name=Logo.png — raíz del drive */
 async function serveRootFile(name) {
-  const { driveItemByPath } = require('./lib/graph');
-  const item = await driveItemByPath(String(name));
-  if (!item || (item.size || 0) > MAX_BYTES) return notFound();
+  const kids = await cachedChildren('');
+  const wanted = String(name).toLowerCase();
+  const item = kids.find(k => k.isFile && k.name.toLowerCase() === wanted);
+  if (!item || item.size > MAX_BYTES) return notFound();
   return binaryResponse(await downloadById(item.id), typeOf(item.name));
 }
 
