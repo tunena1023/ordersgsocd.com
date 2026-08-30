@@ -112,14 +112,31 @@
   .btn-action.primary:hover { background: var(--gold-dk); border-color: var(--gold-dk); color: var(--white); }
   .btn-action:disabled { opacity: .5; cursor: not-allowed; }
 
-  .h-tracker { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-  .h-chip { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 20px; background: var(--off); border: 1px solid var(--border); }
-  .h-chip.done { border-color: var(--border); }
-  .h-chip.active { border-color: var(--gold); background: rgba(201,168,76,0.10); }
-  .h-chip-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); flex-shrink: 0; }
-  .h-chip-text { display: flex; flex-direction: column; line-height: 1.25; }
-  .h-chip-name { font-size: 12px; font-weight: 600; color: var(--black); }
-  .h-chip-date { font-size: 10px; color: var(--gray); }
+  /* Timeline vertical: linea continua a la izquierda, un punto por
+     evento. Reemplaza las burbujas en fila de antes, que con 8-9
+     eventos se amontonaban o se iban a varias filas sin dejar claro
+     el orden. Crece hacia abajo sin limite, se ve igual de bien con
+     3 pasos que con 12. */
+  .h-tracker { position: relative; padding-left: 22px; margin-top: 14px; }
+  .h-tracker::before {
+    content: ''; position: absolute; left: 5px; top: 6px; bottom: 6px;
+    width: 2px; background: var(--border);
+  }
+  .h-step { position: relative; padding-bottom: 20px; }
+  .h-step:last-child { padding-bottom: 0; }
+  .h-step-dot {
+    position: absolute; left: -22px; top: 2px; width: 12px; height: 12px;
+    border-radius: 50%; background: var(--white); border: 2px solid var(--border);
+    box-sizing: border-box; z-index: 1;
+  }
+  .h-step.done .h-step-dot { background: var(--gold); border-color: var(--gold); }
+  .h-step.active .h-step-dot {
+    background: var(--black); border-color: var(--gold);
+    width: 14px; height: 14px; left: -23px; top: 0;
+  }
+  .h-step-name { font-size: 13px; font-weight: 600; color: var(--black); }
+  .h-step.active .h-step-name { color: var(--gold-dk); }
+  .h-step-date { font-size: 11px; color: var(--gray); margin-top: 2px; }
   .h-pending-note { font-size: 12px; color: var(--gold-dk); background: var(--off); border-left: 3px solid var(--gold-dk); padding: 8px 12px; border-radius: 4px; margin-bottom: 14px; }
   .h-cancelled-banner { font-size: 13px; color: #B33A3A; background: #FBEAEA; border-left: 3px solid #B33A3A; padding: 10px 14px; border-radius: 4px; margin-bottom: 10px; }
 
@@ -805,25 +822,45 @@ if (client) {
       events2.push(h);
     });
 
-    if (!events2.length) {
-      return cancelledBanner + '<div class="h-tracker"><div class="h-chip active">' +
-        '<div class="h-chip-dot"></div><div class="h-chip-text">' +
-        '<span class="h-chip-name">Order Received</span>' +
-        '<span class="h-chip-date">' + esc(fmtDateTime(o.createdDateTime)) + '</span>' +
-        '</div></div></div>';
+    /* Mismo criterio aplicado en el historial detallado del admin: al
+       aprobar, 'Dates Confirmed' queda seguido de inmediato por un
+       evento generico de decision ('Change Approved'/etc.) en la misma
+       accion -- dos pasos para una sola decision. Se fusionan, usando
+       la decision como paso visible (mas claro que 'Schedule
+       confirmed' seguido de otro paso sin nada nuevo que decir). */
+    const DECISION_TYPES = ['Change Approved', 'Change Rejected', 'Cancellation Approved', 'Cancellation Rejected'];
+    const events3 = [];
+    events2.forEach(h => {
+      const last = events3[events3.length - 1];
+      const isDecision = DECISION_TYPES.indexOf(String(h.ChangeType || '')) !== -1;
+      const lastIsDatesConfirmed = last && String(last.ChangeType || '') === 'Dates Confirmed';
+      const closeInTime = last &&
+        Math.abs(new Date(h.ChangeDate) - new Date(last.ChangeDate)) < GROUP_WINDOW_MS;
+      if (isDecision && lastIsDatesConfirmed && closeInTime) {
+        events3[events3.length - 1] = h;
+        return;
+      }
+      events3.push(h);
+    });
+
+    if (!events3.length) {
+      return cancelledBanner + '<div class="h-tracker"><div class="h-step active">' +
+        '<div class="h-step-dot"></div>' +
+        '<div class="h-step-name">Order Received</div>' +
+        '<div class="h-step-date">' + esc(fmtDateTime(o.createdDateTime)) + '</div>' +
+        '</div></div>';
     }
 
-    const chipsHtml = events2.map((h, i) => {
-      const cls = (i < events2.length - 1) ? 'done' : 'active';
-      return '<div class="h-chip ' + cls + '">' +
-        '<div class="h-chip-dot"></div>' +
-        '<div class="h-chip-text">' +
-        '<span class="h-chip-name">' + esc(shortLabel(h)) + '</span>' +
-        '<span class="h-chip-date">' + esc(fmtDate(h.ChangeDate)) + '</span>' +
-        '</div></div>';
+    const stepsHtml = events3.map((h, i) => {
+      const cls = (i < events3.length - 1) ? 'done' : 'active';
+      return '<div class="h-step ' + cls + '">' +
+        '<div class="h-step-dot"></div>' +
+        '<div class="h-step-name">' + esc(shortLabel(h)) + '</div>' +
+        '<div class="h-step-date">' + esc(fmtDate(h.ChangeDate)) + '</div>' +
+        '</div>';
     }).join('');
 
-    return cancelledBanner + '<div class="h-tracker">' + chipsHtml + '</div>';
+    return cancelledBanner + '<div class="h-tracker">' + stepsHtml + '</div>';
   }
   /* ===== Aviso de retraso =====
      Es un AVISO, nada mas. No cobra, no calcula y no compromete un monto:
