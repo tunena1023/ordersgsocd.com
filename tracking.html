@@ -785,7 +785,27 @@ if (client) {
       .filter(h => !isHiddenFromClient(h))
       .sort((a, b) => String(a.ChangeDate || '').localeCompare(String(b.ChangeDate || '')));
 
-    if (!events.length) {
+    /* BUG FIX: aprobar un cambio que toco varios campos de fecha a la
+       vez (Entry/Due/Service Window) escribe un renglon de historial
+       POR CADA campo (ver admin-approve-order.js, 'Dates Confirmed'),
+       aunque para el cliente sea una sola decision: "se confirmo el
+       nuevo calendario". Sin agrupar, el tracker mostraba la misma
+       burbuja repetida 2 o 3 veces seguidas. Como cada renglon se
+       escribe por separado (await secuenciales), sus timestamps no
+       son identicos al segundo -- se agrupan por tipo + una ventana
+       de tiempo corta en vez de exigir el mismo instante exacto. */
+    const GROUP_WINDOW_MS = 60000;
+    const events2 = [];
+    events.forEach(h => {
+      const last = events2[events2.length - 1];
+      const sameType = last && String(last.ChangeType || '') === String(h.ChangeType || '');
+      const closeInTime = last &&
+        Math.abs(new Date(h.ChangeDate) - new Date(last.ChangeDate)) < GROUP_WINDOW_MS;
+      if (sameType && closeInTime) return;
+      events2.push(h);
+    });
+
+    if (!events2.length) {
       return cancelledBanner + '<div class="h-tracker"><div class="h-chip active">' +
         '<div class="h-chip-dot"></div><div class="h-chip-text">' +
         '<span class="h-chip-name">Order Received</span>' +
@@ -793,8 +813,8 @@ if (client) {
         '</div></div></div>';
     }
 
-    const chipsHtml = events.map((h, i) => {
-      const cls = (i < events.length - 1) ? 'done' : 'active';
+    const chipsHtml = events2.map((h, i) => {
+      const cls = (i < events2.length - 1) ? 'done' : 'active';
       return '<div class="h-chip ' + cls + '">' +
         '<div class="h-chip-dot"></div>' +
         '<div class="h-chip-text">' +
