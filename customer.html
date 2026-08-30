@@ -278,8 +278,42 @@
   }
   .svc-name { font-size: 13px; font-weight: 600; color: var(--black); display: block; }
   .svc-desc { font-size: 11px; color: var(--gray); display: block; margin-top: 2px; line-height: 1.4; }
-  .accordion-cat { transition: box-shadow .2s; }
+  .acc-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; cursor: pointer; background: var(--white); transition: background .15s; }
+  .accordion-cat { transition: box-shadow .2s, border-color .2s; }
   .accordion-cat:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+  /* Categoria con al menos un servicio elegido: se nota aun cerrada */
+  .accordion-cat.has-selection { border-color: var(--gold-lt); }
+  /* Categoria abierta: encabezado se resalta para que se note cual esta activa */
+  .accordion-cat.open > .acc-head { background: #FFFDF5; }
+  .accordion-cat.open .acc-cat-name { color: var(--gold-dk); }
+  .accordion-cat.open .acc-arrow { color: var(--gold-dk); transform: rotate(180deg); }
+  .acc-head-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .acc-cat-name { font-weight: 600; font-size: 14px; letter-spacing: .02em; }
+  /* El circulo dorado del conteo: oculto salvo que haya algo seleccionado
+     en esa categoria (nunca aparece vacio como un punto suelto). */
+  .cat-badge-wrap { position: relative; display: inline-flex; }
+  .cat-badge {
+    min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px;
+    background: var(--gold); color: var(--white); font-size: 11px; font-weight: 700;
+    align-items: center; justify-content: center; cursor: pointer; display: none;
+  }
+  .cat-badge.show { display: inline-flex; }
+  /* Mensaje flotante con la lista de servicios elegidos en esa categoria,
+     al pasar el mouse (o tocar, en pantallas tactiles) sobre el circulo. */
+  .cat-badge-tip {
+    position: absolute; bottom: calc(100% + 9px); left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background: var(--black); color: var(--white); font-size: 11px; line-height: 1.6;
+    padding: 8px 12px; border-radius: 6px; min-width: 160px; max-width: 260px;
+    box-shadow: 0 6px 18px rgba(0,0,0,.28); opacity: 0; pointer-events: none;
+    transition: opacity .15s ease, transform .15s ease; z-index: 30; text-align: left;
+  }
+  .cat-badge-tip::after {
+    content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+    border: 5px solid transparent; border-top-color: var(--black);
+  }
+  .cat-badge-tip.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+  .cat-badge-tip b { color: var(--gold-lt); }
   .svc-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
   .chip {
     border: 1.5px solid var(--border); background: var(--white); color: var(--black);
@@ -754,13 +788,36 @@ if (client) {
       acc.dataset.cat = cat;
       acc.style.cssText = 'border:1px solid var(--border);border-radius:4px;margin-bottom:8px;overflow:hidden;';
 
-      /* Header del acordeón */
+      /* Header del acordeón: nombre + circulo de conteo agrupados a la
+         izquierda (el circulo solo se muestra si hay algo seleccionado),
+         flecha a la derecha. Pasar el mouse sobre el circulo muestra un
+         mensaje flotante con el detalle de lo elegido en esa categoria. */
       const header = document.createElement('div');
-      header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:14px 20px;cursor:pointer;background:var(--white);';
-      header.innerHTML = '<span style="font-weight:600;font-size:14px;letter-spacing:.02em">' + cat + '</span>' +
-        '<span class="flash-badge accordion-badge" data-cat="' + cat + '" style="margin-right:8px"></span>' +
-        '<span class="acc-arrow" style="font-size:12px;color:var(--gray);transition:transform .2s">▼</span>';
+      header.className = 'acc-head';
+      header.innerHTML =
+        '<span class="acc-head-left">' +
+          '<span class="acc-cat-name">' + esc(cat) + '</span>' +
+          '<span class="cat-badge-wrap">' +
+            '<span class="cat-badge" data-cat="' + esc(cat) + '"></span>' +
+            '<div class="cat-badge-tip" data-tip-for="' + esc(cat) + '"></div>' +
+          '</span>' +
+        '</span>' +
+        '<span class="acc-arrow">▼</span>';
       acc.appendChild(header);
+
+      /* El circulo abre/cierra el mensaje flotante en vez de la categoria;
+         sin esto, un click en el circulo tambien abriria/cerraria el
+         acordeon completo por el listener del header de abajo. */
+      const badgeEl = header.querySelector('.cat-badge');
+      const tipEl   = header.querySelector('.cat-badge-tip');
+      badgeEl.addEventListener('mouseenter', () => showCatTip(cat, tipEl));
+      badgeEl.addEventListener('mouseleave', () => tipEl.classList.remove('show'));
+      badgeEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const willShow = !tipEl.classList.contains('show');
+        document.querySelectorAll('.cat-badge-tip.show').forEach(t => t.classList.remove('show'));
+        if (willShow) showCatTip(cat, tipEl);
+      });
 
       /* Body del acordeón */
       const body = document.createElement('div');
@@ -780,11 +837,13 @@ if (client) {
       body.appendChild(list);
       acc.appendChild(body);
 
-      /* Toggle */
+      /* Toggle: la clase .open en el contenedor maneja el resaltado del
+         encabezado y la rotacion de la flecha por CSS; aqui solo se
+         encarga de mostrar/ocultar el cuerpo y cargar los servicios. */
       header.addEventListener('click', () => {
         const isOpen = body.style.display !== 'none';
         body.style.display = isOpen ? 'none' : 'block';
-        header.querySelector('.acc-arrow').style.transform = isOpen ? '' : 'rotate(180deg)';
+        acc.classList.toggle('open', !isOpen);
         if (!isOpen) {
           activeCat = cat;
           openCat = cat;
@@ -1019,18 +1078,43 @@ if (client) {
     scheduleDraftSave();
   });
 
+  /* BUG FIX (2026-08-30): esta funcion buscaba '.flash-card', una clase
+     que ya no se crea en ningun lado desde que el selector de servicios
+     se movio al acordeon ('.accordion-cat'). El circulo de conteo nunca
+     recibia su numero ni se ocultaba cuando la categoria estaba vacia —
+     por eso aparecia siempre como un punto dorado suelto, sin numero,
+     en cualquier categoria tuviera o no algo seleccionado. */
   function refreshBadges() {
-    document.querySelectorAll('.flash-card').forEach(card => {
-      const cat = card.dataset.cat;
+    document.querySelectorAll('.accordion-cat').forEach(acc => {
+      const cat = acc.dataset.cat;
       const count = Object.keys(selected[cat] || {}).length;
-      card.querySelectorAll('.flash-badge').forEach(b => {
+      acc.classList.toggle('has-selection', count > 0);
+      acc.querySelectorAll('.cat-badge').forEach(b => {
         b.textContent = count;
-        b.classList.toggle('zero', count === 0);
+        b.classList.toggle('show', count > 0);
       });
-      const msg = card.querySelector('.esc-msg');
+      const msg = acc.querySelector('.esc-msg');
       if (msg) msg.classList.toggle('show', !!escalated[cat]);
     });
   }
+
+  /* Mensaje flotante con el detalle de lo elegido en una categoria,
+     mostrado al pasar el mouse (o tocar) el circulo dorado del conteo. */
+  function showCatTip(cat, tipEl) {
+    const items = Object.entries(selected[cat] || {});
+    if (!items.length) return;
+    tipEl.innerHTML = items.map(([svc, sub]) =>
+      '<div><b>' + esc(svc) + '</b>' + (sub ? ' — ' + esc(sub) : '') + '</div>'
+    ).join('');
+    tipEl.classList.add('show');
+  }
+
+  /* Tocar fuera de un circulo/mensaje flotante lo cierra (necesario sobre
+     todo en tactil, donde no existe un "mouseleave" real). */
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.cat-badge-wrap')) return;
+    document.querySelectorAll('.cat-badge-tip.show').forEach(t => t.classList.remove('show'));
+  });
 
   function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
 

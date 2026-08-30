@@ -95,6 +95,7 @@
   .hist-type { font-weight: 600; color: var(--black); }
   .hist-notes { color: var(--gray); }
   .hist-rev { font-weight: 700; color: var(--gold-dk); letter-spacing: .04em; }
+  .hist-by { color: var(--gray); font-weight: 400; }
 
   .order-actions { display: flex; gap: 10px; padding-top: 16px; border-top: 1px solid var(--border); flex-wrap: wrap; align-items: flex-start; }
   /* El boton del PDF lleva su aviso debajo cuando todavia no hay documento */
@@ -598,9 +599,10 @@ if (client) {
             '</div>';
         } else if (oldDates || newDates) {
           const from = datesPayloadText(oldDates), to = datesPayloadText(newDates);
+          const nt = clientNoteText(h.Notes);
           detail = '<div id="' + detailId + '" style="display:none;margin-top:8px;padding:10px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
             '<div style="font-size:12px;margin:3px 0">📅 ' + esc(from || '(none)') + ' → ' + esc(to || '(none)') + '</div>' +
-            (h.Notes ? '<div style="font-size:12px;margin:3px 0">' + esc(h.Notes) + '</div>' : '') +
+            (nt ? '<div style="font-size:12px;margin:3px 0">' + esc(nt) + '</div>' : '') +
             '</div>';
         } else if (Array.isArray(oldSvcs) && Array.isArray(newSvcs)) {
           /* Comparar servicios: agregados, quitados, modificados */
@@ -637,17 +639,29 @@ if (client) {
               lines.map(l => '<div style="font-size:12px;margin:3px 0">' + l + '</div>').join('') +
               '</div>';
           }
+        } else if (h.FieldChanged === 'Status') {
+          /* "Status: OldValue -> NewValue" nunca se muestra: el encabezado
+             del evento (Change Approved, Cancellation Requested, etc.) ya
+             dice lo mismo. Solo se conserva la nota si no es el mensaje
+             generico de Approved/Rejected by. */
+          const nt = clientNoteText(h.Notes);
+          if (nt) {
+            detail = '<div id="' + detailId + '" style="display:none;margin-top:8px;padding:10px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
+              '<div style="font-size:12px">' + esc(nt) + '</div></div>';
+          }
         } else if (h.FieldChanged && (h.OldValue || h.NewValue)) {
           /* Cambios de un solo campo (Dispatch Date, Service Window,
              Supervisor, Due Date...): antes no se veia nada aqui. */
+          const nt = clientNoteText(h.Notes);
           detail = '<div id="' + detailId + '" style="display:none;margin-top:8px;padding:10px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
             '<div style="font-size:12px;margin:3px 0">🔄 <b>' + esc(h.FieldChanged) + ':</b> ' +
             esc(h.OldValue || '(empty)') + ' → ' + esc(h.NewValue || '(empty)') + '</div>' +
-            (h.Notes ? '<div style="font-size:12px;margin:3px 0">' + esc(h.Notes) + '</div>' : '') +
+            (nt ? '<div style="font-size:12px;margin:3px 0">' + esc(nt) + '</div>' : '') +
             '</div>';
-        } else if (h.Notes && h.Notes.indexOf('SERVICES:') !== 0) {
+        } else if (clientNoteText(h.Notes) && h.Notes.indexOf('SERVICES:') !== 0) {
+          const nt = clientNoteText(h.Notes);
           detail = '<div id="' + detailId + '" style="display:none;margin-top:8px;padding:10px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
-            '<div style="font-size:12px">' + esc(h.Notes) + '</div></div>';
+            '<div style="font-size:12px">' + esc(nt) + '</div></div>';
         }
 
         const hasDetail = detail.length > 0;
@@ -656,6 +670,7 @@ if (client) {
           '<div><span class="hist-date">' + fmtDateTime(h.ChangeDate) + '</span>' +
           (h.Title ? '<span class="hist-rev">' + esc(h.Title) + '</span> — ' : '') +
           '<span class="hist-type">' + esc(h.ChangeType || '') + '</span>' +
+          (h.ChangedBy ? ' <span class="hist-by">by ' + esc(h.ChangedBy) + '</span>' : '') +
           (hasDetail ? ' <span style="font-size:10px;color:var(--gold-dk)">▼ details</span>' : '') +
           '</div>' + detail + '</div>';
       }).join('') || '<p class="empty-note">No events recorded.</p>';
@@ -705,6 +720,20 @@ if (client) {
      Se ocultan los eventos puramente internos (Supervisor, Inspection
      Date, PDFs, Archived) para que el cliente solo vea lo que a el le
      importa. */
+  /* Mensaje automatico generico de aprobar/rechazar: el nombre ya esta en
+     el encabezado del evento, asi que repetirlo aqui no aporta nada. Si el
+     admin escribio una nota personalizada en su lugar, esa SI se conserva
+     (no calzara con este patron). Igual filtra el payload SERVICES: y el
+     mensaje generico "Submitted from draft." */
+  function clientNoteText(notes) {
+    if (!notes) return '';
+    if (String(notes).indexOf('SERVICES:') === 0) return '';
+    if (notes === 'Submitted from draft.') return '';
+    if (/^Approved by .+\.$/.test(notes)) return '';
+    if (/^Rejected by .+?\.( Previous services were restored\.)?$/.test(notes)) return '';
+    return notes;
+  }
+
   function isHiddenFromClient(h) {
     const fc = String(h.FieldChanged || '');
     const ct = String(h.ChangeType || '');
@@ -1062,4 +1091,4 @@ return html;
 }
 </script>
 </body>
-</html>
+</html>
