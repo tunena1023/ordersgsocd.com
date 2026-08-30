@@ -668,6 +668,7 @@ if (client) {
         return '<div class="hist-item" style="flex-direction:column;align-items:flex-start;cursor:' + (hasDetail?'pointer':'default') + '"' +
           (hasDetail ? ' onclick="var d=document.getElementById(\'' + detailId + '\');d.style.display=d.style.display===\'none\'?\'block\':\'none\'"' : '') + '>' +
           '<div><span class="hist-date">' + fmtDateTime(h.ChangeDate) + '</span>' +
+          '<span class="hist-rev">' + esc(orderId) + '</span> — ' +
           '<span class="hist-type">' + esc(h.ChangeType || '') + '</span>' +
           (h.ChangedBy ? ' <span class="hist-by">by ' + esc(h.ChangedBy) + '</span>' : '') +
           (hasDetail ? ' <span style="font-size:10px;color:var(--gold-dk)">▼ details</span>' : '') +
