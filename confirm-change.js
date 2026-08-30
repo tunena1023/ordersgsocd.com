@@ -33,12 +33,25 @@ async function fetchByField(listName, fieldName, value) {
 
 /* Un OldValue que es un snapshot de servicios ('SERVICES:...') o un JSON
    de fechas ('{...}') no es un estatus real -- hay que seguir buscando
-   hacia atras. Mismo criterio que usa undo-request.js. */
+   hacia atras. Mismo criterio que usa undo-request.js.
+
+   BUG FIX: tampoco es un estatus real un OldValue que es literalmente
+   el NOMBRE de una solicitud ('Change Requested', 'Cancellation
+   Requested', etc.) -- eso solo dice "aqui empezo una solicitud", no
+   dice a que estatus regresar. Sin esta exclusion, el evento "Change
+   Approved by [Nombre]" (OldValue: 'Change Requested', NewValue:
+   'Assigned') se leia como si 'Change Requested' fuera un estatus
+   valido al que volver, dejando la orden pegada en 'Change Requested'
+   otra vez justo despues de que el cliente ya la habia confirmado --
+   el boton "Confirm" volvia a aparecer en vez de pasar a Edit/Cancel.
+   Mismo criterio que ya usa previousStatus() en admin-approve-order.js. */
+const REQUEST_STATUS_LABELS = ['Change Requested', 'Cancellation Requested', 'Reschedule Requested', 'Change Requested by Client', 'Updated'];
 function looksLikeStatus(v) {
   const s = String(v == null ? '' : v).trim();
   if (!s) return false;
   if (s.indexOf('SERVICES:') === 0) return false;
   if (s.charAt(0) === '{') return false;
+  if (REQUEST_STATUS_LABELS.indexOf(s) !== -1) return false;
   return true;
 }
 
