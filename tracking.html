@@ -469,12 +469,22 @@ if (client) {
   /* Un Change Requested puede venir de dos lados: el cliente pidio un
      cambio (Undo Request tiene sentido), o la oficina propuso uno y
      solo falta que el cliente le de Confirm. Se distinguen por el
-     mismo marcador que usa el admin. */
+     mismo marcador que usa el admin.
+
+     BUG FIX: antes se buscaba en TODO el historial si ALGUNA VEZ hubo
+     un "Client Confirmation" -- una vez que pasaba, el cliente veia el
+     boton "Confirm" para siempre en cualquier solicitud futura,
+     aunque fuera una completamente nueva y distinta (por ejemplo, el
+     cliente pidiendo su propio cambio despues). Ahora se revisa
+     unicamente la solicitud abierta MAS RECIENTE. */
+  const REQUEST_OPENING_TYPES = ['Change Requested', 'Cancellation Requested', 'Reschedule Requested', 'Change Requested by Client'];
   function isWaitingForClientConfirmation(history) {
     for (let i = (history || []).length - 1; i >= 0; i--) {
       const h = history[i];
-      if (String(h.ChangeType || '') === 'Change Requested' &&
-          String(h.FieldChanged || '') === 'Client Confirmation') return true;
+      const type = String(h.ChangeType || '');
+      if (REQUEST_OPENING_TYPES.indexOf(type) !== -1) {
+        return type === 'Change Requested' && String(h.FieldChanged || '') === 'Client Confirmation';
+      }
     }
     return false;
   }

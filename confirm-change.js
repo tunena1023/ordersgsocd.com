@@ -79,12 +79,24 @@ exports.handler = async (event) => {
        confirmar (marcador 'Client Confirmation') y no una solicitud que
        el propio cliente inicio -- esas se manejan con Undo Request, no
        con Confirm. Mismo marcador que usa isWaitingForClientConfirmation
-       en tracking.html y el admin. */
+       en tracking.html y el admin.
+
+       BUG FIX: antes se buscaba en TODO el historial si ALGUNA VEZ hubo
+       un 'Client Confirmation' -- si la orden tuvo una hace tiempo (ya
+       resuelta) y ahora tiene una solicitud nueva y distinta, este
+       endpoint la hubiera aceptado igual, aplicando la confirmacion
+       equivocada. Ahora se revisa unicamente la solicitud abierta MAS
+       RECIENTE (mismo tipo de renglon que abre un Change/Cancellation
+       Requested), no cualquier renglon en cualquier punto del pasado. */
+    const REQUEST_OPENING_TYPES = ['Change Requested', 'Cancellation Requested', 'Reschedule Requested', 'Change Requested by Client'];
     let isOfficeSent = false;
     for (let i = history.length - 1; i >= 0; i--) {
       const h = history[i].fields;
-      if (String(h.ChangeType || '') === 'Change Requested' &&
-          String(h.FieldChanged || '') === 'Client Confirmation') { isOfficeSent = true; break; }
+      const type = String(h.ChangeType || '');
+      if (REQUEST_OPENING_TYPES.indexOf(type) !== -1) {
+        isOfficeSent = (type === 'Change Requested' && String(h.FieldChanged || '') === 'Client Confirmation');
+        break;
+      }
     }
     if (!isOfficeSent) {
       return jsonResponse(409, { error: 'This request was not sent for your confirmation.' });
