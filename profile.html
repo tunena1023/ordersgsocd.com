@@ -203,6 +203,7 @@
   <p class="list-sub">Your business information and saved buildings.</p>
 
   <div class="section-title">Business Info</div>
+  <p class="list-sub" style="margin-top:-8px">This is your <strong>primary address</strong> — used by default unless you select a different building when placing an order.</p>
   <div class="addr-card">
     <div class="addr-card-header" onclick="toggleBusinessInfo(this)">
       <div>
@@ -229,12 +230,12 @@
     </div>
   </div>
 
-  <div class="section-title">Buildings</div>
-  <p class="list-sub" style="margin-top:-8px">Save the buildings you work with so you don't have to retype the address each time. Unit number, bedrooms and bathrooms are entered per order, since they vary unit to unit within the same building.</p>
+  <div class="section-title">Secondary Addresses (Buildings)</div>
+  <p class="list-sub" style="margin-top:-8px">Other buildings you work with, besides your primary address above. Unit number, bedrooms and bathrooms are entered per order, since they vary unit to unit within the same building.</p>
 
   <div class="addr-top-actions">
     <button class="link-toggle" id="archived-toggle" onclick="toggleArchived()">Show archived</button>
-    <button class="btn-gold" onclick="openAddressDialog()">+ Add Building</button>
+    <button class="btn-gold" onclick="startAddBuilding()">+ Add Building</button>
   </div>
 
   <div id="addr-list"><p class="empty-note">Loading…</p></div>
@@ -269,43 +270,6 @@
   </div>
 </div>
 
-<div class="dialog-overlay" id="address-dialog">
-  <div class="dialog-panel">
-    <h3 id="address-dialog-title">Add Building</h3>
-    <div class="field">
-      <label>Label</label>
-      <input type="text" id="addr-label" placeholder="e.g. Building A">
-    </div>
-    <div class="field">
-      <label>Building #</label>
-      <input type="text" id="addr-building" placeholder="e.g. 5824">
-    </div>
-    <div class="field">
-      <label>Address</label>
-      <input type="text" id="addr-address">
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <label>Suite</label>
-        <input type="text" id="addr-suite">
-      </div>
-      <div class="field">
-        <label>City</label>
-        <input type="text" id="addr-city">
-      </div>
-    </div>
-    <div class="field">
-      <label>Zip</label>
-      <input type="text" id="addr-zip">
-    </div>
-    <div class="dialog-btns">
-      <button class="btn-ghost" onclick="closeAddressDialog()">Cancel</button>
-      <button class="btn-gold" id="address-save-btn" onclick="saveAddress()">Save Building</button>
-    </div>
-    <p class="dialog-error" id="address-error"></p>
-  </div>
-</div>
-
 <div class="toast" id="toast"></div>
 
 <script src="shared.js"></script>
@@ -316,7 +280,7 @@ if (client) {
   const $ = id => document.getElementById(id);
   let addresses = [];
   let showArchived = false;
-  let editingId = null; // null = creando; string = editando ese addressId
+  let addingNew = false;
 
   $('client-name').textContent = client.businessName || client.clientId;
   $('client-num-display').textContent = client.clientId;
@@ -421,37 +385,62 @@ if (client) {
   }
 
   function renderAddresses() {
-    if (!addresses.length) {
+    const showingNew = addingNew;
+    const items = showingNew ? [{ id: 'new', label: '', buildingNumber: '', address: '', suite: '', city: '', zip: '', archived: false, isNew: true }].concat(addresses) : addresses;
+
+    if (!items.length) {
       $('addr-list').innerHTML = '<p class="empty-note">' +
-        (showArchived ? 'No addresses yet.' : 'No saved addresses yet. Add one to reuse it on future orders.') +
+        (showArchived ? 'No addresses yet.' : 'No saved buildings yet. Add one to reuse it on future orders.') +
         '</p>';
       return;
     }
-    $('addr-list').innerHTML = addresses.map(addressCard).join('');
+    $('addr-list').innerHTML = items.map(addressCard).join('');
+
+    if (showingNew) {
+      const card = document.querySelector('.addr-card[data-addr="new"]');
+      if (card) {
+        card.querySelector('.addr-card-body').classList.add('open');
+        card.querySelector('.addr-card-header').classList.add('open');
+        const labelInput = $('bld-new-label');
+        if (labelInput) labelInput.focus();
+      }
+    }
   }
 
   function addressCard(a) {
     const addrParts = [a.address, a.suite, a.city, a.zip].filter(Boolean).join(', ');
+    const id = a.id;
     return '' +
-      '<div class="addr-card' + (a.archived ? ' archived' : '') + '" data-addr="' + esc(a.id) + '">' +
+      '<div class="addr-card' + (a.archived ? ' archived' : '') + '" data-addr="' + esc(id) + '">' +
         '<div class="addr-card-header" onclick="toggleAddrCard(this)">' +
           '<div>' +
-            '<div class="addr-label">' + esc(a.label || 'Untitled building') +
+            '<div class="addr-label">' + (a.isNew ? '+ New Building' : esc(a.label || 'Untitled building') +
               (a.buildingNumber ? ' <span style="color:var(--gray);font-weight:400">#' + esc(a.buildingNumber) + '</span>' : '') +
-              (a.archived ? '<span class="addr-badge">Archived</span>' : '') +
+              (a.archived ? '<span class="addr-badge">Archived</span>' : '')) +
             '</div>' +
-            (addrParts ? '<div class="addr-line">' + esc(addrParts) + '</div>' : '') +
+            (!a.isNew && addrParts ? '<div class="addr-line">' + esc(addrParts) + '</div>' : '') +
           '</div>' +
           '<span class="addr-chevron">▾</span>' +
         '</div>' +
         '<div class="addr-card-body">' +
-          '<div class="addr-actions">' +
-            (a.archived
-              ? '<button class="btn-small" onclick="event.stopPropagation(); unarchiveAddress(\'' + esc(a.id) + '\')">Unarchive</button>'
-              : '<button class="btn-small" onclick="event.stopPropagation(); editAddress(\'' + esc(a.id) + '\')">Edit</button>' +
-                '<button class="btn-small danger" onclick="event.stopPropagation(); archiveAddress(\'' + esc(a.id) + '\')">Archive</button>'
+          '<div class="profile-grid" style="margin-top:16px">' +
+            '<div class="field"><label>Label</label><input type="text" id="bld-' + esc(id) + '-label" value="' + esc(a.label) + '" placeholder="e.g. Building A"></div>' +
+            '<div class="field"><label>Building #</label><input type="text" id="bld-' + esc(id) + '-building" value="' + esc(a.buildingNumber) + '" placeholder="e.g. 5824"></div>' +
+            '<div class="field" style="grid-column:1/-1"><label>Address</label><input type="text" id="bld-' + esc(id) + '-address" value="' + esc(a.address) + '"></div>' +
+            '<div class="field"><label>Suite</label><input type="text" id="bld-' + esc(id) + '-suite" value="' + esc(a.suite) + '"></div>' +
+            '<div class="field"><label>City</label><input type="text" id="bld-' + esc(id) + '-city" value="' + esc(a.city) + '"></div>' +
+            '<div class="field"><label>Zip</label><input type="text" id="bld-' + esc(id) + '-zip" value="' + esc(a.zip) + '"></div>' +
+          '</div>' +
+          '<div class="dialog-btns" style="max-width:340px;margin-bottom:8px">' +
+            '<button class="btn-gold" onclick="event.stopPropagation(); saveBuilding(\'' + esc(id) + '\')">' + (a.isNew ? 'Save Building' : 'Save Changes') + '</button>' +
+            (a.isNew
+              ? '<button class="btn-ghost" onclick="event.stopPropagation(); cancelAddBuilding()">Cancel</button>'
+              : (a.archived
+                  ? '<button class="btn-ghost" onclick="event.stopPropagation(); unarchiveAddress(\'' + esc(id) + '\')">Unarchive</button>'
+                  : '<button class="btn-ghost" onclick="event.stopPropagation(); archiveAddress(\'' + esc(id) + '\')">Archive</button>')
             ) +
           '</div>' +
+          '<p class="dialog-error" id="bld-' + esc(id) + '-error"></p>' +
         '</div>' +
       '</div>';
   }
@@ -466,68 +455,54 @@ if (client) {
     if (willOpen) {
       body.classList.add('open');
       headerEl.classList.add('open');
+    } else if (card.dataset.addr === 'new') {
+      addingNew = false;
+      renderAddresses();
     }
   }
 
-  function openAddressDialog() {
-    editingId = null;
-    $('address-dialog-title').textContent = 'Add Building';
-    ['label','building','address','suite','city','zip'].forEach(f => { $('addr-' + f).value = ''; });
-    $('address-error').textContent = '';
-    $('address-dialog').classList.add('open');
+  function startAddBuilding() {
+    addingNew = true;
+    renderAddresses();
   }
 
-  function editAddress(id) {
-    const a = addresses.find(x => x.id === id);
-    if (!a) return;
-    editingId = id;
-    $('address-dialog-title').textContent = 'Edit Building';
-    $('addr-label').value    = a.label || '';
-    $('addr-building').value = a.buildingNumber || '';
-    $('addr-address').value  = a.address || '';
-    $('addr-suite').value    = a.suite || '';
-    $('addr-city').value     = a.city || '';
-    $('addr-zip').value      = a.zip || '';
-    $('address-error').textContent = '';
-    $('address-dialog').classList.add('open');
+  function cancelAddBuilding() {
+    addingNew = false;
+    renderAddresses();
   }
 
-  function closeAddressDialog() {
-    $('address-dialog').classList.remove('open');
-  }
-
-  async function saveAddress() {
-    const label = $('addr-label').value.trim();
-    if (!label) { $('address-error').textContent = 'Please enter a label for this building.'; return; }
+  async function saveBuilding(id) {
+    const $f = f => $('bld-' + id + '-' + f);
+    const label = $f('label').value.trim();
+    const errEl = $('bld-' + id + '-error');
+    if (!label) { errEl.textContent = 'Please enter a label for this building.'; return; }
 
     const body = {
       clientId:       client.clientId,
       label:          label,
-      buildingNumber: $('addr-building').value.trim(),
-      address:        $('addr-address').value.trim(),
-      suite:          $('addr-suite').value.trim(),
-      city:           $('addr-city').value.trim(),
-      zip:            $('addr-zip').value.trim()
+      buildingNumber: $f('building').value.trim(),
+      address:        $f('address').value.trim(),
+      suite:          $f('suite').value.trim(),
+      city:           $f('city').value.trim(),
+      zip:            $f('zip').value.trim()
     };
-    if (editingId) body.addressId = editingId;
+    const isNew = id === 'new';
+    if (!isNew) body.addressId = id;
 
-    $('address-save-btn').disabled = true;
     try {
       await GS.api('/save-client-address', { method: 'POST', body });
-      closeAddressDialog();
-      showToast(editingId ? 'Building updated.' : 'Building saved.');
+      addingNew = false;
+      showToast(isNew ? 'Building saved.' : 'Building updated.');
       await loadAddresses();
     } catch (e) {
-      $('address-error').textContent = e.message;
-    } finally {
-      $('address-save-btn').disabled = false;
+      errEl.textContent = e.message;
     }
   }
 
   async function archiveAddress(id) {
     try {
       await GS.api('/save-client-address', { method: 'POST', body: { clientId: client.clientId, addressId: id, archived: true } });
-      showToast('Address archived.');
+      showToast('Building archived.');
       await loadAddresses();
     } catch (e) {
       showToast('Error: ' + e.message);
@@ -537,7 +512,7 @@ if (client) {
   async function unarchiveAddress(id) {
     try {
       await GS.api('/save-client-address', { method: 'POST', body: { clientId: client.clientId, addressId: id, archived: false } });
-      showToast('Address restored.');
+      showToast('Building restored.');
       await loadAddresses();
     } catch (e) {
       showToast('Error: ' + e.message);
@@ -563,10 +538,9 @@ if (client) {
   window.saveProfile = saveProfile;
   window.toggleBusinessInfo = toggleBusinessInfo;
   window.toggleAddrCard = toggleAddrCard;
-  window.openAddressDialog = openAddressDialog;
-  window.closeAddressDialog = closeAddressDialog;
-  window.saveAddress = saveAddress;
-  window.editAddress = editAddress;
+  window.startAddBuilding = startAddBuilding;
+  window.cancelAddBuilding = cancelAddBuilding;
+  window.saveBuilding = saveBuilding;
   window.archiveAddress = archiveAddress;
   window.unarchiveAddress = unarchiveAddress;
   window.toggleArchived = toggleArchived;
