@@ -85,16 +85,22 @@
   .btn-small:hover { border-color: var(--gold); }
   .btn-small.danger:hover { border-color: #B33A3A; color: #B33A3A; }
 
-  .addr-card {
-    border: 1px solid var(--border); padding: 18px 20px; margin-bottom: 12px;
-    display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
-    background: var(--white);
+  .addr-card { border: 1px solid var(--border); margin-bottom: 12px; background: var(--white); }
+  .addr-card-header {
+    padding: 16px 20px; display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; transition: background .15s;
   }
-  .addr-card.archived { opacity: .55; }
-  .addr-label { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
-  .addr-line { font-size: 12px; color: var(--gray); line-height: 1.7; }
+  .addr-card-header:hover { background: var(--off); }
+  .addr-card.archived .addr-card-header { opacity: .55; }
+  .addr-card-body { padding: 0 20px 20px; display: none; border-top: 1px solid var(--border); padding-top: 16px; }
+  .addr-card-body.open { display: block; animation: bodyIn .3s ease both; }
+  @keyframes bodyIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+  .addr-label { font-size: 14px; font-weight: 700; }
+  .addr-line { font-size: 12px; color: var(--gray); line-height: 1.7; margin-top: 3px; }
   .addr-badge { display: inline-block; font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--gray); background: var(--off); padding: 2px 8px; margin-left: 8px; font-weight: 700; vertical-align: middle; }
-  .addr-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .addr-chevron { font-size: 11px; color: var(--gray); transition: transform .2s; flex-shrink: 0; margin-left: 12px; }
+  .addr-card-header.open .addr-chevron { transform: rotate(180deg); }
+  .addr-actions { display: flex; gap: 8px; }
   .empty-note { font-size: 12px; color: #bbb; font-style: italic; padding: 12px 0; }
 
   .dialog-overlay {
@@ -161,7 +167,7 @@
     .portal-header { padding: 14px 20px; }
     .tabs { padding: 0 20px; }
     .addr-wrap { padding: 28px 20px; }
-    .addr-card { flex-direction: column; }
+    .addr-card-header { flex-wrap: wrap; gap: 8px; }
     footer { flex-direction: column; gap: 8px; padding: 20px; }
     .toast { left: 20px; right: 20px; bottom: 20px; max-width: none; }
   }
@@ -396,22 +402,40 @@ if (client) {
   function addressCard(a) {
     const addrParts = [a.address, a.suite, a.city, a.zip].filter(Boolean).join(', ');
     return '' +
-      '<div class="addr-card' + (a.archived ? ' archived' : '') + '">' +
-        '<div>' +
-          '<div class="addr-label">' + esc(a.label || 'Untitled building') +
-            (a.buildingNumber ? ' <span style="color:var(--gray);font-weight:400">#' + esc(a.buildingNumber) + '</span>' : '') +
-            (a.archived ? '<span class="addr-badge">Archived</span>' : '') +
+      '<div class="addr-card' + (a.archived ? ' archived' : '') + '" data-addr="' + esc(a.id) + '">' +
+        '<div class="addr-card-header" onclick="toggleAddrCard(this)">' +
+          '<div>' +
+            '<div class="addr-label">' + esc(a.label || 'Untitled building') +
+              (a.buildingNumber ? ' <span style="color:var(--gray);font-weight:400">#' + esc(a.buildingNumber) + '</span>' : '') +
+              (a.archived ? '<span class="addr-badge">Archived</span>' : '') +
+            '</div>' +
+            (addrParts ? '<div class="addr-line">' + esc(addrParts) + '</div>' : '') +
           '</div>' +
-          (addrParts ? '<div class="addr-line">' + esc(addrParts) + '</div>' : '') +
+          '<span class="addr-chevron">▾</span>' +
         '</div>' +
-        '<div class="addr-actions">' +
-          (a.archived
-            ? '<button class="btn-small" onclick="unarchiveAddress(\'' + esc(a.id) + '\')">Unarchive</button>'
-            : '<button class="btn-small" onclick="editAddress(\'' + esc(a.id) + '\')">Edit</button>' +
-              '<button class="btn-small danger" onclick="archiveAddress(\'' + esc(a.id) + '\')">Archive</button>'
-          ) +
+        '<div class="addr-card-body">' +
+          '<div class="addr-actions">' +
+            (a.archived
+              ? '<button class="btn-small" onclick="event.stopPropagation(); unarchiveAddress(\'' + esc(a.id) + '\')">Unarchive</button>'
+              : '<button class="btn-small" onclick="event.stopPropagation(); editAddress(\'' + esc(a.id) + '\')">Edit</button>' +
+                '<button class="btn-small danger" onclick="event.stopPropagation(); archiveAddress(\'' + esc(a.id) + '\')">Archive</button>'
+            ) +
+          '</div>' +
         '</div>' +
       '</div>';
+  }
+
+  function toggleAddrCard(headerEl) {
+    const card = headerEl.closest('.addr-card');
+    const body = card.querySelector('.addr-card-body');
+    const willOpen = !body.classList.contains('open');
+    /* Cierra los demas antes de abrir este, uno abierto a la vez */
+    document.querySelectorAll('.addr-card-body.open').forEach(b => b.classList.remove('open'));
+    document.querySelectorAll('.addr-card-header.open').forEach(h => h.classList.remove('open'));
+    if (willOpen) {
+      body.classList.add('open');
+      headerEl.classList.add('open');
+    }
   }
 
   function openAddressDialog() {
@@ -506,6 +530,7 @@ if (client) {
   function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
 
   window.saveProfile = saveProfile;
+  window.toggleAddrCard = toggleAddrCard;
   window.openAddressDialog = openAddressDialog;
   window.closeAddressDialog = closeAddressDialog;
   window.saveAddress = saveAddress;
