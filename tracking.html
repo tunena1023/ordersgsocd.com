@@ -583,14 +583,24 @@ if (client) {
         if (!byCat[cat]) byCat[cat] = [];
         byCat[cat].push(s);
       });
-      const svcHtml = Object.entries(byCat).map(([cat, list]) =>
-        `<div class="svc-line"><b>${esc(cat)}:</b> ${list.map(s => {
+      const svcDetailId = 'svc-detail-' + String(orderId).replace(/[^a-z0-9]/gi, '_');
+      const svcAccordionHtml = Object.entries(byCat).map(([cat, list]) =>
+        '<div style="font-size:12px;margin:5px 0;line-height:1.5"><b>' + esc(cat) + ':</b> ' +
+        list.map(s => {
           const nc = (s.NotCompleted === true || String(s.NotCompleted) === 'true');
           return esc(s.ServiceName) + ' — ' + esc(s.SubOption) + ' (Level ' + levelOf(s.SubOption) + ')' +
             (nc ? ' <b style="color:#B06A2A">· not completed' +
                   (s.NotCompletedReason ? ': ' + esc(s.NotCompletedReason) : '') + '</b>' : '');
-        }).join(' · ')}</div>`
-      ).join('') || '<p class="empty-note">No services recorded.</p>';
+        }).join(' · ') + '</div>'
+      ).join('') || '<div style="font-size:12px">No services recorded.</div>';
+      const svcHeaderHtml =
+        '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;cursor:pointer" ' +
+        'onclick="var d=document.getElementById(\'' + svcDetailId + '\');d.style.display=d.style.display===\'none\'?\'block\':\'none\'">' +
+        '<p class="detail-label" style="margin:0">Services Requested</p>' +
+        '<span style="font-size:10px;color:var(--gold-dk);white-space:nowrap">&#9660; details</span>' +
+        '</div>' +
+        '<div id="' + svcDetailId + '" style="display:none;margin-top:8px;padding:10px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
+        svcAccordionHtml + '</div>';
 
       const noticeHtml = delayNoticeHtml(o);
 
@@ -705,17 +715,16 @@ if (client) {
       body.innerHTML = `
         <div class="detail-grid">
           <div>
-            <p class="detail-label">Services Requested</p>
-            ${svcHtml}
-            ${dirtLine}
-            <p class="meta-line" style="margin-top:10px">
+            <p class="meta-line">
               Entry: ${fmtDateTime(o.EntryDate)}<br>
               Due: ${fmtDate(o.DueDate)}<br>
               Service window: ${esc(o.ServiceWindow || 'to be confirmed')}<br>
               Building/Unit: ${esc(o.BuildingNumber || '—')} / ${esc(o.UnitNumber || '—')} · Bed/Bath: ${esc(o.Bedrooms || '—')} / ${esc(o.Bathrooms || '—')}
             </p>
+            ${dirtLine}
             ${o.Notes ? '<p class="meta-line" style="margin-top:8px">Notes: ' + esc(o.Notes) + '</p>' : ''}
             ${noticeHtml}
+            <div style="margin-top:16px">${svcHeaderHtml}</div>
           </div>
           <div>
             <p class="detail-label">History</p>
