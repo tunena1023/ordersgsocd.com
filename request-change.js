@@ -92,10 +92,31 @@ exports.handler = async (event) => {
         error: 'This order is ' + oldStatus.toLowerCase() + '. Please call our office.'
       });
     }
-       if (oldStatus === 'Change Requested'
+    if (oldStatus === 'Change Requested'
         || oldStatus === 'Cancellation Requested') {
+      /* El mensaje generico "espera a nuestra oficina" es enganoso si
+         en realidad la solicitud pendiente espera que EL CLIENTE la
+         confirme (boton "Request Confirmation" que mando la oficina) --
+         el cliente se queda esperando indefinidamente sin saber que la
+         pelota esta en su cancha. Mismo marcador que usa
+         isWaitingForClientConfirmation en tracking.html y confirm-change.js. */
+      const REQUEST_OPENING_TYPES = ['Change Requested', 'Cancellation Requested', 'Reschedule Requested', 'Change Requested by Client'];
+      const sortedHist = histRows
+        .filter(it => it.fields)
+        .sort((a, b) => String(a.createdDateTime || '').localeCompare(String(b.createdDateTime || '')));
+      let waitingForClient = false;
+      for (let i = sortedHist.length - 1; i >= 0; i--) {
+        const h = sortedHist[i].fields;
+        const type = String(h.ChangeType || '');
+        if (REQUEST_OPENING_TYPES.indexOf(type) !== -1) {
+          waitingForClient = (type === 'Change Requested' && String(h.FieldChanged || '') === 'Client Confirmation');
+          break;
+        }
+      }
       return jsonResponse(409, {
-        error: 'There is already a request waiting for our office on this order.'
+        error: waitingForClient
+          ? 'There is a change waiting for your confirmation on this order. Please confirm or dismiss it first.'
+          : 'There is already a request waiting for our office on this order.'
       });
     }
 
