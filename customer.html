@@ -1482,6 +1482,14 @@ if (client) {
 
   function showConfirmation(orderId, order) {
     $('order-form-steps').style.display = 'none';
+    /* La barra lateral derecha (Order Summary + Your Account) es parte
+       del formulario multi-paso; una vez confirmada la orden, el propio
+       panel de confirmacion ya trae su propio "Order Summary" (mas
+       completo, con fechas y direccion). Sin esto, quedaban los dos
+       resumenes visibles a la vez -- uno a la izquierda (confirmacion)
+       y el viejo sin ocultar a la derecha (sidebar). */
+    const sidebar = document.querySelector('.order-sidebar');
+    if (sidebar) sidebar.style.display = 'none';
     $('confirmed-order-num').textContent = orderId;
 
     const lines = [];
