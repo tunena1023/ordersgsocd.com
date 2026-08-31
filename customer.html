@@ -289,6 +289,7 @@
   .accordion-cat.open .acc-arrow { color: var(--gold-dk); transform: rotate(180deg); }
   .acc-head-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
   .acc-cat-name { font-weight: 600; font-size: 14px; letter-spacing: .02em; }
+  .acc-pin { font-size: 11px; margin-left: 2px; }
   /* El circulo dorado del conteo: oculto salvo que haya algo seleccionado
      en esa categoria (nunca aparece vacio como un punto suelto). */
   .cat-badge-wrap { position: relative; display: inline-flex; }
@@ -625,6 +626,7 @@ if (client) {
   let currentDiv = 'Janitorial';
   let activeCat = null;
   let openCat = null;
+  let pinnedCats = new Set();
   let catOrder = [];
   let selected = {};
   let locked = {};
@@ -753,7 +755,7 @@ if (client) {
     }
     currentDiv = div;
     selected = {}; locked = {}; escalated = {}; dirtLevel = '';
-    activeCat = null; openCat = null; catOrder = [];
+    activeCat = null; openCat = null; pinnedCats = new Set(); catOrder = [];
     draftOrderId = null; draftPendingData = null;
     $('summary-division').textContent = el ? el.querySelector('.div-name').textContent : div;
     renderServices(div);
@@ -801,6 +803,7 @@ if (client) {
             '<span class="cat-badge" data-cat="' + esc(cat) + '"></span>' +
             '<div class="cat-badge-tip" data-tip-for="' + esc(cat) + '"></div>' +
           '</span>' +
+          '<span class="acc-pin"></span>' +
         '</span>' +
         '<span class="acc-arrow">▼</span>';
       acc.appendChild(header);
@@ -837,19 +840,46 @@ if (client) {
       body.appendChild(list);
       acc.appendChild(body);
 
-      /* Toggle: la clase .open en el contenedor maneja el resaltado del
-         encabezado y la rotacion de la flecha por CSS; aqui solo se
-         encarga de mostrar/ocultar el cuerpo y cargar los servicios. */
+      /* Toggle: un clic abre esta categoria y cierra la que estuviera
+         abierta antes (salvo que este fijada con doble clic). La
+         clase .open en el contenedor maneja el resaltado del
+         encabezado y la rotacion de la flecha por CSS. */
+      const pinEl = header.querySelector('.acc-pin');
       header.addEventListener('click', () => {
+        if (pinnedCats.has(cat)) return; // fijada: solo el doble clic la mueve
         const isOpen = body.style.display !== 'none';
-        body.style.display = isOpen ? 'none' : 'block';
-        acc.classList.toggle('open', !isOpen);
-        if (!isOpen) {
+        if (isOpen) {
+          body.style.display = 'none';
+          acc.classList.remove('open');
+          if (openCat === cat) openCat = null;
+          return;
+        }
+        document.querySelectorAll('.accordion-cat').forEach(other => {
+          if (other === acc) return;
+          if (pinnedCats.has(other.dataset.cat)) return;
+          const otherBody = other.querySelector('.accordion-body');
+          if (otherBody) otherBody.style.display = 'none';
+          other.classList.remove('open');
+        });
+        body.style.display = 'block';
+        acc.classList.add('open');
+        activeCat = cat;
+        openCat = cat;
+        populateServices(cat, false);
+      });
+
+      header.addEventListener('dblclick', () => {
+        if (pinnedCats.has(cat)) {
+          pinnedCats.delete(cat);
+          pinEl.innerHTML = '';
+        } else {
+          pinnedCats.add(cat);
+          body.style.display = 'block';
+          acc.classList.add('open');
           activeCat = cat;
           openCat = cat;
           populateServices(cat, false);
-        } else {
-          openCat = null;
+          pinEl.innerHTML = '&#128274;';
         }
       });
 

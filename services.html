@@ -184,6 +184,7 @@
     display: inline-flex; align-items: center; justify-content: center;
   }
   .acc-badge.zero { background: rgba(17,17,17,.06); color: var(--gray); }
+  .acc-pin { font-size: 11px; }
   .acc-arrow { font-size: 11px; color: var(--gray); transition: transform .3s; }
   .acc-item.open .acc-arrow { transform: rotate(180deg); }
   .acc-body { display: none; padding: 4px 22px 20px; border-top: 1px solid var(--border); }
@@ -472,6 +473,7 @@ const IS_DEMO = (typeof DEMO !== 'undefined' && DEMO.active);
 let serviceData = null;
 let currentDiv = null;
 let selected = {};
+let pinnedCats = new Set();
 let catOrder = [];
 const imgURLCache = {};
 
@@ -671,6 +673,7 @@ function renderCarousel() {
 function selectDivision(divKey, instant) {
   currentDiv = divKey;
   selected = {};
+  pinnedCats = new Set();
   updateCountBadge();
   layoutCarousel(instant);
 
@@ -715,7 +718,7 @@ function renderAccordion() {
     head.className = 'acc-head';
     head.innerHTML =
       '<span class="acc-title">' + esc(cat) + '</span>' +
-      '<span class="acc-meta"><span class="acc-badge zero" data-badge="' + esc(cat) + '">0</span><span class="acc-arrow">▼</span></span>';
+      '<span class="acc-meta"><span class="acc-badge zero" data-badge="' + esc(cat) + '">0</span><span class="acc-pin"></span><span class="acc-arrow">▼</span></span>';
     item.appendChild(head);
 
     const body = document.createElement('div');
@@ -794,7 +797,28 @@ function markChips(row, cat, svcName) {
 
 $('accordion-container').addEventListener('click', (e) => {
   const head = e.target.closest('.acc-head');
-  if (head) { head.parentElement.classList.toggle('open'); return; }
+  if (head) {
+    const item = head.parentElement;
+    const cat = item.dataset.cat;
+    if (pinnedCats.has(cat)) return; // fijada: solo el doble clic la mueve
+    const isOpen = item.classList.contains('open');
+    if (isOpen) {
+      item.classList.remove('open');
+      return;
+    }
+    /* Un solo clic abre esta categoria y cierra las demas que no
+       esten fijadas -- antes se podian acumular varias abiertas a
+       la vez, o el tab Approvals-equivalente aqui (todas las
+       categorias) se sentia desordenado con todo abierto de un
+       jalon. */
+    document.querySelectorAll('.acc-item').forEach(other => {
+      if (other === item) return;
+      if (pinnedCats.has(other.dataset.cat)) return;
+      other.classList.remove('open');
+    });
+    item.classList.add('open');
+    return;
+  }
 
   const chip = e.target.closest('.chip');
   if (!chip) return;
@@ -811,6 +835,22 @@ $('accordion-container').addEventListener('click', (e) => {
   refreshServiceImage(cat, svc);
   updateAccBadges();
   updateCountBadge();
+});
+
+$('accordion-container').addEventListener('dblclick', (e) => {
+  const head = e.target.closest('.acc-head');
+  if (!head) return;
+  const item = head.parentElement;
+  const cat = item.dataset.cat;
+  const pinEl = head.querySelector('.acc-pin');
+  if (pinnedCats.has(cat)) {
+    pinnedCats.delete(cat);
+    if (pinEl) pinEl.innerHTML = '';
+  } else {
+    pinnedCats.add(cat);
+    item.classList.add('open');
+    if (pinEl) pinEl.innerHTML = '&#128274;';
+  }
 });
 
 function updateAccBadges() {
