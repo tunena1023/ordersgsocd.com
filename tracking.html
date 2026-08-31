@@ -58,6 +58,7 @@
   .order-card-header { padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); cursor: pointer; transition: background .15s; }
   .order-card-header:hover { background: var(--off); }
   .order-num { font-size: 12px; font-weight: 700; letter-spacing: .06em; }
+  .order-pin { font-size: 11px; }
   .order-date { font-size: 11px; color: var(--gray); margin-top: 2px; }
   .order-status { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; padding: 4px 12px; font-weight: 600; white-space: nowrap; }
   .status-pending    { background: #FFF8E6; color: #8C6F2A; }
@@ -352,6 +353,30 @@ if (client) {
 
   const $ = id => document.getElementById(id);
   let ordersCache = [];
+  /* Cache del detalle ya cargado de cada orden, para que reabrirla sea
+     instantaneo sin volver a pedirselo a la API. Se invalida entero
+     cada vez que se recarga la lista (loadOrders). */
+  let orderDetailCache = {};
+
+  /* Estado de "cual tarjeta esta abierta/fijada", uno por seccion
+     (processing agrupa drafts + active orders; history aparte) --
+     igual que en admin.html. */
+  function cardOpenState(context) {
+    const store = window.__cardOpenState || (window.__cardOpenState = {});
+    return store[context] || (store[context] = { open: null, pinned: {} });
+  }
+
+  function closeOtherCards(context, exceptOrderId) {
+    const st = cardOpenState(context);
+    const listEl = $(context === 'processing' ? 'processing-container' : 'history-container');
+    if (!listEl) return;
+    listEl.querySelectorAll('.order-card').forEach(card => {
+      const cid = card.dataset.order;
+      if (cid === exceptOrderId || st.pinned[cid]) return;
+      const body = card.querySelector('.order-card-body');
+      if (body) body.classList.remove('open');
+    });
+  }
 
   $('client-name').textContent = client.businessName || client.clientId;
   $('client-num-display').textContent = client.clientId;
@@ -384,6 +409,7 @@ if (client) {
     try {
       const data = await GS.api('/get-orders', { method: 'POST', body: { clientId: client.clientId } });
       ordersCache = data.orders || [];
+      orderDetailCache = {};
       renderProcessing();
       renderHistory();
     } catch (e) {
@@ -509,10 +535,10 @@ if (client) {
 
   function renderDraftCard(o) {
     return `
-      <div class="order-card">
-        <div class="order-card-header" onclick="toggleOrder(this)">
+      <div class="order-card" data-order="${escAttr(o.OrderID || '')}">
+        <div class="order-card-header" onclick="toggleOrder(this,'${escAttr(o.OrderID || '')}')" ondblclick="pinOrder(this,'${escAttr(o.OrderID || '')}','processing')">
           <div>
-            <div class="order-num">Draft · ${esc(o.OrderID || '')}</div>
+            <div class="order-num">Draft · ${esc(o.OrderID || '')}<span class="order-pin"></span></div>
             <div class="order-date">${esc(o.Division || '')} · saved ${fmtDate(o.createdDateTime)}</div>
           </div>
           <div style="display:flex;align-items:center;gap:16px">
@@ -537,9 +563,9 @@ if (client) {
     const status = o.Status || 'Received';
     return `
       <div class="order-card" data-order="${escAttr(o.OrderID)}">
-        <div class="order-card-header" onclick="expandOrder(this, '${escAttr(o.OrderID)}')">
+        <div class="order-card-header" onclick="expandOrder(this, '${escAttr(o.OrderID)}')" ondblclick="pinOrder(this,'${escAttr(o.OrderID)}','processing')">
           <div>
-            <div class="order-num">Order #${esc(o.OrderID || '')}</div>
+            <div class="order-num">Order #${esc(o.OrderID || '')}<span class="order-pin"></span></div>
             <div class="order-date">${esc(o.Division || '')} · submitted ${fmtDate(o.createdDateTime)}</div>
           </div>
           <div style="display:flex;align-items:center;gap:16px">
@@ -554,9 +580,9 @@ if (client) {
   function renderCompletedCard(o) {
     return `
       <div class="order-card" data-order="${escAttr(o.OrderID)}">
-        <div class="order-card-header" onclick="expandOrder(this, '${escAttr(o.OrderID)}')">
+        <div class="order-card-header" onclick="expandOrder(this, '${escAttr(o.OrderID)}')" ondblclick="pinOrder(this,'${escAttr(o.OrderID)}','history')">
           <div>
-            <div class="order-num">Order #${esc(o.OrderID || '')}</div>
+            <div class="order-num">Order #${esc(o.OrderID || '')}<span class="order-pin"></span></div>
             <div class="order-date">${esc(o.Division || '')} · submitted ${fmtDate(o.createdDateTime)}</div>
           </div>
           <div style="display:flex;align-items:center;gap:16px">
@@ -570,8 +596,20 @@ if (client) {
 
   async function expandOrder(headerEl, orderId) {
     const body = headerEl.nextElementSibling;
-    if (body.classList.contains('open')) { body.classList.remove('open'); return; }
+    const context = body.closest('#processing-container') ? 'processing' : 'history';
+    const st = cardOpenState(context);
+    if (st.pinned[orderId]) return; // fijada: solo el doble clic la mueve
+
+    if (body.classList.contains('open')) { body.classList.remove('open'); if (st.open === orderId) st.open = null; return; }
+    closeOtherCards(context, orderId);
     body.classList.add('open');
+    st.open = orderId;
+
+    if (orderDetailCache[orderId]) {
+      body.innerHTML = orderDetailCache[orderId].html;
+      bindActions(body, orderDetailCache[orderId].order);
+      return;
+    }
 
     try {
            const data = await GS.api('/get-order-detail', { method: 'POST', body: { orderId: orderId, clientId: client.clientId } });
@@ -753,6 +791,7 @@ if (client) {
         <div class="order-actions">${actionButtonsFor(o, history, data.document || null)}</div>`;
 
       bindActions(body, o);
+      orderDetailCache[orderId] = { html: body.innerHTML, order: o };
     } catch (e) {
       body.innerHTML = '<p class="empty-note">Could not load details: ' + esc(e.message) + '</p>';
     }
@@ -1162,7 +1201,45 @@ return html;
     return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   }
 
-  window.toggleOrder = function (el) { el.nextElementSibling.classList.toggle('open'); };
+  window.toggleOrder = function (el, orderId) {
+    const body = el.nextElementSibling;
+    const context = body.closest('#processing-container') ? 'processing' : 'history';
+    const st = cardOpenState(context);
+    if (st.pinned[orderId]) return; // fijada: solo el doble clic la mueve
+    const isOpen = body.classList.contains('open');
+    if (isOpen) {
+      body.classList.remove('open');
+      if (st.open === orderId) st.open = null;
+      return;
+    }
+    closeOtherCards(context, orderId);
+    body.classList.add('open');
+    st.open = orderId;
+  };
+
+  /* Doble clic fija una tarjeta abierta (draft, active order, o
+     completada) con un candadito, sin importar la seccion. */
+  window.pinOrder = function (headerEl, orderId, context) {
+    const body = headerEl.nextElementSibling;
+    const st = cardOpenState(context);
+    const pinEl = headerEl.querySelector('.order-pin');
+    if (st.pinned[orderId]) {
+      delete st.pinned[orderId];
+      if (pinEl) pinEl.innerHTML = '';
+      return;
+    }
+    st.pinned[orderId] = true;
+    if (pinEl) pinEl.innerHTML = ' &#128274;';
+    if (!body.classList.contains('open')) {
+      const onclickAttr = headerEl.getAttribute('onclick') || '';
+      if (onclickAttr.indexOf('expandOrder') === 0) {
+        expandOrder(headerEl, orderId);
+      } else {
+        body.classList.add('open');
+      }
+    }
+    st.open = orderId;
+  };
   window.expandOrder = expandOrder;
   window.continueDraft = continueDraft;
   window.openDeleteDraft = openDeleteDraft;
