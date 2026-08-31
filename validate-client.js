@@ -46,7 +46,7 @@ exports.handler = async (event) => {
       valid: true,
       clientId: f.ClientID,
       businessName: f.Title,              // el nombre del negocio vive en Title
-      contactPerson: f.BusinessName || '',
+      contactPerson: f.ClientName || '',  // FIX confirmado con datos crudos de Graph (temp-inspect-client.js): la columna 'BusinessName' no existe de verdad, el dato real vive en ClientName
       address: f.Address || '',
       suite: f.Suite || '',
       city: f.City || '',
