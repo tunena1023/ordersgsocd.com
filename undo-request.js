@@ -44,9 +44,7 @@ exports.handler = async (event) => {
     const f = orderItem.fields;
     const currentStatus = f.Status || '';
 
-    /* 'Updated' es el estatus con el que ahora queda una solicitud de
-       cambio. 'Change Requested' se conserva por las ordenes viejas. */
-    const OPEN_REQUEST = ['Updated', 'Change Requested', 'Cancellation Requested'];
+    const OPEN_REQUEST = ['Change Requested', 'Cancellation Requested'];
     if (OPEN_REQUEST.indexOf(currentStatus) === -1) {
       return jsonResponse(409, { error: 'There is no pending request to undo for this order.' });
     }

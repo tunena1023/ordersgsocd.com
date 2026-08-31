@@ -465,7 +465,7 @@ if (client) {
 
   /* Un estatus con solicitud abierta: el cliente solo puede deshacerla */
   function hasOpenRequest(status) {
-    return status === 'Updated' || status === 'Change Requested' || status === 'Cancellation Requested';
+    return status === 'Change Requested' || status === 'Cancellation Requested';
   }
 
   /* Un Change Requested puede venir de dos lados: el cliente pidio un

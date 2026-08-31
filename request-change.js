@@ -103,7 +103,7 @@ exports.handler = async (event) => {
         const newStatus = isCancel ? 'Cancellation Requested' : 'Change Requested';
 
     /* Numero de revision: cuenta las solicitudes anteriores del cliente */
-    const REQUEST_TYPES = ['Change Requested', 'Cancellation Requested', 'Updated'];
+    const REQUEST_TYPES = ['Change Requested', 'Cancellation Requested'];
     const revision = histRows.filter(it =>
       REQUEST_TYPES.indexOf(it.fields?.ChangeType || '') !== -1
     ).length + 1;
