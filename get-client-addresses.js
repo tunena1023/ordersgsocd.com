@@ -1,10 +1,15 @@
 /* ============================================================
-   get-client-addresses.js — libreta de direcciones guardadas
-   de un cliente ("My Addresses").
+   get-client-addresses.js — libreta de EDIFICIOS guardados
+   de un cliente ("Profile" > Buildings).
 
-   Por default regresa solo las direcciones activas (Archived=No).
-   includeArchived=true las regresa todas (lo usa admin.html para
-   poder desarchivar una por error, "sacarla de ahi si algo pasa").
+   Solo datos del edificio (numero, calle, suite, ciudad, zip).
+   Unit#/Bedrooms/Bathrooms NO van aqui -- varian por unidad dentro
+   del mismo edificio, se capturan al hacer la orden, no en la
+   libreta.
+
+   Por default regresa solo los edificios activos (Archived=No).
+   includeArchived=true los regresa todos (para poder desarchivar
+   uno por error, "sacarlo de ahi si algo pasa").
 ============================================================ */
 
 const { CLIENT_ADDRESSES_LIST, graphFetch, siteListPath, jsonResponse } = require('./lib/graph');
@@ -45,13 +50,10 @@ exports.handler = async (event) => {
           id:             it.id,
           label:          f.Label          || '',
           buildingNumber: f.BuildingNumber || '',
-          unitNumber:     f.UnitNumber     || '',
           address:        f.Address        || '',
           suite:          f.Suite          || '',
           city:           f.City           || '',
           zip:            f.Zip            || '',
-          bedrooms:       f.Bedrooms       || '',
-          bathrooms:      f.Bathrooms      || '',
           archived:       truthy(f.Archived)
         };
       })

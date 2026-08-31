@@ -296,6 +296,7 @@ DEMO._demoClient = function () {
     valid: true,
     clientId: 'GS-9999',
     businessName: 'Esmeralda (Local Demo)',
+    contactPerson: 'Esmeralda Amezcua',
     address: '123 Demo St',
     suite: '',
     city: 'Des Moines',
@@ -618,6 +619,14 @@ DEMO.handle = async function (path, opts) {
     case '/submit-contact':
       return { success: true };
 
+    case '/update-client-profile': {
+      const c = DEMO._demoClient();
+      const map = ['businessName', 'contactPerson', 'contact', 'phone', 'address', 'suite', 'city', 'zip'];
+      map.forEach(k => { if (body[k] !== undefined) c[k] = body[k]; });
+      c.success = true;
+      return c;
+    }
+
     case '/get-client-addresses': {
       const all = DEMO._addresses();
       const list = all.filter(a => body.includeArchived || !a.archived);
@@ -630,7 +639,7 @@ DEMO.handle = async function (path, opts) {
       if (body.addressId) {
         const a = all.find(x => x.id === body.addressId);
         if (!a) throw new Error('Address not found.');
-        const map = ['label', 'buildingNumber', 'unitNumber', 'address', 'suite', 'city', 'zip', 'bedrooms', 'bathrooms'];
+        const map = ['label', 'buildingNumber', 'address', 'suite', 'city', 'zip'];
         map.forEach(k => { if (body[k] !== undefined) a[k] = body[k]; });
         if (body.archived !== undefined) a.archived = !!body.archived;
         DEMO._saveAddresses(all);
@@ -640,9 +649,8 @@ DEMO.handle = async function (path, opts) {
       const a = {
         id: DEMO._nextAddrId(all),
         label: body.label || '', buildingNumber: body.buildingNumber || '',
-        unitNumber: body.unitNumber || '', address: body.address || '',
+        address: body.address || '',
         suite: body.suite || '', city: body.city || '', zip: body.zip || '',
-        bedrooms: body.bedrooms || '', bathrooms: body.bathrooms || '',
         archived: !!body.archived
       };
       all.push(a);

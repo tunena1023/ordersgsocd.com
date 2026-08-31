@@ -21,6 +21,7 @@ const handlers = {
   'submit-contact':     require('../submit-contact').handler,
   'submit-order':       require('../submit-order').handler,
   'undo-request':       require('../undo-request').handler,
+  'update-client-profile': require('../update-client-profile').handler,
   'validate-client':    require('../validate-client').handler
 };
 

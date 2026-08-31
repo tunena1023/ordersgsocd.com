@@ -1,10 +1,13 @@
 /* ============================================================
    save-client-address.js — crear, editar y archivar/desarchivar
-   una direccion guardada de un cliente.
+   un EDIFICIO guardado de un cliente.
 
    Contrato:
-     { clientId, addressId?, label, buildingNumber, unitNumber,
-       address, suite, city, zip, bedrooms, bathrooms, archived? }
+     { clientId, addressId?, label, buildingNumber,
+       address, suite, city, zip, archived? }
+
+   Unit#/Bedrooms/Bathrooms NO se guardan aqui -- varian por unidad
+   dentro del mismo edificio, se capturan al hacer la orden.
 
    - Sin addressId  -> crea una fila nueva.
    - Con addressId  -> edita esa fila (se valida que sea del mismo
@@ -55,13 +58,10 @@ exports.handler = async (event) => {
       const map = [
         ['Label',          b.label,          'Title'],
         ['BuildingNumber', b.buildingNumber],
-        ['UnitNumber',     b.unitNumber],
         ['Address',        b.address],
         ['Suite',          b.suite],
         ['City',           b.city],
-        ['Zip',            b.zip],
-        ['Bedrooms',       b.bedrooms],
-        ['Bathrooms',      b.bathrooms]
+        ['Zip',            b.zip]
       ];
       const patch = {};
       for (const [col, incoming, alsoTitle] of map) {
@@ -81,13 +81,10 @@ exports.handler = async (event) => {
       ClientID:       b.clientId,
       Label:          b.label          || '',
       BuildingNumber: b.buildingNumber || '',
-      UnitNumber:     b.unitNumber     || '',
       Address:        b.address        || '',
       Suite:          b.suite          || '',
       City:           b.city           || '',
       Zip:            b.zip            || '',
-      Bedrooms:       b.bedrooms       || '',
-      Bathrooms:      b.bathrooms      || '',
       Archived:       b.archived !== undefined ? !!b.archived : false
     };
     const result = await createListItem(CLIENT_ADDRESSES_LIST, fields);

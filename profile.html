@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GS Solutions – My Addresses</title>
+<title>GS Solutions – Profile</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -48,6 +48,15 @@
   .addr-wrap { padding: 40px 48px; max-width: 860px; }
   .addr-wrap h2 { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 600; margin-bottom: 6px; }
   .addr-wrap .list-sub { font-size: 12px; color: var(--gray); margin-bottom: 24px; line-height: 1.6; }
+
+  .section-title { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold-dk); font-weight: 700; margin: 40px 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  .section-title:first-of-type { margin-top: 0; }
+
+  .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  @media (max-width: 560px) { .profile-grid { grid-template-columns: 1fr; } }
+  .profile-grid .field input { width: 100%; border: 1.5px solid var(--border); padding: 13px 14px; font-size: 14px; font-family: 'Inter', sans-serif; outline: none; transition: border-color .2s; }
+  .profile-grid .field input:focus { border-color: var(--gold); }
+  .profile-grid .field label { display: block; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--gray); font-weight: 600; margin-bottom: 8px; }
 
   .addr-top-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 12px; flex-wrap: wrap; }
   .link-toggle { font-size: 11px; color: var(--gray); background: none; border: none; cursor: pointer; text-decoration: underline; letter-spacing: .04em; }
@@ -180,16 +189,35 @@
   <a class="tab" href="customer.html">New Order</a>
   <a class="tab" href="tracking.html#processing">Processing</a>
   <a class="tab" href="tracking.html#history">History</a>
-  <a class="tab active" href="addresses.html">My Addresses</a>
+  <a class="tab active" href="profile.html">Profile</a>
 </div>
 
 <div class="addr-wrap">
-  <h2>My Addresses</h2>
-  <p class="list-sub">Save addresses you use often so you don't have to retype them each time — useful when placing orders for multiple units under one purchase order.</p>
+  <h2>Profile</h2>
+  <p class="list-sub">Your business information and saved buildings.</p>
+
+  <div class="section-title">Business Info</div>
+  <div class="profile-grid">
+    <div class="field"><label>Business Name</label><input type="text" id="profile-business-name"></div>
+    <div class="field"><label>Contact Person</label><input type="text" id="profile-contact-person"></div>
+    <div class="field"><label>Contact Email</label><input type="text" id="profile-contact-email"></div>
+    <div class="field"><label>Phone</label><input type="text" id="profile-phone"></div>
+    <div class="field"><label>Address</label><input type="text" id="profile-address"></div>
+    <div class="field"><label>Suite</label><input type="text" id="profile-suite"></div>
+    <div class="field"><label>City</label><input type="text" id="profile-city"></div>
+    <div class="field"><label>Zip</label><input type="text" id="profile-zip"></div>
+  </div>
+  <div class="dialog-btns" style="max-width:220px;margin-bottom:8px">
+    <button class="btn-gold" id="profile-save-btn" onclick="saveProfile()">Save Changes</button>
+  </div>
+  <p class="dialog-error" id="profile-error"></p>
+
+  <div class="section-title">Buildings</div>
+  <p class="list-sub" style="margin-top:-8px">Save the buildings you work with so you don't have to retype the address each time. Unit number, bedrooms and bathrooms are entered per order, since they vary unit to unit within the same building.</p>
 
   <div class="addr-top-actions">
     <button class="link-toggle" id="archived-toggle" onclick="toggleArchived()">Show archived</button>
-    <button class="btn-gold" onclick="openAddressDialog()">+ Add Address</button>
+    <button class="btn-gold" onclick="openAddressDialog()">+ Add Building</button>
   </div>
 
   <div id="addr-list"><p class="empty-note">Loading…</p></div>
@@ -226,20 +254,14 @@
 
 <div class="dialog-overlay" id="address-dialog">
   <div class="dialog-panel">
-    <h3 id="address-dialog-title">Add Address</h3>
+    <h3 id="address-dialog-title">Add Building</h3>
     <div class="field">
       <label>Label</label>
-      <input type="text" id="addr-label" placeholder="e.g. Building A - Suite 204">
+      <input type="text" id="addr-label" placeholder="e.g. Building A">
     </div>
-    <div class="field-row">
-      <div class="field">
-        <label>Building #</label>
-        <input type="text" id="addr-building">
-      </div>
-      <div class="field">
-        <label>Unit #</label>
-        <input type="text" id="addr-unit">
-      </div>
+    <div class="field">
+      <label>Building #</label>
+      <input type="text" id="addr-building" placeholder="e.g. 5824">
     </div>
     <div class="field">
       <label>Address</label>
@@ -255,26 +277,13 @@
         <input type="text" id="addr-city">
       </div>
     </div>
-    <div class="field-row">
-      <div class="field">
-        <label>Zip</label>
-        <input type="text" id="addr-zip">
-      </div>
-      <div class="field"></div>
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <label>Bedrooms</label>
-        <input type="text" id="addr-bedrooms">
-      </div>
-      <div class="field">
-        <label>Bathrooms</label>
-        <input type="text" id="addr-bathrooms">
-      </div>
+    <div class="field">
+      <label>Zip</label>
+      <input type="text" id="addr-zip">
     </div>
     <div class="dialog-btns">
       <button class="btn-ghost" onclick="closeAddressDialog()">Cancel</button>
-      <button class="btn-gold" id="address-save-btn" onclick="saveAddress()">Save Address</button>
+      <button class="btn-gold" id="address-save-btn" onclick="saveAddress()">Save Building</button>
     </div>
     <p class="dialog-error" id="address-error"></p>
   </div>
@@ -296,7 +305,63 @@ if (client) {
   $('client-num-display').textContent = client.clientId;
   GS.applyLogo();
 
+  loadProfile();
   loadAddresses();
+
+  /* Carga fresca desde el backend, no de la sesion -- update-client-profile.js
+     mapea Contact Person a la columna correcta (ClientName); la sesion
+     (llenada por validate-client.js al hacer login) trae ese campo de una
+     columna distinta y puede venir vacia. Llamar sin ningun campo de
+     cambio hace que el endpoint solo regrese los valores actuales, sin
+     escribir nada. */
+  async function loadProfile() {
+    try {
+      const p = await GS.api('/update-client-profile', { method: 'POST', body: { clientId: client.clientId } });
+      $('profile-business-name').value  = p.businessName  || '';
+      $('profile-contact-person').value = p.contactPerson || '';
+      $('profile-contact-email').value  = p.contact       || '';
+      $('profile-phone').value          = p.phone         || '';
+      $('profile-address').value        = p.address       || '';
+      $('profile-suite').value          = p.suite         || '';
+      $('profile-city').value           = p.city          || '';
+      $('profile-zip').value            = p.zip           || '';
+    } catch (e) {
+      $('profile-error').textContent = 'Could not load profile: ' + e.message;
+    }
+  }
+
+  async function saveProfile() {
+    $('profile-error').textContent = '';
+    const body = {
+      clientId:      client.clientId,
+      businessName:  $('profile-business-name').value.trim(),
+      contactPerson: $('profile-contact-person').value.trim(),
+      contact:       $('profile-contact-email').value.trim(),
+      phone:         $('profile-phone').value.trim(),
+      address:       $('profile-address').value.trim(),
+      suite:         $('profile-suite').value.trim(),
+      city:          $('profile-city').value.trim(),
+      zip:           $('profile-zip').value.trim()
+    };
+    $('profile-save-btn').disabled = true;
+    try {
+      const res = await GS.api('/update-client-profile', { method: 'POST', body });
+      /* Refrescar la sesion con el nombre de negocio actualizado, para
+         que el saludo del header ("Welcome back, X") no quede desfasado
+         sin tener que volver a hacer login. */
+      GS.session.set(Object.assign({}, client, {
+        businessName: res.businessName,
+        address: res.address, suite: res.suite, city: res.city, zip: res.zip,
+        contact: res.contact, phone: res.phone
+      }));
+      $('client-name').textContent = res.businessName || client.clientId;
+      showToast('Profile updated.');
+    } catch (e) {
+      $('profile-error').textContent = e.message;
+    } finally {
+      $('profile-save-btn').disabled = false;
+    }
+  }
 
   async function loadAddresses() {
     $('addr-list').innerHTML = '<p class="empty-note">Loading…</p>';
@@ -329,18 +394,15 @@ if (client) {
   }
 
   function addressCard(a) {
-    const lineParts = [a.buildingNumber, a.unitNumber ? ('Unit ' + a.unitNumber) : ''].filter(Boolean).join(' · ');
     const addrParts = [a.address, a.suite, a.city, a.zip].filter(Boolean).join(', ');
-    const bedBath = (a.bedrooms || a.bathrooms) ? (esc(a.bedrooms || '—') + ' bed / ' + esc(a.bathrooms || '—') + ' bath') : '';
     return '' +
       '<div class="addr-card' + (a.archived ? ' archived' : '') + '">' +
         '<div>' +
-          '<div class="addr-label">' + esc(a.label || 'Untitled address') +
+          '<div class="addr-label">' + esc(a.label || 'Untitled building') +
+            (a.buildingNumber ? ' <span style="color:var(--gray);font-weight:400">#' + esc(a.buildingNumber) + '</span>' : '') +
             (a.archived ? '<span class="addr-badge">Archived</span>' : '') +
           '</div>' +
-          (lineParts ? '<div class="addr-line">' + esc(lineParts) + '</div>' : '') +
           (addrParts ? '<div class="addr-line">' + esc(addrParts) + '</div>' : '') +
-          (bedBath ? '<div class="addr-line">' + bedBath + '</div>' : '') +
         '</div>' +
         '<div class="addr-actions">' +
           (a.archived
@@ -354,8 +416,8 @@ if (client) {
 
   function openAddressDialog() {
     editingId = null;
-    $('address-dialog-title').textContent = 'Add Address';
-    ['label','building','unit','address','suite','city','zip','bedrooms','bathrooms'].forEach(f => { $('addr-' + f).value = ''; });
+    $('address-dialog-title').textContent = 'Add Building';
+    ['label','building','address','suite','city','zip'].forEach(f => { $('addr-' + f).value = ''; });
     $('address-error').textContent = '';
     $('address-dialog').classList.add('open');
   }
@@ -364,16 +426,13 @@ if (client) {
     const a = addresses.find(x => x.id === id);
     if (!a) return;
     editingId = id;
-    $('address-dialog-title').textContent = 'Edit Address';
-    $('addr-label').value     = a.label || '';
-    $('addr-building').value  = a.buildingNumber || '';
-    $('addr-unit').value      = a.unitNumber || '';
-    $('addr-address').value   = a.address || '';
-    $('addr-suite').value     = a.suite || '';
-    $('addr-city').value      = a.city || '';
-    $('addr-zip').value       = a.zip || '';
-    $('addr-bedrooms').value  = a.bedrooms || '';
-    $('addr-bathrooms').value = a.bathrooms || '';
+    $('address-dialog-title').textContent = 'Edit Building';
+    $('addr-label').value    = a.label || '';
+    $('addr-building').value = a.buildingNumber || '';
+    $('addr-address').value  = a.address || '';
+    $('addr-suite').value    = a.suite || '';
+    $('addr-city').value     = a.city || '';
+    $('addr-zip').value      = a.zip || '';
     $('address-error').textContent = '';
     $('address-dialog').classList.add('open');
   }
@@ -384,19 +443,16 @@ if (client) {
 
   async function saveAddress() {
     const label = $('addr-label').value.trim();
-    if (!label) { $('address-error').textContent = 'Please enter a label for this address.'; return; }
+    if (!label) { $('address-error').textContent = 'Please enter a label for this building.'; return; }
 
     const body = {
       clientId:       client.clientId,
       label:          label,
       buildingNumber: $('addr-building').value.trim(),
-      unitNumber:     $('addr-unit').value.trim(),
       address:        $('addr-address').value.trim(),
       suite:          $('addr-suite').value.trim(),
       city:           $('addr-city').value.trim(),
-      zip:            $('addr-zip').value.trim(),
-      bedrooms:       $('addr-bedrooms').value.trim(),
-      bathrooms:      $('addr-bathrooms').value.trim()
+      zip:            $('addr-zip').value.trim()
     };
     if (editingId) body.addressId = editingId;
 
@@ -404,7 +460,7 @@ if (client) {
     try {
       await GS.api('/save-client-address', { method: 'POST', body });
       closeAddressDialog();
-      showToast(editingId ? 'Address updated.' : 'Address saved.');
+      showToast(editingId ? 'Building updated.' : 'Building saved.');
       await loadAddresses();
     } catch (e) {
       $('address-error').textContent = e.message;
@@ -449,6 +505,7 @@ if (client) {
 
   function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
 
+  window.saveProfile = saveProfile;
   window.openAddressDialog = openAddressDialog;
   window.closeAddressDialog = closeAddressDialog;
   window.saveAddress = saveAddress;
