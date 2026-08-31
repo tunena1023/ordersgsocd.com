@@ -88,6 +88,8 @@
   .svc-line { font-size: 12px; color: var(--black); line-height: 1.9; }
   .svc-line b { color: var(--gold-dk); }
   .meta-line { font-size: 11px; color: var(--gray); line-height: 1.9; }
+  .field-caption { font-size: 10px; color: var(--gray); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 3px; }
+  .field-value { font-size: 13px; color: var(--black); }
 
   .hist-item { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
   .hist-item:last-child { border-bottom: none; }
@@ -584,23 +586,34 @@ if (client) {
         byCat[cat].push(s);
       });
       const svcDetailId = 'svc-detail-' + String(orderId).replace(/[^a-z0-9]/gi, '_');
-      const svcAccordionHtml = Object.entries(byCat).map(([cat, list]) =>
-        '<div style="font-size:12px;margin:5px 0;line-height:1.5"><b>' + esc(cat) + ':</b> ' +
-        list.map(s => {
+      const svcRows = [];
+      Object.entries(byCat).forEach(([cat, list]) => {
+        list.forEach((s, i) => {
           const nc = (s.NotCompleted === true || String(s.NotCompleted) === 'true');
-          return esc(s.ServiceName) + ' — ' + esc(s.SubOption) + ' (Level ' + levelOf(s.SubOption) + ')' +
+          const subText = esc(s.SubOption || '') + (s.SubOption ? ' (Level ' + levelOf(s.SubOption) + ')' : '') +
             (nc ? ' <b style="color:#B06A2A">· not completed' +
                   (s.NotCompletedReason ? ': ' + esc(s.NotCompletedReason) : '') + '</b>' : '');
-        }).join(' · ') + '</div>'
-      ).join('') || '<div style="font-size:12px">No services recorded.</div>';
+          svcRows.push({ cat: i === 0 ? cat : '', name: esc(s.ServiceName || ''), sub: s.SubOption ? subText : '' });
+        });
+      });
+      const svcTableHtml = svcRows.length
+        ? '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
+          svcRows.map((r, i) => '<tr' + (i < svcRows.length - 1 ? ' style="border-bottom:1px solid var(--border)"' : '') + '>' +
+            '<td style="padding:8px 12px 8px 0;color:var(--gold-dk);font-weight:600;width:36%">' + r.cat + '</td>' +
+            '<td style="padding:8px 8px 8px 0;width:32%">' + r.name + '</td>' +
+            '<td style="padding:8px 0;color:' + (r.sub ? 'var(--black)' : 'var(--gray)') + '">' + (r.sub || '—') + '</td>' +
+            '</tr>').join('') +
+          '</table>'
+        : '<div style="font-size:12px;padding:10px 0">No services recorded.</div>';
       const svcHeaderHtml =
-        '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;cursor:pointer" ' +
+        '<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">' +
+        '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;cursor:pointer;padding:10px 12px;background:var(--off)" ' +
         'onclick="var d=document.getElementById(\'' + svcDetailId + '\');d.style.display=d.style.display===\'none\'?\'block\':\'none\'">' +
         '<p class="detail-label" style="margin:0">Services Requested</p>' +
-        '<span style="font-size:10px;color:var(--gold-dk);white-space:nowrap">&#9660; details</span>' +
+        '<span style="font-size:10px;color:var(--gold-dk);white-space:nowrap">&#9660; ' + svcRows.length + ' service' + (svcRows.length === 1 ? '' : 's') + '</span>' +
         '</div>' +
-        '<div id="' + svcDetailId + '" style="display:none;margin-top:8px;padding:10px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
-        svcAccordionHtml + '</div>';
+        '<div id="' + svcDetailId + '" style="display:none;padding:0 12px">' + svcTableHtml + '</div>' +
+        '</div>';
 
       const noticeHtml = delayNoticeHtml(o);
 
@@ -715,16 +728,18 @@ if (client) {
       body.innerHTML = `
         <div class="detail-grid">
           <div>
-            <p class="meta-line">
-              Entry: ${fmtDateTime(o.EntryDate)}<br>
-              Due: ${fmtDate(o.DueDate)}<br>
-              Service window: ${esc(o.ServiceWindow || 'to be confirmed')}<br>
-              Building/Unit: ${esc(o.BuildingNumber || '—')} / ${esc(o.UnitNumber || '—')} · Bed/Bath: ${esc(o.Bedrooms || '—')} / ${esc(o.Bathrooms || '—')}
-            </p>
+            <p class="detail-label">Order Details</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px 16px;margin-bottom:14px">
+              <div><div class="field-caption">Entry</div><div class="field-value">${fmtDateTime(o.EntryDate)}</div></div>
+              <div><div class="field-caption">Due</div><div class="field-value">${fmtDate(o.DueDate)}</div></div>
+              <div><div class="field-caption">Service window</div><div class="field-value">${esc(o.ServiceWindow || 'To be confirmed')}</div></div>
+              <div><div class="field-caption">Building / Unit</div><div class="field-value">${esc(o.BuildingNumber || '—')} / ${esc(o.UnitNumber || '—')}</div></div>
+              <div><div class="field-caption">Bed / Bath</div><div class="field-value">${esc(o.Bedrooms || '—')} / ${esc(o.Bathrooms || '—')}</div></div>
+            </div>
             ${dirtLine}
-            ${o.Notes ? '<p class="meta-line" style="margin-top:8px">Notes: ' + esc(o.Notes) + '</p>' : ''}
+            ${o.Notes ? '<p class="meta-line" style="margin-bottom:14px">Notes: ' + esc(o.Notes) + '</p>' : ''}
             ${noticeHtml}
-            <div style="margin-top:16px">${svcHeaderHtml}</div>
+            ${svcHeaderHtml}
           </div>
           <div>
             <p class="detail-label">History</p>
