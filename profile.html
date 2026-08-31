@@ -203,20 +203,31 @@
   <p class="list-sub">Your business information and saved buildings.</p>
 
   <div class="section-title">Business Info</div>
-  <div class="profile-grid">
-    <div class="field"><label>Business Name</label><input type="text" id="profile-business-name"></div>
-    <div class="field"><label>Contact Person</label><input type="text" id="profile-contact-person"></div>
-    <div class="field"><label>Contact Email</label><input type="text" id="profile-contact-email"></div>
-    <div class="field"><label>Phone</label><input type="text" id="profile-phone"></div>
-    <div class="field"><label>Address</label><input type="text" id="profile-address"></div>
-    <div class="field"><label>Suite</label><input type="text" id="profile-suite"></div>
-    <div class="field"><label>City</label><input type="text" id="profile-city"></div>
-    <div class="field"><label>Zip</label><input type="text" id="profile-zip"></div>
+  <div class="addr-card">
+    <div class="addr-card-header" onclick="toggleBusinessInfo(this)">
+      <div>
+        <div class="addr-label" id="business-info-summary-name">Loading…</div>
+        <div class="addr-line" id="business-info-summary-sub"></div>
+      </div>
+      <span class="addr-chevron">▾</span>
+    </div>
+    <div class="addr-card-body" id="business-info-body">
+      <div class="profile-grid" style="margin-top:16px">
+        <div class="field"><label>Business Name</label><input type="text" id="profile-business-name"></div>
+        <div class="field"><label>Contact Person</label><input type="text" id="profile-contact-person"></div>
+        <div class="field"><label>Contact Email</label><input type="text" id="profile-contact-email"></div>
+        <div class="field"><label>Phone</label><input type="text" id="profile-phone"></div>
+        <div class="field"><label>Address</label><input type="text" id="profile-address"></div>
+        <div class="field"><label>Suite</label><input type="text" id="profile-suite"></div>
+        <div class="field"><label>City</label><input type="text" id="profile-city"></div>
+        <div class="field"><label>Zip</label><input type="text" id="profile-zip"></div>
+      </div>
+      <div class="dialog-btns" style="max-width:220px;margin-bottom:8px">
+        <button class="btn-gold" id="profile-save-btn" onclick="event.stopPropagation(); saveProfile()">Save Changes</button>
+      </div>
+      <p class="dialog-error" id="profile-error"></p>
+    </div>
   </div>
-  <div class="dialog-btns" style="max-width:220px;margin-bottom:8px">
-    <button class="btn-gold" id="profile-save-btn" onclick="saveProfile()">Save Changes</button>
-  </div>
-  <p class="dialog-error" id="profile-error"></p>
 
   <div class="section-title">Buildings</div>
   <p class="list-sub" style="margin-top:-8px">Save the buildings you work with so you don't have to retype the address each time. Unit number, bedrooms and bathrooms are entered per order, since they vary unit to unit within the same building.</p>
@@ -331,8 +342,27 @@ if (client) {
       $('profile-suite').value          = p.suite         || '';
       $('profile-city').value           = p.city          || '';
       $('profile-zip').value            = p.zip           || '';
+      updateBusinessInfoSummary(p);
     } catch (e) {
       $('profile-error').textContent = 'Could not load profile: ' + e.message;
+      $('business-info-summary-name').textContent = 'Business Info';
+    }
+  }
+
+  function updateBusinessInfoSummary(p) {
+    $('business-info-summary-name').textContent = p.businessName || client.businessName || client.clientId;
+    const sub = [p.contactPerson, p.contact].filter(Boolean).join(' · ');
+    $('business-info-summary-sub').textContent = sub;
+  }
+
+  function toggleBusinessInfo(headerEl) {
+    const body = $('business-info-body');
+    const willOpen = !body.classList.contains('open');
+    document.querySelectorAll('.addr-card-body.open').forEach(b => b.classList.remove('open'));
+    document.querySelectorAll('.addr-card-header.open').forEach(h => h.classList.remove('open'));
+    if (willOpen) {
+      body.classList.add('open');
+      headerEl.classList.add('open');
     }
   }
 
@@ -361,6 +391,7 @@ if (client) {
         contact: res.contact, phone: res.phone
       }));
       $('client-name').textContent = res.businessName || client.clientId;
+      updateBusinessInfoSummary(res);
       showToast('Profile updated.');
     } catch (e) {
       $('profile-error').textContent = e.message;
@@ -530,6 +561,7 @@ if (client) {
   function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
 
   window.saveProfile = saveProfile;
+  window.toggleBusinessInfo = toggleBusinessInfo;
   window.toggleAddrCard = toggleAddrCard;
   window.openAddressDialog = openAddressDialog;
   window.closeAddressDialog = closeAddressDialog;
