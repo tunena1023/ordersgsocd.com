@@ -4,7 +4,8 @@
 const { toVercel } = require('../lib/vercel-adapter');
 
 const handlers = {
-  'confirm-change':     require('../confirm-change').handler,
+  'confirm-change':       require('../confirm-change').handler,
+  'confirm-reactivation': require('../confirm-reactivation').handler,
   'delete-draft':       require('../delete-draft').handler,
   'get-order-detail':   require('../get-order-detail').handler,
   'get-order-document': require('../get-order-document').handler,

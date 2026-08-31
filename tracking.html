@@ -517,6 +517,24 @@ if (client) {
     return false;
   }
 
+  /* Una orden que la oficina mando a reactivar (boton "Reactivate" en
+     History, del lado admin) tambien llega aqui como Change Requested
+     -- pero no es ni un cambio propio del cliente (Undo Request) ni
+     una confirmacion de cambio normal (Confirm): es un camino distinto,
+     donde el cliente puede reactivarla el mismo sin esperar al
+     director. Mismo patron de "solo la solicitud abierta mas
+     reciente". */
+  function isReactivationPending(history) {
+    for (let i = (history || []).length - 1; i >= 0; i--) {
+      const h = history[i];
+      const type = String(h.ChangeType || '');
+      if (REQUEST_OPENING_TYPES.indexOf(type) !== -1) {
+        return type === 'Change Requested' && String(h.FieldChanged || '') === 'Reactivation Pending';
+      }
+    }
+    return false;
+  }
+
   function statusClass(s) {
     switch (s) {
       case 'Received': return 'status-pending';
@@ -855,6 +873,7 @@ if (client) {
       'Cancellation Approved':       'Cancellation approved',
       'Cancellation Rejected':       'Cancellation not approved',
       'Cancellation Reversed':       'Order active again',
+      'Order Reactivated':           'Order reactivated',
       'Dates Confirmed':             'Schedule confirmed',
       'Request Cancelled by Client': 'Request withdrawn',
       'Requested Dates Rejected':    'Requested dates not approved',
@@ -971,7 +990,9 @@ if (client) {
 
     let html = '';
     if (hasOpenRequest(status)) {
-      if (isWaitingForClientConfirmation(history)) {
+      if (isReactivationPending(history)) {
+        html += `<button class="btn-action primary" data-act="confirm-reactivation">Review &amp; Reactivate</button>`;
+      } else if (isWaitingForClientConfirmation(history)) {
         html += `<button class="btn-action primary" data-act="confirm-change">Confirm</button>`;
       } else {
         html += `<button class="btn-action" data-act="undo">Undo Request</button>`;
@@ -1003,6 +1024,7 @@ return html;
         if (act === 'cancel') openCancelDialog(o.OrderID);
         if (act === 'undo') undoRequest(o.OrderID);
         if (act === 'confirm-change') confirmChange(o.OrderID);
+        if (act === 'confirm-reactivation') confirmReactivation(o.OrderID);
         if (act === 'print') openOrderDocument(o.OrderID);
         if (act === 'printhist') printOrder(o.OrderID);
       });
@@ -1030,6 +1052,20 @@ return html;
       loadOrders();
     } catch (e) {
       alert('Error confirming the change: ' + e.message);
+    }
+  }
+
+  /* ===== Reactivate: la oficina pidio reactivar una orden cancelada y
+     archivada, y el cliente la confirma el mismo sin esperar al
+     director -- el que actue primero gana. ===== */
+  async function confirmReactivation(orderId) {
+    if (!confirm('Reactivate this order? It will go back to being active with our office.')) return;
+    try {
+      await GS.api('/confirm-reactivation', { method: 'POST', body: { orderId: orderId, clientId: client.clientId } });
+      showToast('Order reactivated. Thank you!');
+      loadOrders();
+    } catch (e) {
+      alert('Error reactivating the order: ' + e.message);
     }
   }
 
