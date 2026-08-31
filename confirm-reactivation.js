@@ -29,20 +29,6 @@ async function fetchByField(listName, fieldName, value) {
   return out;
 }
 
-/* Mismo criterio que ya usa confirm-change.js/previousStatus() en
-   admin-approve-order.js: un OldValue que es un snapshot de servicios,
-   un JSON de fechas, o el nombre de un tipo de solicitud, no es un
-   estatus real al que volver -- hay que seguir buscando hacia atras. */
-const REQUEST_STATUS_LABELS = ['Change Requested', 'Cancellation Requested', 'Reschedule Requested', 'Change Requested by Client', 'Updated'];
-function looksLikeStatus(v) {
-  const s = String(v == null ? '' : v).trim();
-  if (!s) return false;
-  if (s.indexOf('SERVICES:') === 0) return false;
-  if (s.charAt(0) === '{') return false;
-  if (REQUEST_STATUS_LABELS.indexOf(s) !== -1) return false;
-  return true;
-}
-
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return jsonResponse(405, { error: 'Method not allowed' });
@@ -79,36 +65,40 @@ exports.handler = async (event) => {
     /* Confirmar que de verdad es una reactivacion pendiente (marcador
        'Reactivation Pending') y no otro tipo de Change Requested --
        misma tecnica de "solo la solicitud abierta mas reciente" que ya
-       usan confirm-change.js/tracking.html/admin.html. */
+       usan confirm-change.js/tracking.html/admin.html. Se guarda la
+       fila completa (no solo un booleano) porque de ahi se lee
+       directo el estatus al que hay que regresar. */
     const REQUEST_OPENING_TYPES = ['Change Requested', 'Cancellation Requested', 'Reschedule Requested', 'Change Requested by Client'];
-    let isReactivation = false;
+    let reactivationRow = null;
     for (let i = history.length - 1; i >= 0; i--) {
       const h = history[i].fields;
       const type = String(h.ChangeType || '');
       if (REQUEST_OPENING_TYPES.indexOf(type) !== -1) {
-        isReactivation = (type === 'Change Requested' && String(h.FieldChanged || '') === 'Reactivation Pending');
+        if (type === 'Change Requested' && String(h.FieldChanged || '') === 'Reactivation Pending') {
+          reactivationRow = h;
+        }
         break;
       }
     }
-    if (!isReactivation) {
+    if (!reactivationRow) {
       return jsonResponse(409, { error: 'This order does not have a pending reactivation request.' });
     }
 
-    /* Buscar a que estatus regresar (el que tenia la orden antes de
-       cancelarse). Se excluye 'Archived' (guarda 'true'/'false' en
-       OldValue, nada que ver con el Status) -- mismo bug encontrado y
-       arreglado hoy en previousStatus() de admin-approve-order.js;
-       aqui se construye ya con el fix de una vez. */
-    let prevStatus = null;
-    for (let i = history.length - 1; i >= 0; i--) {
-      const h = history[i].fields;
-      if (String(h.FieldChanged || '') === 'Archived') continue;
-      if (looksLikeStatus(h.OldValue)) {
-        prevStatus = String(h.OldValue).trim();
-        break;
-      }
-    }
-    const newStatus = prevStatus || 'Assigned';
+    /* El estatus al que hay que regresar ya se calculo UNA SOLA VEZ
+       cuando la oficina pidio la reactivacion (request-reactivate en
+       admin-approve-order.js) y quedo guardado aqui mismo -- se lee
+       directo, en vez de volver a adivinarlo buscando hacia atras en
+       un historial que para este punto ya puede traer mucho ruido de
+       otras solicitudes viejas. Mismo motivo por el que se movio este
+       calculo a un solo lugar: SharePoint no valida que el texto que
+       se guarda en Status sea un valor real, asi que una adivinanza
+       equivocada se guardaba sin ningun error, dejando la orden
+       atorada sin que nadie se diera cuenta. */
+    let newStatus = 'Assigned';
+    try {
+      const payload = JSON.parse(reactivationRow.OldValue || '{}');
+      if (payload && payload.restoreTo) newStatus = payload.restoreTo;
+    } catch (e) { /* deja el fallback 'Assigned' */ }
     const actor = (clientId && String(clientId).trim()) || f.ClientID || '';
 
     await Promise.all([
