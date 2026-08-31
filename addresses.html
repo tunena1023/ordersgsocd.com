@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GS Solutions – My Addresses</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black:   #111111;
+    --gold:    #C9A84C;
+    --gold-lt: #E2C97E;
+    --gold-dk: #8C6F2A;
+    --white:   #FFFFFF;
+    --off:     #F7F6F3;
+    --gray:    #6B6B6B;
+    --border:  #E0D9CC;
+  }
+
+  body { font-family: 'Inter', sans-serif; background: var(--white); color: var(--black); min-height: 100vh; }
+
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 48px; min-height: 72px;
+    border-bottom: 1px solid var(--border);
+    background: var(--white); position: sticky; top: 0; z-index: 100;
+  }
+  .logo-wrap { display: flex; align-items: center; gap: 12px; }
+  .logo-diamond { width: 80px; height: 80px; }
+  .nav-right { display: flex; align-items: center; gap: 24px; }
+  .nav-link { font-size: 13px; color: var(--gray); text-decoration: none; letter-spacing: .04em; transition: color .2s; }
+  .nav-link:hover { color: var(--gold); }
+
+  .portal-header {
+    background: var(--off); border-bottom: 1px solid var(--border);
+    padding: 16px 48px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .portal-header p { font-size: 12px; color: var(--gray); }
+  .portal-header strong { color: var(--black); }
+  .btn-signout { font-size: 11px; color: var(--gray); background: none; border: none; cursor: pointer; letter-spacing: .06em; text-decoration: underline; }
+
+  .tabs { display: flex; border-bottom: 1px solid var(--border); padding: 0 48px; background: var(--white); }
+  .tab { padding: 16px 20px; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--gray); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color .2s, border-color .2s; text-decoration: none; display: inline-block; }
+  .tab.active { color: var(--black); border-bottom-color: var(--gold); }
+
+  .addr-wrap { padding: 40px 48px; max-width: 860px; }
+  .addr-wrap h2 { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 600; margin-bottom: 6px; }
+  .addr-wrap .list-sub { font-size: 12px; color: var(--gray); margin-bottom: 24px; line-height: 1.6; }
+
+  .addr-top-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 12px; flex-wrap: wrap; }
+  .link-toggle { font-size: 11px; color: var(--gray); background: none; border: none; cursor: pointer; text-decoration: underline; letter-spacing: .04em; }
+  .link-toggle:hover { color: var(--gold-dk); }
+
+  .btn-gold {
+    background: var(--gold); color: var(--black); border: none;
+    padding: 12px 20px; font-size: 11px; font-family: 'Inter', sans-serif;
+    letter-spacing: .14em; text-transform: uppercase; font-weight: 700;
+    cursor: pointer; transition: background .2s;
+  }
+  .btn-gold:hover { background: var(--gold-dk); color: var(--white); }
+  .btn-ghost {
+    background: none; border: 1.5px solid var(--border); color: var(--black);
+    padding: 12px 20px; font-size: 11px; font-family: 'Inter', sans-serif;
+    letter-spacing: .14em; text-transform: uppercase; font-weight: 700; cursor: pointer;
+    transition: border-color .2s;
+  }
+  .btn-ghost:hover { border-color: var(--gold); }
+  .btn-small {
+    background: none; border: 1.5px solid var(--border); color: var(--black);
+    padding: 8px 14px; font-size: 10px; font-family: 'Inter', sans-serif;
+    letter-spacing: .1em; text-transform: uppercase; font-weight: 700; cursor: pointer;
+    transition: border-color .2s, color .2s; white-space: nowrap;
+  }
+  .btn-small:hover { border-color: var(--gold); }
+  .btn-small.danger:hover { border-color: #B33A3A; color: #B33A3A; }
+
+  .addr-card {
+    border: 1px solid var(--border); padding: 18px 20px; margin-bottom: 12px;
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
+    background: var(--white);
+  }
+  .addr-card.archived { opacity: .55; }
+  .addr-label { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+  .addr-line { font-size: 12px; color: var(--gray); line-height: 1.7; }
+  .addr-badge { display: inline-block; font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--gray); background: var(--off); padding: 2px 8px; margin-left: 8px; font-weight: 700; vertical-align: middle; }
+  .addr-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .empty-note { font-size: 12px; color: #bbb; font-style: italic; padding: 12px 0; }
+
+  .dialog-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(17,17,17,.55);
+    z-index: 210; align-items: center; justify-content: center; padding: 20px;
+    overflow-y: auto;
+  }
+  .dialog-overlay.open { display: flex; }
+  .dialog-panel {
+    background: var(--white); border: 1px solid var(--border); max-width: 520px;
+    width: 100%; padding: 36px 32px; margin: auto;
+    animation: dialogIn .3s cubic-bezier(.22,.9,.28,1) both;
+  }
+  @keyframes dialogIn { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
+  .dialog-panel h3 { font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 600; margin-bottom: 20px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--gray); font-weight: 600; margin-bottom: 8px; }
+  .field input { width: 100%; border: 1.5px solid var(--border); padding: 13px 14px; font-size: 14px; font-family: 'Inter', sans-serif; outline: none; transition: border-color .2s; }
+  .field input:focus { border-color: var(--gold); }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 560px) { .field-row { grid-template-columns: 1fr; } }
+  .dialog-btns { display: flex; gap: 10px; margin-top: 8px; }
+  .dialog-btns .btn-gold, .dialog-btns .btn-ghost { flex: 1; }
+  .dialog-error { font-size: 11px; color: #B33A3A; margin-top: 10px; min-height: 14px; }
+
+  .toast {
+    position: fixed; bottom: 32px; right: 32px; z-index: 300;
+    background: var(--black); color: var(--white); padding: 18px 24px;
+    border-left: 3px solid var(--gold); max-width: 380px;
+    font-size: 13px; line-height: 1.6; box-shadow: 0 10px 30px rgba(0,0,0,.3);
+    display: none; animation: toastIn .35s cubic-bezier(.22,.9,.28,1) both;
+  }
+  .toast.show { display: block; }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+
+  footer { background: var(--black); padding: 24px 48px; display: flex; align-items: center; justify-content: space-between; }
+  footer p { font-size: 11px; color: #555; letter-spacing: .06em; }
+  footer span { color: var(--gold); }
+
+  .contact-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(17,17,17,.55);
+    z-index: 200; align-items: flex-start; justify-content: center; padding: 60px 20px;
+    overflow-y: auto;
+  }
+  .contact-overlay.open { display: flex; }
+  .contact-panel {
+    background: var(--white); border: 1px solid var(--border);
+    max-width: 460px; width: 100%; padding: 40px; position: relative;
+  }
+  .contact-close {
+    position: absolute; top: 12px; right: 16px; background: none; border: none;
+    font-size: 20px; color: var(--gray); cursor: pointer; line-height: 1;
+  }
+  .contact-close:hover { color: var(--black); }
+  .contact-logo-slot { display: flex; justify-content: center; margin-bottom: 12px; }
+  .contact-logo-slot img { width: 72px; height: 72px; object-fit: contain; }
+  .contact-panel h2 { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 600; text-align: center; margin-bottom: 6px; }
+  .contact-panel .contact-sub { font-size: 12px; color: var(--gray); text-align: center; margin-bottom: 24px; line-height: 1.6; }
+  .contact-panel textarea { width: 100%; border: 1.5px solid var(--border); padding: 13px 14px; font-size: 14px; font-family: 'Inter', sans-serif; outline: none; resize: vertical; min-height: 90px; }
+  .contact-panel textarea:focus { border-color: var(--gold); }
+
+  @media (max-width: 860px) {
+    nav { padding: 0 20px; }
+    .portal-header { padding: 14px 20px; }
+    .tabs { padding: 0 20px; }
+    .addr-wrap { padding: 28px 20px; }
+    .addr-card { flex-direction: column; }
+    footer { flex-direction: column; gap: 8px; padding: 20px; }
+    .toast { left: 20px; right: 20px; bottom: 20px; max-width: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo-wrap">
+    <img src="" alt="GS Solutions Inc." class="logo-diamond" style="object-fit:contain">
+  </div>
+  <div class="nav-right">
+    <a href="https://gsocd.com" class="nav-link">Home</a>
+    <a href="services.html" class="nav-link">Services</a>
+    <a href="#" class="nav-link" onclick="openContact(); return false;">Contact</a>
+  </div>
+</nav>
+
+<div class="portal-header">
+  <p>Welcome back, <strong id="client-name">Client</strong> &nbsp;·&nbsp; <span id="client-num-display"></span></p>
+  <button class="btn-signout" onclick="doSignout()">Sign out</button>
+</div>
+
+<div class="tabs">
+  <a class="tab" href="customer.html">New Order</a>
+  <a class="tab" href="tracking.html#processing">Processing</a>
+  <a class="tab" href="tracking.html#history">History</a>
+  <a class="tab active" href="addresses.html">My Addresses</a>
+</div>
+
+<div class="addr-wrap">
+  <h2>My Addresses</h2>
+  <p class="list-sub">Save addresses you use often so you don't have to retype them each time — useful when placing orders for multiple units under one purchase order.</p>
+
+  <div class="addr-top-actions">
+    <button class="link-toggle" id="archived-toggle" onclick="toggleArchived()">Show archived</button>
+    <button class="btn-gold" onclick="openAddressDialog()">+ Add Address</button>
+  </div>
+
+  <div id="addr-list"><p class="empty-note">Loading…</p></div>
+</div>
+
+<footer>
+  <p>© 2026 <span>GS Solutions Inc.</span> — Des Moines, Iowa</p>
+  <p>orders@gsocd.com · (515) 473-5990</p>
+</footer>
+
+<div class="contact-overlay" id="contact-overlay" onclick="if(event.target===this) closeContact();">
+  <div class="contact-panel">
+    <button class="contact-close" onclick="closeContact()">✕</button>
+    <div class="contact-logo-slot" id="contact-logo-slot"></div>
+    <h2>Contact Us</h2>
+    <p class="contact-sub">Send us a message and our team will get back to you.</p>
+    <div class="field" style="margin-bottom:14px">
+      <label>Your Name</label>
+      <input type="text" id="contact-name" placeholder="Full name" />
+    </div>
+    <div class="field" style="margin-bottom:14px">
+      <label>Email</label>
+      <input type="text" id="contact-email" placeholder="you@email.com" />
+    </div>
+    <div class="field" style="margin-bottom:14px">
+      <label>Message</label>
+      <textarea id="contact-message" placeholder="How can we help?"></textarea>
+    </div>
+    <button class="btn-gold" onclick="sendContact()">Send Message</button>
+    <p id="contact-error" style="font-size:11px;color:#B33A3A;margin-top:10px;text-align:center"></p>
+    <p id="contact-ok" style="font-size:12px;color:#2A7A2A;margin-top:10px;text-align:center;display:none">Message sent. We'll be in touch shortly.</p>
+  </div>
+</div>
+
+<div class="dialog-overlay" id="address-dialog">
+  <div class="dialog-panel">
+    <h3 id="address-dialog-title">Add Address</h3>
+    <div class="field">
+      <label>Label</label>
+      <input type="text" id="addr-label" placeholder="e.g. Building A - Suite 204">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Building #</label>
+        <input type="text" id="addr-building">
+      </div>
+      <div class="field">
+        <label>Unit #</label>
+        <input type="text" id="addr-unit">
+      </div>
+    </div>
+    <div class="field">
+      <label>Address</label>
+      <input type="text" id="addr-address">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Suite</label>
+        <input type="text" id="addr-suite">
+      </div>
+      <div class="field">
+        <label>City</label>
+        <input type="text" id="addr-city">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Zip</label>
+        <input type="text" id="addr-zip">
+      </div>
+      <div class="field"></div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Bedrooms</label>
+        <input type="text" id="addr-bedrooms">
+      </div>
+      <div class="field">
+        <label>Bathrooms</label>
+        <input type="text" id="addr-bathrooms">
+      </div>
+    </div>
+    <div class="dialog-btns">
+      <button class="btn-ghost" onclick="closeAddressDialog()">Cancel</button>
+      <button class="btn-gold" id="address-save-btn" onclick="saveAddress()">Save Address</button>
+    </div>
+    <p class="dialog-error" id="address-error"></p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="shared.js"></script>
+<script>
+const client = GS.requireSession();
+if (client) {
+
+  const $ = id => document.getElementById(id);
+  let addresses = [];
+  let showArchived = false;
+  let editingId = null; // null = creando; string = editando ese addressId
+
+  $('client-name').textContent = client.businessName || client.clientId;
+  $('client-num-display').textContent = client.clientId;
+  GS.applyLogo();
+
+  loadAddresses();
+
+  async function loadAddresses() {
+    $('addr-list').innerHTML = '<p class="empty-note">Loading…</p>';
+    try {
+      const data = await GS.api('/get-client-addresses', {
+        method: 'POST',
+        body: { clientId: client.clientId, includeArchived: showArchived }
+      });
+      addresses = data.addresses || [];
+      renderAddresses();
+    } catch (e) {
+      $('addr-list').innerHTML = '<p class="empty-note">Could not load addresses: ' + esc(e.message) + '</p>';
+    }
+  }
+
+  function toggleArchived() {
+    showArchived = !showArchived;
+    $('archived-toggle').textContent = showArchived ? 'Hide archived' : 'Show archived';
+    loadAddresses();
+  }
+
+  function renderAddresses() {
+    if (!addresses.length) {
+      $('addr-list').innerHTML = '<p class="empty-note">' +
+        (showArchived ? 'No addresses yet.' : 'No saved addresses yet. Add one to reuse it on future orders.') +
+        '</p>';
+      return;
+    }
+    $('addr-list').innerHTML = addresses.map(addressCard).join('');
+  }
+
+  function addressCard(a) {
+    const lineParts = [a.buildingNumber, a.unitNumber ? ('Unit ' + a.unitNumber) : ''].filter(Boolean).join(' · ');
+    const addrParts = [a.address, a.suite, a.city, a.zip].filter(Boolean).join(', ');
+    const bedBath = (a.bedrooms || a.bathrooms) ? (esc(a.bedrooms || '—') + ' bed / ' + esc(a.bathrooms || '—') + ' bath') : '';
+    return '' +
+      '<div class="addr-card' + (a.archived ? ' archived' : '') + '">' +
+        '<div>' +
+          '<div class="addr-label">' + esc(a.label || 'Untitled address') +
+            (a.archived ? '<span class="addr-badge">Archived</span>' : '') +
+          '</div>' +
+          (lineParts ? '<div class="addr-line">' + esc(lineParts) + '</div>' : '') +
+          (addrParts ? '<div class="addr-line">' + esc(addrParts) + '</div>' : '') +
+          (bedBath ? '<div class="addr-line">' + bedBath + '</div>' : '') +
+        '</div>' +
+        '<div class="addr-actions">' +
+          (a.archived
+            ? '<button class="btn-small" onclick="unarchiveAddress(\'' + esc(a.id) + '\')">Unarchive</button>'
+            : '<button class="btn-small" onclick="editAddress(\'' + esc(a.id) + '\')">Edit</button>' +
+              '<button class="btn-small danger" onclick="archiveAddress(\'' + esc(a.id) + '\')">Archive</button>'
+          ) +
+        '</div>' +
+      '</div>';
+  }
+
+  function openAddressDialog() {
+    editingId = null;
+    $('address-dialog-title').textContent = 'Add Address';
+    ['label','building','unit','address','suite','city','zip','bedrooms','bathrooms'].forEach(f => { $('addr-' + f).value = ''; });
+    $('address-error').textContent = '';
+    $('address-dialog').classList.add('open');
+  }
+
+  function editAddress(id) {
+    const a = addresses.find(x => x.id === id);
+    if (!a) return;
+    editingId = id;
+    $('address-dialog-title').textContent = 'Edit Address';
+    $('addr-label').value     = a.label || '';
+    $('addr-building').value  = a.buildingNumber || '';
+    $('addr-unit').value      = a.unitNumber || '';
+    $('addr-address').value   = a.address || '';
+    $('addr-suite').value     = a.suite || '';
+    $('addr-city').value      = a.city || '';
+    $('addr-zip').value       = a.zip || '';
+    $('addr-bedrooms').value  = a.bedrooms || '';
+    $('addr-bathrooms').value = a.bathrooms || '';
+    $('address-error').textContent = '';
+    $('address-dialog').classList.add('open');
+  }
+
+  function closeAddressDialog() {
+    $('address-dialog').classList.remove('open');
+  }
+
+  async function saveAddress() {
+    const label = $('addr-label').value.trim();
+    if (!label) { $('address-error').textContent = 'Please enter a label for this address.'; return; }
+
+    const body = {
+      clientId:       client.clientId,
+      label:          label,
+      buildingNumber: $('addr-building').value.trim(),
+      unitNumber:     $('addr-unit').value.trim(),
+      address:        $('addr-address').value.trim(),
+      suite:          $('addr-suite').value.trim(),
+      city:           $('addr-city').value.trim(),
+      zip:            $('addr-zip').value.trim(),
+      bedrooms:       $('addr-bedrooms').value.trim(),
+      bathrooms:      $('addr-bathrooms').value.trim()
+    };
+    if (editingId) body.addressId = editingId;
+
+    $('address-save-btn').disabled = true;
+    try {
+      await GS.api('/save-client-address', { method: 'POST', body });
+      closeAddressDialog();
+      showToast(editingId ? 'Address updated.' : 'Address saved.');
+      await loadAddresses();
+    } catch (e) {
+      $('address-error').textContent = e.message;
+    } finally {
+      $('address-save-btn').disabled = false;
+    }
+  }
+
+  async function archiveAddress(id) {
+    try {
+      await GS.api('/save-client-address', { method: 'POST', body: { clientId: client.clientId, addressId: id, archived: true } });
+      showToast('Address archived.');
+      await loadAddresses();
+    } catch (e) {
+      showToast('Error: ' + e.message);
+    }
+  }
+
+  async function unarchiveAddress(id) {
+    try {
+      await GS.api('/save-client-address', { method: 'POST', body: { clientId: client.clientId, addressId: id, archived: false } });
+      showToast('Address restored.');
+      await loadAddresses();
+    } catch (e) {
+      showToast('Error: ' + e.message);
+    }
+  }
+
+  function doSignout() {
+    GS.session.clear();
+    location.href = 'index.html';
+  }
+
+  let toastTimer = null;
+  function showToast(msg) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+  }
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+
+  window.openAddressDialog = openAddressDialog;
+  window.closeAddressDialog = closeAddressDialog;
+  window.saveAddress = saveAddress;
+  window.editAddress = editAddress;
+  window.archiveAddress = archiveAddress;
+  window.unarchiveAddress = unarchiveAddress;
+  window.toggleArchived = toggleArchived;
+  window.doSignout = doSignout;
+}
+</script>
+</body>
+</html>

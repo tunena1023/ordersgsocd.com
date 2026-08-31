@@ -22,7 +22,8 @@ const DEMO = {
   urlCache: {},                  // objectURLs ya creados (por clave)
 
   SS_KEY: 'gs_demo_state',       // estado demo que sobrevive navegación interna
-  ORD_KEY: 'gs_demo_orders'      // órdenes simuladas (localStorage)
+  ORD_KEY: 'gs_demo_orders',     // órdenes simuladas (localStorage)
+  ADDR_KEY: 'gs_demo_addresses'  // libreta de direcciones simulada (localStorage)
 };
 
 /* ===== SESIÓN ===== */
@@ -342,6 +343,15 @@ DEMO._orders = function () {
 };
 DEMO._saveOrders = function (o) { localStorage.setItem(DEMO.ORD_KEY, JSON.stringify(o)); };
 
+DEMO._addresses = function () {
+  try { return JSON.parse(localStorage.getItem(DEMO.ADDR_KEY)) || []; } catch (e) { return []; }
+};
+DEMO._saveAddresses = function (a) { localStorage.setItem(DEMO.ADDR_KEY, JSON.stringify(a)); };
+DEMO._nextAddrId = function (list) {
+  const nums = list.map(a => parseInt(String(a.id || '').replace('demo-addr-', ''), 10)).filter(n => !isNaN(n));
+  return 'demo-addr-' + (nums.length ? Math.max(...nums) + 1 : 1);
+};
+
 /* Correlativo: rellena huecos desde el mínimo; si no hay, MAX+1 */
 DEMO._nextSuffix = function (orders) {
   const parse = (s) => /^[0-9]+$/.test(s) ? parseInt(s, 10) : parseInt(s, 36);
@@ -607,6 +617,38 @@ DEMO.handle = async function (path, opts) {
 
     case '/submit-contact':
       return { success: true };
+
+    case '/get-client-addresses': {
+      const all = DEMO._addresses();
+      const list = all.filter(a => body.includeArchived || !a.archived);
+      return { addresses: list.slice().sort((a, b2) => (a.label || '').localeCompare(b2.label || '')) };
+    }
+
+    case '/save-client-address': {
+      const all = DEMO._addresses();
+
+      if (body.addressId) {
+        const a = all.find(x => x.id === body.addressId);
+        if (!a) throw new Error('Address not found.');
+        const map = ['label', 'buildingNumber', 'unitNumber', 'address', 'suite', 'city', 'zip', 'bedrooms', 'bathrooms'];
+        map.forEach(k => { if (body[k] !== undefined) a[k] = body[k]; });
+        if (body.archived !== undefined) a.archived = !!body.archived;
+        DEMO._saveAddresses(all);
+        return { success: true, addressId: a.id };
+      }
+
+      const a = {
+        id: DEMO._nextAddrId(all),
+        label: body.label || '', buildingNumber: body.buildingNumber || '',
+        unitNumber: body.unitNumber || '', address: body.address || '',
+        suite: body.suite || '', city: body.city || '', zip: body.zip || '',
+        bedrooms: body.bedrooms || '', bathrooms: body.bathrooms || '',
+        archived: !!body.archived
+      };
+      all.push(a);
+      DEMO._saveAddresses(all);
+      return { success: true, addressId: a.id };
+    }
 
     default:
       throw new Error('Demo: unknown endpoint ' + path);

@@ -39,6 +39,43 @@ exports.handler = async (event) => {
 
     const wanted = String(b.clientId).trim().toLowerCase();
 
+    /* ===== Editar (o archivar/desarchivar) una direccion existente =====
+       Patch PARCIAL de verdad: solo se tocan los campos que de verdad
+       llegaron en la peticion. Esto es lo que permite mandar nomas
+       { addressId, archived:true } para archivar sin borrar el resto
+       de los datos de la direccion. */
+    if (b.addressId) {
+      const rows = await fetchAll(CLIENT_ADDRESSES_LIST);
+      const item = rows.find(it => it.id === String(b.addressId));
+      if (!item) return jsonResponse(404, { error: 'Address not found.' });
+      if (String(item.fields.ClientID || '').trim().toLowerCase() !== wanted) {
+        return jsonResponse(403, { error: 'This address does not belong to that client.' });
+      }
+
+      const map = [
+        ['Label',          b.label,          'Title'],
+        ['BuildingNumber', b.buildingNumber],
+        ['UnitNumber',     b.unitNumber],
+        ['Address',        b.address],
+        ['Suite',          b.suite],
+        ['City',           b.city],
+        ['Zip',            b.zip],
+        ['Bedrooms',       b.bedrooms],
+        ['Bathrooms',      b.bathrooms]
+      ];
+      const patch = {};
+      for (const [col, incoming, alsoTitle] of map) {
+        if (incoming === undefined) continue;
+        patch[col] = incoming || '';
+        if (alsoTitle) patch.Title = incoming || '';
+      }
+      if (b.archived !== undefined) patch.Archived = !!b.archived;
+
+      await updateListItemByItemId(CLIENT_ADDRESSES_LIST, item.id, patch);
+      return jsonResponse(200, { success: true, addressId: item.id });
+    }
+
+    /* ===== Direccion nueva: aqui si se llenan todos los campos ===== */
     const fields = {
       Title:          b.label || '',
       ClientID:       b.clientId,
@@ -50,25 +87,9 @@ exports.handler = async (event) => {
       City:           b.city           || '',
       Zip:            b.zip            || '',
       Bedrooms:       b.bedrooms       || '',
-      Bathrooms:      b.bathrooms      || ''
+      Bathrooms:      b.bathrooms      || '',
+      Archived:       b.archived !== undefined ? !!b.archived : false
     };
-    if (b.archived !== undefined) fields.Archived = !!b.archived;
-
-    /* ===== Editar (o archivar/desarchivar) una direccion existente ===== */
-    if (b.addressId) {
-      const rows = await fetchAll(CLIENT_ADDRESSES_LIST);
-      const item = rows.find(it => it.id === String(b.addressId));
-      if (!item) return jsonResponse(404, { error: 'Address not found.' });
-      if (String(item.fields.ClientID || '').trim().toLowerCase() !== wanted) {
-        return jsonResponse(403, { error: 'This address does not belong to that client.' });
-      }
-
-      await updateListItemByItemId(CLIENT_ADDRESSES_LIST, item.id, fields);
-      return jsonResponse(200, { success: true, addressId: item.id });
-    }
-
-    /* ===== Direccion nueva ===== */
-    if (fields.Archived === undefined) fields.Archived = false;
     const result = await createListItem(CLIENT_ADDRESSES_LIST, fields);
     return jsonResponse(200, { success: true, addressId: result.id });
 
