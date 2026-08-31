@@ -20,6 +20,7 @@ const handlers = {
   'site-image':         require('../site-image').handler,
   'submit-contact':     require('../submit-contact').handler,
   'submit-order':       require('../submit-order').handler,
+  'temp-inspect-client': require('../temp-inspect-client').handler,
   'undo-request':       require('../undo-request').handler,
   'update-client-profile': require('../update-client-profile').handler,
   'validate-client':    require('../validate-client').handler
