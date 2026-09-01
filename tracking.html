@@ -391,6 +391,20 @@ if (client) {
      instantaneo sin volver a pedirselo a la API. Se invalida entero
      cada vez que se recarga la lista (loadOrders). */
   let orderDetailCache = {};
+  /* Contactos del cliente, cacheados una vez por sesion de pagina --
+     se usan para resolver el nombre del contacto en el resumen de
+     notificaciones de cada orden, sin pedirlos de nuevo cada vez. */
+  let contactsCache = null;
+  async function ensureContactsCache() {
+    if (contactsCache) return contactsCache;
+    try {
+      const data = await GS.api('/get-client-contacts', { method: 'POST', body: { clientId: client.clientId, includeArchived: false } });
+      contactsCache = data.contacts || [];
+    } catch (e) {
+      contactsCache = [];
+    }
+    return contactsCache;
+  }
   /* Aparte del cache de HTML de arriba, se guarda si la orden esta
      esperando confirmacion del cliente ahora mismo -- lo necesita el
      dialogo de Notifications para mostrar el aviso de Confirmations. */
@@ -650,6 +664,38 @@ if (client) {
       </div>`;
   }
 
+  /* Mismo criterio que orderNotificationsLineHtml() en admin.html: si
+     la orden no tiene NADA distinto al default de la cuenta, no se ve
+     ningun renglon extra. Si tiene algo custom, se resume aqui -- el
+     boton "Notifications" de mas abajo es para cambiarlo. */
+  function orderNotifSummaryHtml(o, contacts) {
+    const enabled    = o.OrderNotificationsEnabled || '';
+    const confirmVal = o.OrderNotifyConfirmations  || '';
+    const changesVal = o.OrderNotifyChanges        || '';
+    const updatesVal = o.OrderNotifyUpdates        || '';
+    const contactId  = o.OrderContactId            || '';
+
+    if (!enabled && !confirmVal && !changesVal && !updatesVal && !contactId) return '';
+
+    const parts = [];
+    if (enabled)    parts.push('Notifications ' + enabled);
+    if (confirmVal) parts.push('Confirmations ' + confirmVal);
+    if (changesVal) parts.push('Changes ' + changesVal);
+    if (updatesVal) parts.push('Updates ' + updatesVal);
+
+    let contactLabel = '';
+    if (contactId) {
+      const contact = (contacts || []).find(c => c.id === contactId);
+      contactLabel = contact ? (esc(contact.name) + ' (' + esc(contact.type) + ')') : 'a custom contact';
+    }
+
+    return '<p class="field-caption" style="margin-bottom:2px">Notifications for this order</p>' +
+      '<p class="meta-line" style="margin-bottom:14px;font-size:12px;color:var(--gray)">' +
+      'Custom' + (contactLabel ? ' — goes to ' + contactLabel : '') +
+      (parts.length ? (contactLabel ? '; ' : ' — ') + esc(parts.join(', ')) : '') +
+      '</p>';
+  }
+
   async function expandOrder(headerEl, orderId) {
     const body = headerEl.nextElementSibling;
     const context = body.closest('#processing-container') ? 'processing' : 'history';
@@ -672,6 +718,7 @@ if (client) {
       const o = data.order || {};
       const services = data.services || [];
       const history = data.history || [];
+      const contactsForSummary = await ensureContactsCache();
 
       const byCat = {};
       (services || []).forEach(s => {
@@ -830,6 +877,7 @@ if (client) {
               <div><div class="field-caption">Building / Unit</div><div class="field-value">${esc(o.BuildingNumber || '—')} / ${esc(o.UnitNumber || '—')}</div></div>
               <div><div class="field-caption">Bed / Bath</div><div class="field-value">${esc(o.Bedrooms || '—')} / ${esc(o.Bathrooms || '—')}</div></div>
             </div>
+            ${orderNotifSummaryHtml(o, contactsForSummary)}
             ${dirtLine}
             ${o.Notes ? '<p class="meta-line" style="margin-bottom:14px">Notes: ' + esc(o.Notes) + '</p>' : ''}
             ${noticeHtml}
