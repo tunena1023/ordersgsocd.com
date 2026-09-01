@@ -1624,8 +1624,19 @@ if (client) {
       order.Bathrooms = bathrooms;
     }
 
-    if (editOrderId) order.OrderID = editOrderId;
-    else if (draftOrderId) order.OrderID = draftOrderId;
+    /* En modo Multiple Units nunca se manda el OrderID de un borrador
+       autoguardado -- si lo mandamos, submit-order.js lo revisa ANTES
+       que Units y desvia todo al flujo de "convertir borrador en
+       orden" (una sola orden, sin nada de Units). El lote siempre
+       tiene que entrar como creacion nueva. El borrador huerfano que
+       haya quedado se limpia despues, si el envio sale bien. */
+    if (multiUnitsOn) {
+      // nada -- order.OrderID se queda sin poner a proposito
+    } else if (editOrderId) {
+      order.OrderID = editOrderId;
+    } else if (draftOrderId) {
+      order.OrderID = draftOrderId;
+    }
 
     const btn = $('submit-btn');
     const originalText = btn.textContent;
@@ -1639,6 +1650,13 @@ if (client) {
         setTimeout(() => { location.href = 'tracking.html'; }, 2500);
       } else if (result.batchId) {
         showBatchConfirmation(result.batchId, result.orderIds || [], order);
+        /* El borrador autoguardado (si alguno quedo pendiente mientras
+           se llenaba el formulario) nunca se uso -- el lote se creo
+           como ordenes nuevas independientes. Se borra de verdad para
+           que no se quede huerfano en "Unfinished Drafts". */
+        if (draftOrderId) {
+          GS.api('/delete-draft', { method: 'POST', body: { orderId: draftOrderId } }).catch(() => {});
+        }
       } else {
         showConfirmation(result.orderId || order.OrderID, order);
       }
