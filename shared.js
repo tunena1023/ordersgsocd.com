@@ -504,6 +504,43 @@ DEMO.handle = async function (path, opts) {
        En producción, submit-order.js replicará exactamente esta
        lógica (1 fila Orders + N OrderServices refrescados + evento
        OrderHistory con Title de revisión). */
+    case '/add-batch-unit': {
+      const savedBuildings = DEMO._addresses();
+      const building = savedBuildings.find(b => b.id === body.buildingId);
+      if (!building) throw new Error('That building does not belong to this account.');
+
+      const siblings = orders.filter(o => o.BatchId === body.batchId);
+      if (!siblings.length) throw new Error('That order was not found.');
+      const template = siblings[0];
+
+      const suffix = DEMO._nextSuffix(orders);
+      const clientId = body.clientId || 'GS-9999';
+      const id = clientId + '-' + suffix + '-' + body.batchId;
+
+      orders.push(Object.assign({}, template, {
+        OrderID: id,
+        Status: 'Received',
+        createdDateTime: new Date().toISOString(),
+        BuildingNumber: building.buildingNumber || '',
+        UnitNumber: body.unitNumber || '',
+        Bedrooms: body.bedrooms || '',
+        Bathrooms: body.bathrooms || '',
+        EntryDate: body.entryDate || '',
+        DueDate: body.dueDate || '',
+        Address: building.address || '',
+        Suite: building.suite || '',
+        City: building.city || '',
+        Zip: building.zip || '',
+        BatchId: body.batchId,
+        BuildingId: body.buildingId,
+        services: (template.services || []).slice(),
+        history: [DEMO._historyEntry('Created', 'Added to existing order ' + template.OrderID + '.', '', 'Received')]
+      }));
+
+      DEMO._saveOrders(orders);
+      return { success: true, orderId: id };
+    }
+
     case '/submit-order': {
       /* ===== Multi-unidad: Units es un arreglo de 2+ unidades ===== */
       if (Array.isArray(body.Units) && body.Units.length >= 2) {

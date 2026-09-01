@@ -378,6 +378,42 @@
   </div>
 </div>
 
+<div class="dialog-overlay" id="addunit-dialog">
+  <div class="dialog-panel">
+    <h3>Add a Unit to <span id="addunit-po-id"></span></h3>
+    <p style="font-size:12px;color:var(--gray);margin-bottom:16px">Uses the same services as the rest of this order. Just pick the building and this unit's details.</p>
+    <div class="field">
+      <label>Building</label>
+      <select id="addunit-building"></select>
+    </div>
+    <div class="field">
+      <label>Unit #</label>
+      <input type="text" id="addunit-unit-number" placeholder="e.g. 205">
+    </div>
+    <div class="field">
+      <label>Bedrooms</label>
+      <input type="number" id="addunit-bedrooms" min="1" max="5" placeholder="e.g. 2">
+    </div>
+    <div class="field">
+      <label>Bathrooms</label>
+      <input type="number" id="addunit-bathrooms" min="1" max="3" placeholder="e.g. 1">
+    </div>
+    <div class="field">
+      <label>Entry available from</label>
+      <input type="date" id="addunit-entry-date">
+    </div>
+    <div class="field">
+      <label>Service due date</label>
+      <input type="date" id="addunit-due-date">
+    </div>
+    <div class="dialog-btns">
+      <button class="btn-ghost" onclick="closeAddBatchUnit()">Cancel</button>
+      <button class="btn-gold" id="addunit-save-btn" onclick="submitAddBatchUnit()">Add Unit</button>
+    </div>
+    <p class="dialog-error" id="addunit-error"></p>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="shared.js"></script>
@@ -493,7 +529,7 @@ if (client) {
     return { standalone, groupsMap, groupOrder };
   }
 
-  function renderBatchGroupCard(batchId, units, cardRenderer) {
+  function renderBatchGroupCard(batchId, units, cardRenderer, showAddButton) {
     const groupOrderId = 'batch-' + batchId;
     const innerHtml = units.map(cardRenderer).join('');
     return `
@@ -508,6 +544,7 @@ if (client) {
           </div>
         </div>
         <div class="order-card-body" style="padding:16px">
+          ${showAddButton ? '<button type="button" class="btn-action" style="margin-bottom:16px" onclick="event.stopPropagation(); openAddBatchUnit(\'' + escAttr(batchId) + '\')">+ Add a Unit</button>' : ''}
           ${innerHtml}
         </div>
       </div>`;
@@ -539,7 +576,7 @@ if (client) {
       html += '<p class="empty-note">No active orders yet.</p>';
     } else {
       const { standalone, groupsMap, groupOrder } = groupByBatch(active);
-      html += groupOrder.map(bid => renderBatchGroupCard(bid, groupsMap[bid], renderActiveCard)).join('');
+      html += groupOrder.map(bid => renderBatchGroupCard(bid, groupsMap[bid], renderActiveCard, true)).join('');
       html += standalone.map(renderActiveCard).join('');
     }
     box.innerHTML = html;
@@ -1364,6 +1401,85 @@ return html;
     }
   }
 
+  /* ===== Add a Unit a un PO ya existente ===== */
+  let addUnitBatchId = null;
+  let addUnitBuildingsCache = null;
+
+  async function openAddBatchUnit(batchId) {
+    addUnitBatchId = batchId;
+    $('addunit-po-id').textContent = client.clientId + '-' + batchId;
+    $('addunit-error').textContent = '';
+    $('addunit-unit-number').value = '';
+    $('addunit-bedrooms').value = '';
+    $('addunit-bathrooms').value = '';
+    $('addunit-entry-date').value = '';
+    $('addunit-due-date').value = '';
+
+    if (!addUnitBuildingsCache) {
+      try {
+        const data = await GS.api('/get-client-addresses', { method: 'POST', body: { clientId: client.clientId, includeArchived: false } });
+        addUnitBuildingsCache = data.addresses || [];
+      } catch (e) {
+        addUnitBuildingsCache = [];
+      }
+    }
+    let optHtml = '';
+    addUnitBuildingsCache.forEach(b => {
+      optHtml += '<option value="' + escAttr(b.id) + '">' + esc(b.label || 'Building') + (b.buildingNumber ? ' #' + esc(b.buildingNumber) : '') + '</option>';
+    });
+    $('addunit-building').innerHTML = optHtml || '<option value="">No saved buildings — add one in Profile first</option>';
+
+    $('addunit-dialog').classList.add('open');
+  }
+
+  function closeAddBatchUnit() {
+    $('addunit-dialog').classList.remove('open');
+    addUnitBatchId = null;
+  }
+
+  async function submitAddBatchUnit() {
+    if (!addUnitBatchId) return;
+    const errEl = $('addunit-error');
+    errEl.textContent = '';
+
+    const buildingId = $('addunit-building').value;
+    const unitNumber = $('addunit-unit-number').value.trim();
+    const bedrooms = $('addunit-bedrooms').value.trim();
+    const bathrooms = $('addunit-bathrooms').value.trim();
+    const entryDateVal = $('addunit-entry-date').value;
+    const dueDateVal = $('addunit-due-date').value;
+
+    if (!buildingId)  { errEl.textContent = 'Please choose a building.'; return; }
+    if (!unitNumber)  { errEl.textContent = 'Please enter the Unit Number.'; return; }
+    if (!bedrooms || parseInt(bedrooms) < 1)  { errEl.textContent = 'Please enter a valid number of Bedrooms.'; return; }
+    if (!bathrooms || parseInt(bathrooms) < 1) { errEl.textContent = 'Please enter a valid number of Bathrooms.'; return; }
+    if (!entryDateVal) { errEl.textContent = 'Please enter the entry date.'; return; }
+    if (!dueDateVal)   { errEl.textContent = 'Please enter the due date.'; return; }
+
+    const body = {
+      clientId:   client.clientId,
+      batchId:    addUnitBatchId,
+      buildingId: buildingId,
+      unitNumber: unitNumber,
+      bedrooms:   bedrooms,
+      bathrooms:  bathrooms,
+      entryDate:  new Date(entryDateVal + 'T08:00').toISOString(),
+      dueDate:    new Date(dueDateVal + 'T23:59:59').toISOString()
+    };
+
+    $('addunit-save-btn').disabled = true;
+    try {
+      await GS.api('/add-batch-unit', { method: 'POST', body });
+      closeAddBatchUnit();
+      showToast('Unit added to ' + client.clientId + '-' + addUnitBatchId + '.');
+      loadOrders();
+    } catch (e) {
+      errEl.textContent = e.message;
+    } finally {
+      $('addunit-save-btn').disabled = false;
+    }
+  }
+
   async function submitChange() {
     const orderId = $('change-order-id').textContent;
     const txt = $('change-text').value.trim();
@@ -1518,6 +1634,9 @@ return html;
   window.closeChangeDialog = closeChangeDialog;
   window.submitChange = submitChange;
   window.toggleBatchCard = toggleBatchCard;
+  window.openAddBatchUnit = openAddBatchUnit;
+  window.closeAddBatchUnit = closeAddBatchUnit;
+  window.submitAddBatchUnit = submitAddBatchUnit;
   window.closeNotifDialog = closeNotifDialog;
   window.saveOrderNotifications = saveOrderNotifications;
   window.undoRequest = undoRequest;
