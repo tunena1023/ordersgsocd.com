@@ -102,7 +102,8 @@ exports.handler = async (event) => {
           Notes:           f.Notes || '',
           ServiceWindow:    f.ServiceWindow || '',
           DelayReasonType:  '',
-          DelayReasonNotes: ''
+          DelayReasonNotes: '',
+          UnitsData: f.UnitsData || ''
         };
       });
 

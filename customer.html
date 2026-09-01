@@ -1199,6 +1199,7 @@ if (client) {
         addUnitCard();
       }
     }
+    scheduleDraftSave();
   }
 
   async function loadClientBuildingsForUnits() {
@@ -1236,7 +1237,18 @@ if (client) {
       '</div>';
   }
 
-  function addUnitCard() {
+  /* Autoguardado tambien para las filas de unidad -- se crean dinamico,
+     asi que no las agarra el .forEach de addEventListener de arriba. */
+  function wireUnitCardAutosave(idx) {
+    ['building-select', 'unit-number', 'bedrooms', 'bathrooms'].forEach(suffix => {
+      const el = $('unit-' + idx + '-' + suffix);
+      if (!el) return;
+      el.addEventListener('input', scheduleDraftSave);
+      el.addEventListener('change', scheduleDraftSave);
+    });
+  }
+
+  function addUnitCard(prefill) {
     const idx = ++unitCardCounter;
     const div = document.createElement('div');
     div.className = 'unit-card';
@@ -1244,6 +1256,14 @@ if (client) {
     div.innerHTML = unitCardHtml(idx);
     $('unit-cards').appendChild(div);
     renumberUnitCards();
+    wireUnitCardAutosave(idx);
+    if (prefill) {
+      const sel = $('unit-' + idx + '-building-select');
+      if (sel && prefill.buildingId) sel.value = prefill.buildingId;
+      if ($('unit-' + idx + '-unit-number')) $('unit-' + idx + '-unit-number').value = prefill.unitNumber || '';
+      if ($('unit-' + idx + '-bedrooms'))    $('unit-' + idx + '-bedrooms').value    = prefill.bedrooms || '';
+      if ($('unit-' + idx + '-bathrooms'))   $('unit-' + idx + '-bathrooms').value   = prefill.bathrooms || '';
+    }
   }
 
   function removeUnitCard(idx) {
@@ -1255,6 +1275,7 @@ if (client) {
     const el = document.querySelector('.unit-card[data-unit="' + idx + '"]');
     if (el) el.remove();
     renumberUnitCards();
+    scheduleDraftSave();
   }
 
   function renumberUnitCards() {
@@ -1262,6 +1283,16 @@ if (client) {
       const title = card.querySelector('.unit-card-title');
       if (title) title.textContent = 'Unit ' + (i + 1);
     });
+  }
+
+  /* Reconstruye las tarjetas de unidad de un draft/orden restaurada,
+     limpiando lo que hubiera antes. Usado tanto por el dialogo de
+     "Continue" como por loadForContinue (llegando desde tracking). */
+  async function restoreUnitsIntoForm(unitsRaw) {
+    if (!Array.isArray(unitsRaw) || unitsRaw.length < 2) return;
+    await setOrderMode('multi');
+    $('unit-cards').innerHTML = '';
+    unitsRaw.forEach(u => addUnitCard(u));
   }
 
   function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
@@ -1295,6 +1326,7 @@ if (client) {
       dirtLevel: dirtLevel,
       dirtLabel: (document.querySelector('input[name="dirt-level"]:checked') || {}).value || '',
       selected: selected,
+      units: multiUnitsOn ? gatherUnitsRaw() : null,
       fields: {
         buildingNumber: $('building-number').value,
         unitNumber: $('unit-number').value,
@@ -1354,6 +1386,7 @@ if (client) {
       DueDate:        snap.fields.dueDate ? new Date(snap.fields.dueDate + 'T23:59:59').toISOString() : '',
       Notes:          snap.fields.notes
     };
+    if (snap.units) payload.Units = snap.units;
 
     /* Si ya tenemos un ID temporal de esta sesión, lo mandamos para que actualice la fila */
     if (draftOrderId) {
@@ -1426,6 +1459,9 @@ if (client) {
       syncDirtRadios();
       updateSummary();
       if (openCat) populateServices(openCat, false);
+      if (o.UnitsData) {
+        try { await restoreUnitsIntoForm(JSON.parse(o.UnitsData)); } catch (e) { /* draft viejo sin esto, se ignora */ }
+      }
       showToast('Draft ' + orderId + ' loaded — continue where you left off.');
     } catch (e) {
       alert('Could not load the draft: ' + e.message);
@@ -1501,6 +1537,9 @@ if (client) {
       renderServices(currentDiv);
       syncDirtRadios();
       updateSummary();
+      if (o.UnitsData) {
+        try { await restoreUnitsIntoForm(JSON.parse(o.UnitsData)); } catch (e) { /* draft viejo sin esto, se ignora */ }
+      }
     } catch (e) {
       alert('Could not load the draft: ' + e.message);
       location.href = 'tracking.html';
@@ -1564,6 +1603,21 @@ if (client) {
   }
 
   /* ===== Submit / Save ===== */
+  function gatherUnitsRaw() {
+    const cards = document.querySelectorAll('.unit-card');
+    const out = [];
+    cards.forEach(card => {
+      const idx = card.dataset.unit;
+      out.push({
+        buildingId: $('unit-' + idx + '-building-select')?.value || '',
+        unitNumber: $('unit-' + idx + '-unit-number')?.value.trim() || '',
+        bedrooms:   $('unit-' + idx + '-bedrooms')?.value.trim() || '',
+        bathrooms:  $('unit-' + idx + '-bathrooms')?.value.trim() || ''
+      });
+    });
+    return out;
+  }
+
   async function submitOrder() {
     const svcCount = Object.values(selected).reduce((n, o) => n + Object.keys(o).length, 0);
     if (svcCount === 0) { alert('Please select at least one service.'); return; }
@@ -1590,19 +1644,12 @@ if (client) {
     let unitsPayload = null;
     if (multiUnitsOn) {
       if (!clientBuildings.length) { alert('You need at least one saved building in your Profile before submitting a multi-unit order.'); return; }
-      const cards = document.querySelectorAll('.unit-card');
-      unitsPayload = [];
-      for (const card of cards) {
-        const idx = card.dataset.unit;
-        const buildingId = $('unit-' + idx + '-building-select')?.value || '';
-        const unitNumber = $('unit-' + idx + '-unit-number')?.value.trim() || '';
-        const bedrooms = $('unit-' + idx + '-bedrooms')?.value.trim() || '';
-        const bathrooms = $('unit-' + idx + '-bathrooms')?.value.trim() || '';
-        if (!buildingId) { alert('Please choose a building for every unit.'); return; }
-        if (!unitNumber) { alert('Please enter the Unit Number for every unit.'); return; }
-        if (!bedrooms || parseInt(bedrooms) < 1) { alert('Please enter a valid number of Bedrooms (1-5) for every unit.'); return; }
-        if (!bathrooms || parseInt(bathrooms) < 1) { alert('Please enter a valid number of Bathrooms (1-3) for every unit.'); return; }
-        unitsPayload.push({ buildingId, unitNumber, bedrooms, bathrooms });
+      unitsPayload = gatherUnitsRaw();
+      for (const u of unitsPayload) {
+        if (!u.buildingId) { alert('Please choose a building for every unit.'); return; }
+        if (!u.unitNumber) { alert('Please enter the Unit Number for every unit.'); return; }
+        if (!u.bedrooms || parseInt(u.bedrooms) < 1) { alert('Please enter a valid number of Bedrooms (1-5) for every unit.'); return; }
+        if (!u.bathrooms || parseInt(u.bathrooms) < 1) { alert('Please enter a valid number of Bathrooms (1-3) for every unit.'); return; }
       }
       order.Units = unitsPayload;
     } else {

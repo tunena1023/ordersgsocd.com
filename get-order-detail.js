@@ -77,7 +77,8 @@ exports.handler = async (event) => {
       /* Columnas nuevas 28/08/2026 */
       ServiceWindow:    f.ServiceWindow || '',
       DelayReasonType:  f.DelayReasonType || '',
-      DelayReasonNotes: f.DelayReasonNotes || ''
+      DelayReasonNotes: f.DelayReasonNotes || '',
+      UnitsData: f.UnitsData || ''
       };
 
       const services = draftRows

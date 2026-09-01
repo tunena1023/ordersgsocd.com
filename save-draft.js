@@ -86,7 +86,8 @@ exports.handler = async (event) => {
       Bedrooms:       numberField(b.Bedrooms),
       Bathrooms:      numberField(b.Bathrooms),
       Notes:          b.Notes || '',
-      DraftDate:      new Date().toISOString()
+      DraftDate:      new Date().toISOString(),
+      UnitsData:      Array.isArray(b.Units) ? JSON.stringify(b.Units) : ''
     };
     if (b.EntryDate !== undefined) headerFields.EntryDate = dateField(b.EntryDate);
     if (b.DueDate   !== undefined) headerFields.DueDate   = dateField(b.DueDate);
