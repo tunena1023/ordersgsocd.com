@@ -66,7 +66,9 @@ exports.handler = async (event) => {
              se movio la visita sin tener que llamar. */
           ServiceWindow:    f.ServiceWindow || '',
           DelayReasonType:  f.DelayReasonType || '',
-          DelayReasonNotes: f.DelayReasonNotes || ''
+          DelayReasonNotes: f.DelayReasonNotes || '',
+          BatchId:    f.BatchId    || '',
+          BuildingId: f.BuildingId || ''
         };
       });
 
