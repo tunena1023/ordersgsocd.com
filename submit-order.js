@@ -375,7 +375,7 @@ exports.handler = async (event) => {
         const suffix = String(nextSuffixNum++).padStart(4, '0');
         const orderId = String(b.ClientID).trim() + '-' + suffix + '-' + poTag;
 
-        await createListItem(ORDERS_LIST, Object.assign({}, orderFields, {
+        const unitFields = Object.assign({}, orderFields, {
           OrderID:        orderId,
           Status:         b.Status || 'Received',
           BuildingNumber: bf.BuildingNumber || '',
@@ -388,29 +388,48 @@ exports.handler = async (event) => {
           Zip:            bf.Zip     || '',
           BatchId:        poTag,
           BuildingId:     bId
-        }));
-
-        await Promise.all(parsedServices.map(s =>
-          createListItem(ORDER_SERVICES_LIST, {
-            Title:       s.ServiceName || '',
-            OrderID:     orderId,
-            Category:    s.Category,
-            ServiceName: s.ServiceName,
-            SubOption:   s.SubOption,
-            Division:    s.Division
-          })
-        ));
-
-        await createListItem(ORDER_HISTORY_LIST, {
-          Title:      orderId,
-          OrderID:    orderId,
-          ChangeType: 'Created',
-          ChangedBy:  b.ClientID,
-          ChangeDate: new Date().toISOString(),
-          Notes:      '',
-          OldValue:   '',
-          NewValue:   b.Status || 'Received'
         });
+
+        try {
+          await createListItem(ORDERS_LIST, unitFields);
+        } catch (e) {
+          /* DIAGNOSTICO TEMPORAL: Graph solo dice "one of the provided
+             arguments is not acceptable" sin decir cual campo -- se
+             loguea el payload completo para poder ver en los logs de
+             Vercel exactamente que se estaba mandando cuando truena. */
+          console.error('Batch order create failed. Fields sent:', JSON.stringify(unitFields));
+          throw new Error('Could not create unit ' + orderId + ': ' + e.message);
+        }
+
+        try {
+          await Promise.all(parsedServices.map(s =>
+            createListItem(ORDER_SERVICES_LIST, {
+              Title:       s.ServiceName || '',
+              OrderID:     orderId,
+              Category:    s.Category    || '',
+              ServiceName: s.ServiceName || '',
+              SubOption:   s.SubOption   || '',
+              Division:    s.Division    || b.Division
+            })
+          ));
+
+          await createListItem(ORDER_HISTORY_LIST, {
+            Title:      orderId,
+            OrderID:    orderId,
+            ChangeType: 'Created',
+            ChangedBy:  b.ClientID,
+            ChangeDate: new Date().toISOString(),
+            Notes:      '',
+            OldValue:   '',
+            NewValue:   b.Status || 'Received'
+          });
+        } catch (e) {
+          /* Mismo criterio que el Flujo C (orden normal): un problema
+             al escribir servicios/historial NO debe tumbar la orden
+             completa (la orden ya existe en ORDERS_LIST en este punto).
+             Se loguea para diagnostico, no se avienta al cliente. */
+          console.error('Batch unit post-order write failed for ' + orderId + ':', e.message);
+        }
 
         createdOrderIds.push(orderId);
       }
