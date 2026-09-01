@@ -351,22 +351,38 @@ exports.handler = async (event) => {
         return jsonResponse(400, { error: 'Every unit needs a building selected.' });
       }
 
-      const [allOrderRows, buildingRows] = await Promise.all([
-        fetchAllOrderIds(),
-        fetchByField(CLIENT_ADDRESSES_LIST, 'ClientID', b.ClientID)
-      ]);
+      let allOrderRows, buildingRows;
+      try {
+        console.error('[D-diag] step1: fetching allOrderRows + buildingRows for ClientID=', b.ClientID, 'buildingIds=', buildingIds);
+        [allOrderRows, buildingRows] = await Promise.all([
+          fetchAllOrderIds(),
+          fetchByField(CLIENT_ADDRESSES_LIST, 'ClientID', b.ClientID)
+        ]);
+        console.error('[D-diag] step1 OK: allOrderRows=' + allOrderRows.length + ' buildingRows=' + buildingRows.length);
+      } catch (e) {
+        console.error('[D-diag] step1 FAILED:', e.message);
+        throw new Error('[step1 fetch] ' + e.message);
+      }
 
       /* Cada building tiene que ser de verdad de este cliente -- que
          nadie pueda mandar el id de un building ajeno. */
       const buildingsById = {};
       buildingRows.forEach(it => { if (it.fields) buildingsById[it.id] = it.fields; });
+      console.error('[D-diag] step2: buildingsById keys=', Object.keys(buildingsById));
       for (const id of buildingIds) {
         if (!buildingsById[id]) return jsonResponse(403, { error: 'One of the selected buildings does not belong to this account.' });
       }
 
-      const poTag = nextGlobalPO(allOrderRows);
-      let nextSuffixNum = parseInt(nextGlobalSuffix(allOrderRows), 10);
-      const parsedServices = resolveServices(b.Services, b.Division);
+      let poTag, nextSuffixNum, parsedServices;
+      try {
+        poTag = nextGlobalPO(allOrderRows);
+        nextSuffixNum = parseInt(nextGlobalSuffix(allOrderRows), 10);
+        parsedServices = resolveServices(b.Services, b.Division);
+        console.error('[D-diag] step3 OK: poTag=' + poTag + ' nextSuffixNum=' + nextSuffixNum + ' parsedServices.length=' + parsedServices.length, JSON.stringify(parsedServices));
+      } catch (e) {
+        console.error('[D-diag] step3 FAILED:', e.message);
+        throw new Error('[step3 resolve] ' + e.message);
+      }
 
       const createdOrderIds = [];
       for (const unit of b.Units) {
@@ -390,14 +406,12 @@ exports.handler = async (event) => {
           BuildingId:     bId
         });
 
+        console.error('[D-diag] step4: creating order ' + orderId, JSON.stringify(unitFields));
         try {
           await createListItem(ORDERS_LIST, unitFields);
+          console.error('[D-diag] step4 OK: ' + orderId);
         } catch (e) {
-          /* DIAGNOSTICO TEMPORAL: Graph solo dice "one of the provided
-             arguments is not acceptable" sin decir cual campo -- se
-             loguea el payload completo para poder ver en los logs de
-             Vercel exactamente que se estaba mandando cuando truena. */
-          console.error('Batch order create failed. Fields sent:', JSON.stringify(unitFields));
+          console.error('[D-diag] step4 FAILED for ' + orderId + ':', e.message, 'fields=', JSON.stringify(unitFields));
           throw new Error('Could not create unit ' + orderId + ': ' + e.message);
         }
 
