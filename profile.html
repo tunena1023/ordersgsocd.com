@@ -54,9 +54,12 @@
 
   .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
   @media (max-width: 560px) { .profile-grid { grid-template-columns: 1fr; } }
-  .profile-grid .field input { width: 100%; border: 1.5px solid var(--border); padding: 13px 14px; font-size: 14px; font-family: 'Inter', sans-serif; outline: none; transition: border-color .2s; }
-  .profile-grid .field input:focus { border-color: var(--gold); }
+  .profile-grid .field input, .profile-grid .field select { width: 100%; border: 1.5px solid var(--border); padding: 13px 14px; font-size: 14px; font-family: 'Inter', sans-serif; outline: none; transition: border-color .2s; background: var(--white); }
+  .profile-grid .field input:focus, .profile-grid .field select:focus { border-color: var(--gold); }
   .profile-grid .field label { display: block; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--gray); font-weight: 600; margin-bottom: 8px; }
+
+  .recipient-row { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 8px 0; }
+  .recipient-row input[type="radio"] { width: auto; }
 
   .addr-top-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 12px; flex-wrap: wrap; }
   .link-toggle { font-size: 11px; color: var(--gray); background: none; border: none; cursor: pointer; text-decoration: underline; letter-spacing: .04em; }
@@ -230,6 +233,22 @@
     </div>
   </div>
 
+  <div class="section-title">Contacts</div>
+  <p class="list-sub" style="margin-top:-8px">Add contacts for this account and choose who should receive order notifications.</p>
+
+  <div style="border:1px solid var(--border);padding:16px 20px;margin-bottom:20px;background:var(--off)">
+    <div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--gray);font-weight:700;margin-bottom:6px">Who receives notifications</div>
+    <div id="recipient-list"><p class="empty-note" style="padding:6px 0">Loading…</p></div>
+    <button class="btn-gold" style="margin-top:10px" onclick="saveRecipient()">Save</button>
+    <p class="dialog-error" id="recipient-error"></p>
+  </div>
+
+  <div class="addr-top-actions">
+    <button class="link-toggle" id="contact-archived-toggle" onclick="toggleContactArchived()">Show archived</button>
+    <button class="btn-gold" onclick="startAddContact()">+ Add Contact</button>
+  </div>
+  <div id="contact-list"><p class="empty-note">Loading…</p></div>
+
   <div class="section-title">Secondary Addresses (Buildings)</div>
   <p class="list-sub" style="margin-top:-8px">Other buildings you work with, besides your primary address above. Unit number, bedrooms and bathrooms are entered per order, since they vary unit to unit within the same building.</p>
 
@@ -281,13 +300,19 @@ if (client) {
   let addresses = [];
   let showArchived = false;
   let addingNew = false;
+  let contacts = [];
+  let showContactArchived = false;
+  let addingNewContact = false;
 
   $('client-name').textContent = client.businessName || client.clientId;
   $('client-num-display').textContent = client.clientId;
   GS.applyLogo();
 
   loadProfile();
-  loadAddresses();
+  /* Contactos primero: las tarjetas de Buildings necesitan la lista de
+     contactos ya cargada para armar su selector de "Contact for this
+     Building". */
+  loadContacts().then(loadAddresses);
 
   /* Carga fresca desde el backend, no de la sesion -- update-client-profile.js
      mapea Contact Person a la columna correcta (ClientName); la sesion
@@ -364,6 +389,181 @@ if (client) {
     }
   }
 
+  async function loadContacts() {
+    try {
+      const data = await GS.api('/get-client-contacts', {
+        method: 'POST',
+        body: { clientId: client.clientId, includeArchived: showContactArchived }
+      });
+      contacts = data.contacts || [];
+      renderContacts();
+      renderRecipientList();
+    } catch (e) {
+      $('contact-list').innerHTML = '<p class="empty-note">Could not load contacts: ' + esc(e.message) + '</p>';
+    }
+  }
+
+  function toggleContactArchived() {
+    showContactArchived = !showContactArchived;
+    $('contact-archived-toggle').textContent = showContactArchived ? 'Hide archived' : 'Show archived';
+    loadContacts();
+  }
+
+  function renderRecipientList() {
+    const active = contacts.filter(c => !c.archived);
+    const anyRecipient = active.some(c => c.notifyRecipient);
+    let html = '<label class="recipient-row"><input type="radio" name="recipient-pick" value="primary" ' + (anyRecipient ? '' : 'checked') + '> ' +
+      esc(client.contactPerson || client.businessName) + ' (Email) — ' + esc(client.contact || '—') + '</label>';
+    active.forEach(c => {
+      html += '<label class="recipient-row"><input type="radio" name="recipient-pick" value="' + esc(c.id) + '" ' + (c.notifyRecipient ? 'checked' : '') + '> ' +
+        esc(c.name) + ' (' + esc(c.type) + ') — ' + esc(c.value) + '</label>';
+    });
+    $('recipient-list').innerHTML = html;
+  }
+
+  async function saveRecipient() {
+    const checked = document.querySelector('input[name="recipient-pick"]:checked');
+    const value = checked ? checked.value : 'primary';
+    $('recipient-error').textContent = '';
+    try {
+      await GS.api('/save-client-contact', {
+        method: 'POST',
+        body: { clientId: client.clientId, action: 'setRecipient', contactId: value === 'primary' ? '' : value }
+      });
+      showToast('Notification recipient updated.');
+      await loadContacts();
+    } catch (e) {
+      $('recipient-error').textContent = e.message;
+    }
+  }
+
+  function renderContacts() {
+    const active = contacts.filter(c => showContactArchived || !c.archived);
+    const items = addingNewContact ? [{ id: 'new', isNew: true }].concat(active) : active;
+
+    if (!items.length) {
+      $('contact-list').innerHTML = '<p class="empty-note">' +
+        (showContactArchived ? 'No contacts yet.' : 'No additional contacts yet. Add one to choose who gets notified.') +
+        '</p>';
+      return;
+    }
+    $('contact-list').innerHTML = items.map(contactCard).join('');
+
+    if (addingNewContact) {
+      const card = document.querySelector('.addr-card[data-contact="new"]');
+      if (card) {
+        card.querySelector('.addr-card-body').classList.add('open');
+        card.querySelector('.addr-card-header').classList.add('open');
+        const nameInput = $('contact-new-name');
+        if (nameInput) nameInput.focus();
+      }
+    }
+  }
+
+  function contactCard(c) {
+    if (c.isNew) {
+      return '' +
+        '<div class="addr-card" data-contact="new">' +
+          '<div class="addr-card-header" onclick="toggleAddrCard(this)">' +
+            '<div><div class="addr-label">+ New Contact</div></div>' +
+            '<span class="addr-chevron">▾</span>' +
+          '</div>' +
+          '<div class="addr-card-body">' +
+            '<div class="profile-grid" style="margin-top:16px">' +
+              '<div class="field"><label>Name</label><input type="text" id="contact-new-name" placeholder="e.g. Front Desk"></div>' +
+              '<div class="field"><label>Type</label><select id="contact-new-type"><option value="Email">Email</option><option value="Phone">Phone</option></select></div>' +
+              '<div class="field" style="grid-column:1/-1"><label>Value</label><input type="text" id="contact-new-value" placeholder="name@company.com"></div>' +
+            '</div>' +
+            '<div class="dialog-btns" style="max-width:340px;margin-bottom:8px">' +
+              '<button class="btn-gold" onclick="event.stopPropagation(); saveNewContact()">Save Contact</button>' +
+              '<button class="btn-ghost" onclick="event.stopPropagation(); cancelAddContact()">Cancel</button>' +
+            '</div>' +
+            '<p class="dialog-error" id="contact-new-error"></p>' +
+          '</div>' +
+        '</div>';
+    }
+    const badge = c.archived
+      ? '<span class="addr-badge">Archived</span>'
+      : (c.notifyRecipient ? '<span class="addr-badge" style="color:var(--gold-dk)">Receives notifications</span>' : '');
+    return '' +
+      '<div class="addr-card' + (c.archived ? ' archived' : '') + '" data-contact="' + esc(c.id) + '">' +
+        '<div class="addr-card-header" onclick="toggleAddrCard(this)">' +
+          '<div>' +
+            '<div class="addr-label">' + esc(c.name) + ' <span style="color:var(--gray);font-weight:400">(' + esc(c.type) + ')</span>' + badge + '</div>' +
+            '<div class="addr-line">' + esc(c.value) + '</div>' +
+          '</div>' +
+          '<span class="addr-chevron">▾</span>' +
+        '</div>' +
+        '<div class="addr-card-body">' +
+          '<div class="addr-actions" style="margin-top:16px">' +
+            (c.archived
+              ? '<button class="btn-small" onclick="event.stopPropagation(); unarchiveContact(\'' + esc(c.id) + '\')">Unarchive</button>'
+              : '<button class="btn-small danger" onclick="event.stopPropagation(); archiveContact(\'' + esc(c.id) + '\')">Remove</button>') +
+          '</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function startAddContact() {
+    addingNewContact = true;
+    renderContacts();
+  }
+
+  function cancelAddContact() {
+    addingNewContact = false;
+    renderContacts();
+  }
+
+  async function saveNewContact() {
+    const name = $('contact-new-name').value.trim();
+    const value = $('contact-new-value').value.trim();
+    const errEl = $('contact-new-error');
+    if (!name) { errEl.textContent = 'Please enter a name.'; return; }
+    if (!value) { errEl.textContent = 'Please enter a value.'; return; }
+    try {
+      await GS.api('/save-client-contact', {
+        method: 'POST',
+        body: { clientId: client.clientId, action: 'create', name, type: $('contact-new-type').value, value }
+      });
+      addingNewContact = false;
+      showToast('Contact added.');
+      await loadContacts();
+      renderAddresses(); // los selects de building necesitan ver el contacto nuevo
+    } catch (e) {
+      errEl.textContent = e.message;
+    }
+  }
+
+  async function archiveContact(id) {
+    try {
+      await GS.api('/save-client-contact', { method: 'POST', body: { clientId: client.clientId, action: 'archive', contactId: id } });
+      showToast('Contact removed.');
+      await loadContacts();
+      renderAddresses();
+    } catch (e) {
+      showToast('Error: ' + e.message);
+    }
+  }
+
+  async function unarchiveContact(id) {
+    try {
+      await GS.api('/save-client-contact', { method: 'POST', body: { clientId: client.clientId, action: 'unarchive', contactId: id } });
+      showToast('Contact restored.');
+      await loadContacts();
+      renderAddresses();
+    } catch (e) {
+      showToast('Error: ' + e.message);
+    }
+  }
+
+  function contactOptionsHtml(selectedId) {
+    let html = '<option value=""' + (!selectedId ? ' selected' : '') + '>Use primary contact (default)</option>';
+    contacts.filter(c => !c.archived).forEach(c => {
+      html += '<option value="' + esc(c.id) + '"' + (selectedId === c.id ? ' selected' : '') + '>' + esc(c.name) + ' (' + esc(c.type) + ')</option>';
+    });
+    return html;
+  }
+
   async function loadAddresses() {
     $('addr-list').innerHTML = '<p class="empty-note">Loading…</p>';
     try {
@@ -430,6 +630,7 @@ if (client) {
             '<div class="field"><label>Suite</label><input type="text" id="bld-' + esc(id) + '-suite" value="' + esc(a.suite) + '"></div>' +
             '<div class="field"><label>City</label><input type="text" id="bld-' + esc(id) + '-city" value="' + esc(a.city) + '"></div>' +
             '<div class="field"><label>Zip</label><input type="text" id="bld-' + esc(id) + '-zip" value="' + esc(a.zip) + '"></div>' +
+            '<div class="field" style="grid-column:1/-1"><label>Contact for this Building</label><select id="bld-' + esc(id) + '-contact">' + contactOptionsHtml(a.contactId) + '</select></div>' +
           '</div>' +
           '<div class="dialog-btns" style="max-width:340px;margin-bottom:8px">' +
             '<button class="btn-gold" onclick="event.stopPropagation(); saveBuilding(\'' + esc(id) + '\')">' + (a.isNew ? 'Save Building' : 'Save Changes') + '</button>' +
@@ -484,7 +685,8 @@ if (client) {
       address:        $f('address').value.trim(),
       suite:          $f('suite').value.trim(),
       city:           $f('city').value.trim(),
-      zip:            $f('zip').value.trim()
+      zip:            $f('zip').value.trim(),
+      contactId:      $f('contact')?.value || ''
     };
     const isNew = id === 'new';
     if (!isNew) body.addressId = id;
@@ -544,6 +746,13 @@ if (client) {
   window.archiveAddress = archiveAddress;
   window.unarchiveAddress = unarchiveAddress;
   window.toggleArchived = toggleArchived;
+  window.toggleContactArchived = toggleContactArchived;
+  window.saveRecipient = saveRecipient;
+  window.startAddContact = startAddContact;
+  window.cancelAddContact = cancelAddContact;
+  window.saveNewContact = saveNewContact;
+  window.archiveContact = archiveContact;
+  window.unarchiveContact = unarchiveContact;
   window.doSignout = doSignout;
 }
 </script>

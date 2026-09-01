@@ -4,10 +4,16 @@
 
    Contrato:
      { clientId, addressId?, label, buildingNumber,
-       address, suite, city, zip, archived? }
+       address, suite, city, zip, archived?, contactId?, newContact? }
 
    Unit#/Bedrooms/Bathrooms NO se guardan aqui -- varian por unidad
    dentro del mismo edificio, se capturan al hacer la orden.
+
+   contactId: id de un ClientContacts existente que se asigna a este
+   building (vacio = usa el contacto default de la direccion primaria).
+   newContact: {name, type, value} -- si viene, se crea ese contacto
+   primero (compartido, mismo lugar que los de la primaria) y su id
+   gana sobre cualquier contactId que haya llegado por separado.
 
    - Sin addressId  -> crea una fila nueva.
    - Con addressId  -> edita esa fila (se valida que sea del mismo
@@ -17,7 +23,7 @@
 ============================================================ */
 
 const {
-  CLIENT_ADDRESSES_LIST,
+  CLIENT_ADDRESSES_LIST, CLIENT_CONTACTS_LIST,
   createListItem, updateListItemByItemId,
   graphFetch, siteListPath, jsonResponse
 } = require('./lib/graph');
@@ -55,13 +61,32 @@ exports.handler = async (event) => {
         return jsonResponse(403, { error: 'This address does not belong to that client.' });
       }
 
+      /* Si viene un contacto nuevo (name+value llenos), se crea primero
+         en ClientContacts (compartida con la primaria) y su id gana
+         sobre cualquier contactId que haya llegado por separado. */
+      let newContactId = null;
+      if (b.newContact && b.newContact.name && String(b.newContact.name).trim()
+          && b.newContact.value && String(b.newContact.value).trim()) {
+        const created = await createListItem(CLIENT_CONTACTS_LIST, {
+          Title:           b.newContact.name,
+          ClientID:        b.clientId,
+          Name:            b.newContact.name  || '',
+          ContactType:     b.newContact.type  || 'Email',
+          Value:           b.newContact.value || '',
+          Archived:        false,
+          NotifyRecipient: false
+        });
+        newContactId = created.id;
+      }
+
       const map = [
         ['Label',          b.label,          'Title'],
         ['BuildingNumber', b.buildingNumber],
         ['Address',        b.address],
         ['Suite',          b.suite],
         ['City',           b.city],
-        ['Zip',            b.zip]
+        ['Zip',            b.zip],
+        ['ContactId',      newContactId !== null ? newContactId : b.contactId]
       ];
       const patch = {};
       for (const [col, incoming, alsoTitle] of map) {
@@ -72,7 +97,7 @@ exports.handler = async (event) => {
       if (b.archived !== undefined) patch.Archived = !!b.archived;
 
       await updateListItemByItemId(CLIENT_ADDRESSES_LIST, item.id, patch);
-      return jsonResponse(200, { success: true, addressId: item.id });
+      return jsonResponse(200, { success: true, addressId: item.id, contactId: newContactId });
     }
 
     /* ===== Direccion nueva: aqui si se llenan todos los campos ===== */
@@ -85,6 +110,7 @@ exports.handler = async (event) => {
       Suite:          b.suite          || '',
       City:           b.city           || '',
       Zip:            b.zip            || '',
+      ContactId:      '',
       Archived:       b.archived !== undefined ? !!b.archived : false
     };
     const result = await createListItem(CLIENT_ADDRESSES_LIST, fields);

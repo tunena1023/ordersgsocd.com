@@ -23,7 +23,8 @@ const DEMO = {
 
   SS_KEY: 'gs_demo_state',       // estado demo que sobrevive navegación interna
   ORD_KEY: 'gs_demo_orders',     // órdenes simuladas (localStorage)
-  ADDR_KEY: 'gs_demo_addresses'  // libreta de direcciones simulada (localStorage)
+  ADDR_KEY: 'gs_demo_addresses', // libreta de direcciones simulada (localStorage)
+  CONTACT_KEY: 'gs_demo_contacts' // libreta de contactos simulada (localStorage)
 };
 
 /* ===== SESIÓN ===== */
@@ -353,6 +354,15 @@ DEMO._nextAddrId = function (list) {
   return 'demo-addr-' + (nums.length ? Math.max(...nums) + 1 : 1);
 };
 
+DEMO._contacts = function () {
+  try { return JSON.parse(localStorage.getItem(DEMO.CONTACT_KEY)) || []; } catch (e) { return []; }
+};
+DEMO._saveContacts = function (a) { localStorage.setItem(DEMO.CONTACT_KEY, JSON.stringify(a)); };
+DEMO._nextContactId = function (list) {
+  const nums = list.map(a => parseInt(String(a.id || '').replace('demo-contact-', ''), 10)).filter(n => !isNaN(n));
+  return 'demo-contact-' + (nums.length ? Math.max(...nums) + 1 : 1);
+};
+
 /* Correlativo: rellena huecos desde el mínimo; si no hay, MAX+1 */
 DEMO._nextSuffix = function (orders) {
   const parse = (s) => /^[0-9]+$/.test(s) ? parseInt(s, 10) : parseInt(s, 36);
@@ -636,14 +646,29 @@ DEMO.handle = async function (path, opts) {
     case '/save-client-address': {
       const all = DEMO._addresses();
 
+      let newContactId = null;
+      if (body.newContact && body.newContact.name && body.newContact.value) {
+        const contacts = DEMO._contacts();
+        const nc = {
+          id: DEMO._nextContactId(contacts),
+          name: body.newContact.name, type: body.newContact.type || 'Email',
+          value: body.newContact.value, notifyRecipient: false, archived: false
+        };
+        contacts.push(nc);
+        DEMO._saveContacts(contacts);
+        newContactId = nc.id;
+      }
+
       if (body.addressId) {
         const a = all.find(x => x.id === body.addressId);
         if (!a) throw new Error('Address not found.');
         const map = ['label', 'buildingNumber', 'address', 'suite', 'city', 'zip'];
         map.forEach(k => { if (body[k] !== undefined) a[k] = body[k]; });
+        if (newContactId !== null) a.contactId = newContactId;
+        else if (body.contactId !== undefined) a.contactId = body.contactId;
         if (body.archived !== undefined) a.archived = !!body.archived;
         DEMO._saveAddresses(all);
-        return { success: true, addressId: a.id };
+        return { success: true, addressId: a.id, contactId: newContactId };
       }
 
       const a = {
@@ -651,11 +676,49 @@ DEMO.handle = async function (path, opts) {
         label: body.label || '', buildingNumber: body.buildingNumber || '',
         address: body.address || '',
         suite: body.suite || '', city: body.city || '', zip: body.zip || '',
-        archived: !!body.archived
+        contactId: '', archived: !!body.archived
       };
       all.push(a);
       DEMO._saveAddresses(all);
       return { success: true, addressId: a.id };
+    }
+
+    case '/get-client-contacts': {
+      const all = DEMO._contacts();
+      const list = all.filter(c => body.includeArchived || !c.archived);
+      return { contacts: list.slice().sort((a, b2) => (a.name || '').localeCompare(b2.name || '')) };
+    }
+
+    case '/save-client-contact': {
+      const all = DEMO._contacts();
+
+      if (body.action === 'create') {
+        if (!body.name || !body.value) throw new Error('Name and value are required.');
+        const c = {
+          id: DEMO._nextContactId(all),
+          name: body.name, type: body.type || 'Email', value: body.value,
+          notifyRecipient: false, archived: false
+        };
+        all.push(c);
+        DEMO._saveContacts(all);
+        return { success: true, contactId: c.id };
+      }
+
+      if (body.action === 'archive' || body.action === 'unarchive') {
+        const c = all.find(x => x.id === body.contactId);
+        if (!c) throw new Error('Contact not found.');
+        c.archived = body.action === 'archive';
+        DEMO._saveContacts(all);
+        return { success: true, contactId: c.id };
+      }
+
+      if (body.action === 'setRecipient') {
+        all.forEach(c => { c.notifyRecipient = (c.id === body.contactId); });
+        DEMO._saveContacts(all);
+        return { success: true, contactId: body.contactId || null };
+      }
+
+      throw new Error('Unknown action.');
     }
 
     default:

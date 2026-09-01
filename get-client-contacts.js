@@ -1,18 +1,13 @@
 /* ============================================================
-   get-client-addresses.js — libreta de EDIFICIOS guardados
-   de un cliente ("Profile" > Buildings).
+   get-client-contacts.js — contactos adicionales de un cliente
+   ("Profile" > Contacts). Compartida entre la primaria y cada
+   building (un building puede apuntar a uno de estos contactos).
 
-   Solo datos del edificio (numero, calle, suite, ciudad, zip).
-   Unit#/Bedrooms/Bathrooms NO van aqui -- varian por unidad dentro
-   del mismo edificio, se capturan al hacer la orden, no en la
-   libreta.
-
-   Por default regresa solo los edificios activos (Archived=No).
-   includeArchived=true los regresa todos (para poder desarchivar
-   uno por error, "sacarlo de ahi si algo pasa").
+   Por default regresa solo los activos (Archived=No). includeArchived
+   =true los regresa todos (para poder desarchivar uno por error).
 ============================================================ */
 
-const { CLIENT_ADDRESSES_LIST, graphFetch, siteListPath, jsonResponse } = require('./lib/graph');
+const { CLIENT_CONTACTS_LIST, graphFetch, siteListPath, jsonResponse } = require('./lib/graph');
 
 function truthy(v) {
   return v === true || v === 'true' || v === 1 || v === '1' || v === 'Yes';
@@ -39,28 +34,25 @@ exports.handler = async (event) => {
     const wanted = String(b.clientId).trim().toLowerCase();
     const includeArchived = !!b.includeArchived;
 
-    const rows = await fetchAll(CLIENT_ADDRESSES_LIST);
+    const rows = await fetchAll(CLIENT_CONTACTS_LIST);
 
-    const addresses = rows
+    const contacts = rows
       .filter(it => it.fields && String(it.fields.ClientID || '').trim().toLowerCase() === wanted)
       .filter(it => includeArchived || !truthy(it.fields.Archived))
       .map(it => {
         const f = it.fields;
         return {
-          id:             it.id,
-          label:          f.Label          || '',
-          buildingNumber: f.BuildingNumber || '',
-          address:        f.Address        || '',
-          suite:          f.Suite          || '',
-          city:           f.City           || '',
-          zip:            f.Zip            || '',
-          contactId:      f.ContactId      || '',
-          archived:       truthy(f.Archived)
+          id:              it.id,
+          name:            f.Name        || '',
+          type:            f.ContactType || '',
+          value:           f.Value       || '',
+          notifyRecipient: truthy(f.NotifyRecipient),
+          archived:        truthy(f.Archived)
         };
       })
-      .sort((a, b2) => a.label.localeCompare(b2.label));
+      .sort((a, b2) => a.name.localeCompare(b2.name));
 
-    return jsonResponse(200, { addresses });
+    return jsonResponse(200, { contacts });
   } catch (e) {
     return jsonResponse(500, { error: e.message });
   }
