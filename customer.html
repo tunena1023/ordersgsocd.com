@@ -93,6 +93,25 @@
 
   .property-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 18px; margin-bottom: 24px; }
 
+  .multi-toggle-row {
+    display: flex; align-items: center; gap: 10px; cursor: pointer;
+    padding: 14px 16px; border: 1.5px solid var(--border); margin-bottom: 20px; background: var(--off);
+  }
+  .multi-toggle-row input { width: auto; }
+  .multi-toggle-row span { font-size: 13px; color: var(--black); }
+  .multi-toggle-row .sub { display: block; font-size: 11px; color: var(--gray); margin-top: 2px; }
+
+  .unit-card { border: 1.5px solid var(--border); padding: 18px 20px; margin-bottom: 14px; background: var(--white); position: relative; }
+  .unit-card-title { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--gold-dk); font-weight: 700; margin-bottom: 14px; }
+  .unit-remove-btn { position: absolute; top: 14px; right: 16px; background: none; border: none; color: var(--gray); cursor: pointer; font-size: 18px; line-height: 1; padding: 0 4px; }
+  .unit-remove-btn:hover { color: #B33A3A; }
+  .unit-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .unit-field-row:last-child { margin-bottom: 0; }
+  .unit-field-row.four { grid-template-columns: 1fr 1fr 1fr 1fr; }
+  .unit-field-row .field-wrap { margin-bottom: 0; }
+  .unit-address-manual { display: none; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .unit-address-manual.open { display: block; }
+
   .due-warning {
     display: none; background: #FFF8E6; border: 1px solid #E8D9A0; color: #8C6F2A;
     font-size: 12px; line-height: 1.6; padding: 12px 14px; border-radius: 6px; margin-bottom: 16px;
@@ -471,7 +490,7 @@ style="object-fit:contain">
         <div class="step-label">Step 3 of 3</div>
         <div class="step-title">Dates &amp; property details</div>
 
-        <div class="property-grid">
+        <div class="property-grid" id="single-unit-fields">
           <div class="field-wrap">
             <label>Building #</label>
             <input type="text" id="building-number" placeholder="e.g. 1215" />
@@ -489,6 +508,19 @@ style="object-fit:contain">
             <input type="number" id="bathrooms" placeholder="e.g. 1" min="1" max="3" />
           </div>
         </div>
+
+        <label class="multi-toggle-row">
+          <input type="checkbox" id="multi-units-toggle" onchange="toggleMultiUnits()">
+          <span>This order is for multiple units
+            <span class="sub">Same services applied to every unit — different addresses, bed/bath per unit</span>
+          </span>
+        </label>
+
+        <div id="multi-units-container" style="display:none">
+          <div id="unit-cards"></div>
+          <button type="button" class="btn-ghost" onclick="addUnitCard()" style="margin-bottom:24px">+ Add Another Unit</button>
+        </div>
+
 
         <div class="dates-grid">
           <div class="field-wrap">
@@ -509,7 +541,7 @@ style="object-fit:contain">
           Heads-up: this order is due less than 24 hours after entry. The office will need to confirm availability.
         </div>
 
-        <div class="field-wrap" style="margin-bottom:24px">
+        <div class="field-wrap" style="margin-bottom:24px" id="account-location-wrap">
           <label>Service location (from your account)</label>
           <div id="account-details-block" style="border:1.5px solid var(--border);background:var(--off);padding:16px 18px;font-size:13px;line-height:1.9;color:var(--black)">
             <div><strong id="ad-business">—</strong></div>
@@ -638,6 +670,9 @@ if (client) {
   let draftOrderId = null;
   let draftPendingData = null;
   let saveTimer = null;
+  let multiUnitsOn = false;
+  let clientBuildings = [];
+  let unitCardCounter = 0;
 
   const $ = id => document.getElementById(id);
 
@@ -1147,6 +1182,113 @@ if (client) {
     document.querySelectorAll('.cat-badge-tip.show').forEach(t => t.classList.remove('show'));
   });
 
+  /* ===== Multiple Units ===== */
+  async function toggleMultiUnits() {
+    multiUnitsOn = $('multi-units-toggle').checked;
+    $('single-unit-fields').style.display   = multiUnitsOn ? 'none'  : '';
+    $('multi-units-container').style.display = multiUnitsOn ? 'block' : 'none';
+    $('account-location-wrap').style.display = multiUnitsOn ? 'none'  : '';
+
+    if (multiUnitsOn) {
+      if (!clientBuildings.length) await loadClientBuildingsForUnits();
+      if (!$('unit-cards').children.length) {
+        addUnitCard();
+        addUnitCard();
+      }
+    }
+  }
+
+  async function loadClientBuildingsForUnits() {
+    try {
+      const data = await GS.api('/get-client-addresses', { method: 'POST', body: { clientId: client.clientId, includeArchived: false } });
+      clientBuildings = data.addresses || [];
+    } catch (e) {
+      clientBuildings = [];
+    }
+  }
+
+  function buildingOptionsHtml() {
+    let html = '<option value="">+ Enter new address</option>';
+    clientBuildings.forEach(b => {
+      html += '<option value="' + esc(b.id) + '">' + esc(b.label || 'Building') + (b.buildingNumber ? ' #' + esc(b.buildingNumber) : '') + '</option>';
+    });
+    return html;
+  }
+
+  function unitCardHtml(idx) {
+    return '' +
+      '<div class="unit-card-title">Unit</div>' +
+      '<button type="button" class="unit-remove-btn" onclick="removeUnitCard(' + idx + ')" title="Remove unit">×</button>' +
+      '<div class="unit-field-row">' +
+        '<div class="field-wrap"><label>Building</label><select id="unit-' + idx + '-building-select" onchange="onUnitBuildingChange(' + idx + ')">' + buildingOptionsHtml() + '</select></div>' +
+        '<div class="field-wrap"><label>Unit #</label><input type="text" id="unit-' + idx + '-unit-number" placeholder="e.g. 205"></div>' +
+      '</div>' +
+      '<div class="unit-line" id="unit-' + idx + '-preview" style="display:none;font-size:12px;color:var(--gray);margin-bottom:14px"></div>' +
+      '<div class="unit-address-manual open" id="unit-' + idx + '-manual">' +
+        '<div class="unit-field-row">' +
+          '<div class="field-wrap"><label>Address</label><input type="text" id="unit-' + idx + '-address"></div>' +
+          '<div class="field-wrap"><label>Suite</label><input type="text" id="unit-' + idx + '-suite"></div>' +
+        '</div>' +
+        '<div class="unit-field-row">' +
+          '<div class="field-wrap"><label>City</label><input type="text" id="unit-' + idx + '-city"></div>' +
+          '<div class="field-wrap"><label>Zip</label><input type="text" id="unit-' + idx + '-zip"></div>' +
+        '</div>' +
+        '<div class="unit-field-row">' +
+          '<div class="field-wrap"><label>Building #</label><input type="text" id="unit-' + idx + '-building-number" placeholder="e.g. 1215"></div>' +
+          '<div class="field-wrap"></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="unit-field-row" style="margin-top:14px">' +
+        '<div class="field-wrap"><label>Bedrooms</label><input type="number" id="unit-' + idx + '-bedrooms" min="1" max="5" placeholder="e.g. 2"></div>' +
+        '<div class="field-wrap"><label>Bathrooms</label><input type="number" id="unit-' + idx + '-bathrooms" min="1" max="3" placeholder="e.g. 1"></div>' +
+      '</div>';
+  }
+
+  function addUnitCard() {
+    const idx = ++unitCardCounter;
+    const div = document.createElement('div');
+    div.className = 'unit-card';
+    div.dataset.unit = idx;
+    div.innerHTML = unitCardHtml(idx);
+    $('unit-cards').appendChild(div);
+    renumberUnitCards();
+  }
+
+  function removeUnitCard(idx) {
+    const cards = document.querySelectorAll('.unit-card');
+    if (cards.length <= 2) {
+      alert('A multi-unit order needs at least 2 units. Turn off "Multiple Units" above if you only need one.');
+      return;
+    }
+    const el = document.querySelector('.unit-card[data-unit="' + idx + '"]');
+    if (el) el.remove();
+    renumberUnitCards();
+  }
+
+  function renumberUnitCards() {
+    document.querySelectorAll('.unit-card').forEach((card, i) => {
+      const title = card.querySelector('.unit-card-title');
+      if (title) title.textContent = 'Unit ' + (i + 1);
+    });
+  }
+
+  function onUnitBuildingChange(idx) {
+    const sel = $('unit-' + idx + '-building-select');
+    const manual = $('unit-' + idx + '-manual');
+    const preview = $('unit-' + idx + '-preview');
+    if (!sel.value) {
+      manual.classList.add('open');
+      preview.style.display = 'none';
+    } else {
+      manual.classList.remove('open');
+      const b = clientBuildings.find(x => x.id === sel.value);
+      if (b) {
+        preview.style.display = 'block';
+        preview.textContent = [b.address, b.suite, b.city, b.zip].filter(Boolean).join(', ');
+      }
+    }
+  }
+
   function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
 
   function buildServicesString() {
@@ -1452,6 +1594,16 @@ if (client) {
     if (svcCount === 0) { alert('Please select at least one service.'); return; }
     if (!$('entry-date').value) { alert('Please enter the entry date.'); return; }
     if (!$('delivery-date').value) { alert('Please enter your delivery deadline.'); return; }
+
+    /* TEMPORAL: el backend de creacion en lote para Multiple Units
+       todavia no existe (es el siguiente paso). Bloquea aqui en vez
+       de dejar que se mande un pedido a medias. Quitar este bloque
+       en cuanto submit-order.js soporte 'units'. */
+    if (multiUnitsOn) {
+      alert('Multi-unit ordering is being finished up and isn\'t available to submit yet. Please check back soon, or turn off "Multiple Units" to submit a single-unit order now.');
+      return;
+    }
+
     const buildingNumber = $('building-number').value.trim();
     const unitNumber = $('unit-number').value.trim();
     const bedrooms = $('bedrooms').value.trim();
@@ -1557,8 +1709,12 @@ if (client) {
   window.selectDiv = selectDiv;
   window.submitOrder = submitOrder;
   window.cancelEdit = cancelEdit;
+  window.toggleMultiUnits = toggleMultiUnits;
+  window.addUnitCard = addUnitCard;
+  window.removeUnitCard = removeUnitCard;
+  window.onUnitBuildingChange = onUnitBuildingChange;
   window.doSignout = doSignout;
 }
 </script>
 </body>
-</html>
+</html>
