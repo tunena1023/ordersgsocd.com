@@ -463,7 +463,17 @@ if (client) {
         '</div>';
     });
 
-    control.innerHTML = '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin-bottom:12px">Who receives notifications</div>' +
+    control.innerHTML = '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin-bottom:12px">Notifications</div>' +
+      '<label style="display:flex;align-items:center;gap:8px;font-weight:700;margin-bottom:10px;font-size:13px">' +
+        '<input type="checkbox" id="ctl-notif-master" ' + (profileFields.notificationsEnabled !== false ? 'checked' : '') + ' onchange="toggleNotifSubgroup()">' +
+        'Notifications enabled' +
+      '</label>' +
+      '<div id="ctl-notif-sub" style="display:flex;flex-direction:column;gap:8px;padding-left:20px;margin-bottom:16px;' + (profileFields.notificationsEnabled !== false ? '' : 'opacity:.4;pointer-events:none') + '">' +
+        '<label style="display:flex;align-items:center;gap:6px;font-size:12px"><input type="checkbox" id="ctl-notif-confirm" ' + (profileFields.notifyConfirmations !== false ? 'checked' : '') + '> Confirmations</label>' +
+        '<label style="display:flex;align-items:center;gap:6px;font-size:12px"><input type="checkbox" id="ctl-notif-changes" ' + (profileFields.notifyChanges !== false ? 'checked' : '') + '> Changes</label>' +
+        '<label style="display:flex;align-items:center;gap:6px;font-size:12px"><input type="checkbox" id="ctl-notif-updates" ' + (profileFields.notifyUpdates !== false ? 'checked' : '') + '> Updates</label>' +
+      '</div>' +
+      '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:16px 0 8px;padding-top:12px;border-top:1px solid var(--border)">Who receives notifications</div>' +
       '<div id="ctl-contacts">' + html + '</div>' +
       '<div id="ctl-newcontacts"></div>' +
       '<a onclick="addContactRow(true)" style="font-size:11px;color:var(--gray);text-decoration:underline;cursor:pointer;display:block;margin:4px 0 14px">+ Add another contact</a>' +
@@ -605,6 +615,15 @@ if (client) {
     });
 
     try {
+      const notifBody = {
+        clientId: client.clientId,
+        notificationsEnabled: $('ctl-notif-master')?.checked ?? true,
+        notifyConfirmations:  $('ctl-notif-confirm')?.checked ?? true,
+        notifyChanges:        $('ctl-notif-changes')?.checked ?? true,
+        notifyUpdates:        $('ctl-notif-updates')?.checked ?? true
+      };
+      await GS.api('/update-client-profile', { method: 'POST', body: notifBody });
+
       for (const entry of contactsPayload) {
         if (entry.contactId) {
           if (entry.isRecipient) {
@@ -660,6 +679,14 @@ if (client) {
   function toggleShowArchivedBuildings() {
     showArchivedBuildings = !showArchivedBuildings;
     renderAddrList();
+  }
+
+  function toggleNotifSubgroup() {
+    const master = $('ctl-notif-master')?.checked;
+    const sub = $('ctl-notif-sub');
+    if (!sub) return;
+    sub.style.opacity = master ? '1' : '.4';
+    sub.style.pointerEvents = master ? 'auto' : 'none';
   }
 
   function toggleShowArchivedContacts() {
@@ -748,6 +775,7 @@ if (client) {
   window.saveNotifications = saveNotifications;
   window.saveBuildingNotifications = saveBuildingNotifications;
   window.toggleShowArchivedBuildings = toggleShowArchivedBuildings;
+  window.toggleNotifSubgroup = toggleNotifSubgroup;
   window.toggleShowArchivedContacts = toggleShowArchivedContacts;
   window.startAddBuilding = startAddBuilding;
   window.archiveBuilding = archiveBuilding;

@@ -303,7 +303,11 @@ DEMO._demoClient = function () {
     city: 'Des Moines',
     zip: '50314',
     contact: 'esmeralda@demo.local',
-    phone: '(515) 555-0100'
+    phone: '(515) 555-0100',
+    notificationsEnabled: true,
+    notifyConfirmations: true,
+    notifyChanges: true,
+    notifyUpdates: true
   };
 };
 
@@ -631,7 +635,8 @@ DEMO.handle = async function (path, opts) {
 
     case '/update-client-profile': {
       const c = DEMO._demoClient();
-      const map = ['businessName', 'contactPerson', 'contact', 'phone', 'address', 'suite', 'city', 'zip'];
+      const map = ['businessName', 'contactPerson', 'contact', 'phone', 'address', 'suite', 'city', 'zip',
+        'notificationsEnabled', 'notifyConfirmations', 'notifyChanges', 'notifyUpdates'];
       map.forEach(k => { if (body[k] !== undefined) c[k] = body[k]; });
       c.success = true;
       return c;

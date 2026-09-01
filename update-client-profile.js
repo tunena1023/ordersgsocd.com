@@ -30,6 +30,11 @@ function sameValue(a, b) {
   return String(a == null ? '' : a) === String(b == null ? '' : b);
 }
 
+/* Mismo criterio que admin-update-client.js para columnas Si/No */
+function truthy(v) {
+  return v === true || v === 'true' || v === 1 || v === '1' || v === 'Yes';
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return jsonResponse(405, { error: 'Method not allowed' });
 
@@ -66,6 +71,23 @@ exports.handler = async (event) => {
       if (!sameValue(oldValue, next)) changes.push({ label, old: oldValue, next });
     }
 
+    /* Preferencias de notificacion: ahora el cliente tambien las puede
+       tocar desde su propio Profile (antes solo el admin). Mismo
+       default seguro (Si) si la columna no tiene valor todavia. */
+    const boolMap = [
+      ['NotificationsEnabled', b.notificationsEnabled, 'Notifications: Master'],
+      ['NotifyConfirmations',  b.notifyConfirmations,  'Notifications: Confirmations'],
+      ['NotifyChanges',        b.notifyChanges,        'Notifications: Changes'],
+      ['NotifyUpdates',        b.notifyUpdates,        'Notifications: Updates']
+    ];
+    for (const [col, incoming, label] of boolMap) {
+      if (incoming === undefined) continue;
+      const oldValue = f[col] == null ? true : truthy(f[col]);
+      const next = truthy(incoming);
+      patch[col] = next;
+      if (oldValue !== next) changes.push({ label, old: oldValue ? 'Yes' : 'No', next: next ? 'Yes' : 'No' });
+    }
+
     if (Object.keys(patch).length) {
       await updateListItemByItemId(CLIENTS_LIST, item.id, patch);
     }
@@ -98,6 +120,10 @@ exports.handler = async (event) => {
       suite:         patch.Suite        !== undefined ? patch.Suite        : f.Suite,
       city:          patch.City         !== undefined ? patch.City         : f.City,
       zip:           patch.Zip          !== undefined ? patch.Zip          : f.Zip,
+      notificationsEnabled: patch.NotificationsEnabled !== undefined ? patch.NotificationsEnabled : (f.NotificationsEnabled == null ? true : truthy(f.NotificationsEnabled)),
+      notifyConfirmations:  patch.NotifyConfirmations  !== undefined ? patch.NotifyConfirmations  : (f.NotifyConfirmations  == null ? true : truthy(f.NotifyConfirmations)),
+      notifyChanges:        patch.NotifyChanges        !== undefined ? patch.NotifyChanges        : (f.NotifyChanges        == null ? true : truthy(f.NotifyChanges)),
+      notifyUpdates:        patch.NotifyUpdates        !== undefined ? patch.NotifyUpdates        : (f.NotifyUpdates        == null ? true : truthy(f.NotifyUpdates)),
       changesLogged: logged,
       historyError:  logError
     });
