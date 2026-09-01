@@ -565,6 +565,19 @@ DEMO.handle = async function (path, opts) {
       return { order: o, services: o.services || [], history: o.history || [] };
     }
 
+    case '/save-order-notifications': {
+      const o = orders.find(x => x.OrderID === body.orderId);
+      if (!o) throw new Error('Order not found.');
+      const toggleVal = v => v === 'on' ? 'Yes' : v === 'off' ? 'No' : '';
+      if (body.notificationsEnabled !== undefined) o.OrderNotificationsEnabled = toggleVal(body.notificationsEnabled);
+      if (body.notifyConfirmations  !== undefined) o.OrderNotifyConfirmations  = toggleVal(body.notifyConfirmations);
+      if (body.notifyChanges        !== undefined) o.OrderNotifyChanges        = toggleVal(body.notifyChanges);
+      if (body.notifyUpdates        !== undefined) o.OrderNotifyUpdates        = toggleVal(body.notifyUpdates);
+      if (body.contactId            !== undefined) o.OrderContactId           = body.contactId || '';
+      DEMO._saveOrders(orders);
+      return { success: true };
+    }
+
     /* REVISADO: las solicitudes hechas desde tracking ahora llevan
        el identificador de revisión en Title:
          change  → GS-6060-1001-N

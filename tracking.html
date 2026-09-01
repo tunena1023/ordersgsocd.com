@@ -345,6 +345,39 @@
   </div>
 </div>
 
+<div class="dialog-overlay" id="notif-dialog">
+  <div class="dialog-panel">
+    <h3>Notifications for <span id="notif-order-id"></span></h3>
+    <p style="font-size:12px;color:var(--gray);margin-bottom:16px">These settings apply only to this order. Leave as "Account default" to use your regular Profile settings.</p>
+    <div class="field">
+      <label>Notifications for this order</label>
+      <select id="notif-enabled"><option value="inherit">Account default</option><option value="on">On</option><option value="off">Off</option></select>
+    </div>
+    <div class="field">
+      <label>Confirmations</label>
+      <select id="notif-confirmations"><option value="inherit">Account default</option><option value="on">On</option><option value="off">Off</option></select>
+      <p id="notif-confirm-note" style="font-size:11px;color:var(--gold-dk);margin-top:6px;display:none">This order currently needs your confirmation — you'll still be notified about that specific request even if this is off.</p>
+    </div>
+    <div class="field">
+      <label>Changes</label>
+      <select id="notif-changes"><option value="inherit">Account default</option><option value="on">On</option><option value="off">Off</option></select>
+    </div>
+    <div class="field">
+      <label>Updates</label>
+      <select id="notif-updates"><option value="inherit">Account default</option><option value="on">On</option><option value="off">Off</option></select>
+    </div>
+    <div class="field">
+      <label>Who receives notifications for this order</label>
+      <select id="notif-contact"></select>
+    </div>
+    <div class="dialog-btns">
+      <button class="btn-ghost" onclick="closeNotifDialog()">Cancel</button>
+      <button class="btn-gold" id="notif-save-btn" onclick="saveOrderNotifications()">Save</button>
+    </div>
+    <p class="dialog-error" id="notif-error"></p>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="shared.js"></script>
@@ -358,6 +391,10 @@ if (client) {
      instantaneo sin volver a pedirselo a la API. Se invalida entero
      cada vez que se recarga la lista (loadOrders). */
   let orderDetailCache = {};
+  /* Aparte del cache de HTML de arriba, se guarda si la orden esta
+     esperando confirmacion del cliente ahora mismo -- lo necesita el
+     dialogo de Notifications para mostrar el aviso de Confirmations. */
+  let orderNeedsConfirmationCache = {};
 
   /* Estado de "cual tarjeta esta abierta/fijada", uno por seccion
      (processing agrupa drafts + active orders; history aparte) --
@@ -811,6 +848,7 @@ if (client) {
 
       bindActions(body, o);
       orderDetailCache[orderId] = { html: body.innerHTML, order: o };
+      orderNeedsConfirmationCache[orderId] = isWaitingForClientConfirmation(history);
     } catch (e) {
       body.innerHTML = '<p class="empty-note">Could not load details: ' + esc(e.message) + '</p>';
     }
@@ -1012,7 +1050,8 @@ if (client) {
       html += `<span class="print-wrap"><button class="btn-action" data-act="print" disabled
         title="Available once the order is approved">Print PDF</button>
         <span class="print-hint">Available once the order is approved</span></span>`;
-    }     
+    }
+    html += `<button class="btn-action" data-act="notifications">Notifications</button>`;
 return html;
   }
 
@@ -1028,6 +1067,7 @@ return html;
         if (act === 'confirm-reactivation') confirmReactivation(o.OrderID);
         if (act === 'print') openOrderDocument(o.OrderID);
         if (act === 'printhist') printOrder(o.OrderID);
+        if (act === 'notifications') openOrderNotifications(o);
       });
     });
   }
@@ -1134,6 +1174,72 @@ return html;
     $('change-dialog').classList.add('open');
   }
   function closeChangeDialog() { $('change-dialog').classList.remove('open'); }
+
+  /* ===== Notifications por orden individual ===== */
+  let notifDialogOrder = null;
+  let notifDialogContacts = [];
+
+  async function openOrderNotifications(o) {
+    notifDialogOrder = o;
+    $('notif-order-id').textContent = o.OrderID;
+    $('notif-enabled').value      = orderToggleUiValue(o.OrderNotificationsEnabled);
+    $('notif-confirmations').value = orderToggleUiValue(o.OrderNotifyConfirmations);
+    $('notif-changes').value      = orderToggleUiValue(o.OrderNotifyChanges);
+    $('notif-updates').value      = orderToggleUiValue(o.OrderNotifyUpdates);
+    $('notif-error').textContent = '';
+
+    const needsConfirmation = !!orderNeedsConfirmationCache[o.OrderID];
+    $('notif-confirm-note').style.display = needsConfirmation ? 'block' : 'none';
+
+    try {
+      const data = await GS.api('/get-client-contacts', { method: 'POST', body: { clientId: client.clientId, includeArchived: false } });
+      notifDialogContacts = data.contacts || [];
+    } catch (e) {
+      notifDialogContacts = [];
+    }
+    let optHtml = '<option value="">Account default</option>';
+    notifDialogContacts.forEach(c => {
+      optHtml += '<option value="' + escAttr(c.id) + '"' + (o.OrderContactId === c.id ? ' selected' : '') + '>' + esc(c.name) + ' (' + esc(c.type) + ')</option>';
+    });
+    $('notif-contact').innerHTML = optHtml;
+    if (!o.OrderContactId) $('notif-contact').value = '';
+
+    $('notif-dialog').classList.add('open');
+  }
+
+  function orderToggleUiValue(v) {
+    if (v === 'Yes') return 'on';
+    if (v === 'No') return 'off';
+    return 'inherit';
+  }
+
+  function closeNotifDialog() { $('notif-dialog').classList.remove('open'); }
+
+  async function saveOrderNotifications() {
+    if (!notifDialogOrder) return;
+    const body = {
+      clientId:             client.clientId,
+      orderId:               notifDialogOrder.OrderID,
+      notificationsEnabled: $('notif-enabled').value,
+      notifyConfirmations:  $('notif-confirmations').value,
+      notifyChanges:        $('notif-changes').value,
+      notifyUpdates:        $('notif-updates').value,
+      contactId:            $('notif-contact').value
+    };
+    $('notif-save-btn').disabled = true;
+    try {
+      await GS.api('/save-order-notifications', { method: 'POST', body });
+      closeNotifDialog();
+      showToast('Notification settings updated for this order.');
+      delete orderDetailCache[notifDialogOrder.OrderID];
+      loadOrders();
+    } catch (e) {
+      $('notif-error').textContent = e.message;
+    } finally {
+      $('notif-save-btn').disabled = false;
+    }
+  }
+
   async function submitChange() {
     const orderId = $('change-order-id').textContent;
     const txt = $('change-text').value.trim();
@@ -1287,6 +1393,8 @@ return html;
   window.openChangeDialog = openChangeDialog;
   window.closeChangeDialog = closeChangeDialog;
   window.submitChange = submitChange;
+  window.closeNotifDialog = closeNotifDialog;
+  window.saveOrderNotifications = saveOrderNotifications;
   window.undoRequest = undoRequest;
   window.printOrder = printOrder;
   window.openOrderDocument = openOrderDocument;
