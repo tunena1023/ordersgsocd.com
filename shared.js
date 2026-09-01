@@ -368,11 +368,19 @@ DEMO._nextContactId = function (list) {
 };
 
 /* Correlativo: rellena huecos desde el mínimo; si no hay, MAX+1 */
+DEMO._orderSuffixPart = function (orderId) {
+  const parts = String(orderId || '').split('-');
+  const last = parts[parts.length - 1];
+  /* Ordenes de un pedido multi-unidad terminan en "-PONNNN"; el
+     sufijo real es el segmento de antes de ese, no el ultimo. */
+  return /^PO[0-9]+$/.test(last) ? parts[parts.length - 2] : last;
+};
+
 DEMO._nextSuffix = function (orders) {
   const parse = (s) => /^[0-9]+$/.test(s) ? parseInt(s, 10) : parseInt(s, 36);
   const nums = orders
     .filter(o => (o.Status || '') !== 'Cancelled')
-    .map(o => { const s = (o.OrderID || '').split('-').pop(); const n = parse(s); return isNaN(n) ? null : n; })
+    .map(o => { const s = DEMO._orderSuffixPart(o.OrderID); const n = parse(s); return isNaN(n) ? null : n; })
     .filter(n => n !== null).sort((a, b) => a - b);
   let next;
   if (!nums.length) next = 0;
@@ -386,11 +394,20 @@ DEMO._nextSuffix = function (orders) {
   // Longitud objetivo: la del sufijo más largo vivo (default 4); aplica también a alfa
   let lastLen = 4;
   orders.forEach(o => {
-    const s = (o.OrderID || '').split('-').pop();
+    const s = DEMO._orderSuffixPart(o.OrderID);
     if (/^[0-9]+$/.test(s)) lastLen = Math.max(lastLen, s.length);
   });
-  const anyAlpha = orders.some(o => /[a-zA-Z]/.test((o.OrderID || '').split('-').pop()));
+  const anyAlpha = orders.some(o => /[a-zA-Z]/.test(DEMO._orderSuffixPart(o.OrderID)));
   return anyAlpha ? next.toString(36).toUpperCase().padStart(lastLen, '0') : String(next).padStart(lastLen, '0');
+};
+
+/* PO compartido entre las unidades de un pedido multi-unidad demo. */
+DEMO._nextPO = function (orders) {
+  const nums = orders
+    .map(o => { const m = (o.OrderID || '').match(/-PO([0-9]+)$/); return m ? parseInt(m[1], 10) : null; })
+    .filter(n => n !== null);
+  const next = nums.length > 0 ? Math.max(...nums) + 1 : 5000;
+  return 'PO' + next;
 };
 
 DEMO._newOrderId = function (clientId) {
@@ -488,6 +505,55 @@ DEMO.handle = async function (path, opts) {
        lógica (1 fila Orders + N OrderServices refrescados + evento
        OrderHistory con Title de revisión). */
     case '/submit-order': {
+      /* ===== Multi-unidad: Units es un arreglo de 2+ unidades ===== */
+      if (Array.isArray(body.Units) && body.Units.length >= 2) {
+        const clientId = body.ClientID || 'GS-9999';
+        const savedBuildings = DEMO._addresses();
+        for (const u of body.Units) {
+          if (!savedBuildings.find(b => b.id === u.buildingId)) {
+            throw new Error('One of the selected buildings does not belong to this account.');
+          }
+        }
+
+        const poTag = DEMO._nextPO(orders);
+        const services = DEMO._parseServicesString(body.Services, body.Division);
+        const createdOrderIds = [];
+
+        body.Units.forEach(u => {
+          const bf = savedBuildings.find(b => b.id === u.buildingId) || {};
+          const suffix = DEMO._nextSuffix(orders);
+          const id = clientId + '-' + suffix + '-' + poTag;
+          orders.push(Object.assign({}, body, {
+            OrderID: id,
+            Status: body.Status || 'Pending',
+            createdDateTime: new Date().toISOString(),
+            BuildingNumber: bf.buildingNumber || '',
+            UnitNumber: u.unitNumber || '',
+            Bedrooms: u.bedrooms || '',
+            Bathrooms: u.bathrooms || '',
+            Address: bf.address || '',
+            Suite: bf.suite || '',
+            City: bf.city || '',
+            Zip: bf.zip || '',
+            BatchId: poTag,
+            BuildingId: u.buildingId,
+            services: services,
+            history: [DEMO._historyEntry('Created', '', '', '')]
+          }));
+          createdOrderIds.push(id);
+        });
+
+        /* Batch Created pegado a la ultima unidad, mismo criterio que
+           el backend real. */
+        const lastOrder = orders.find(o => o.OrderID === createdOrderIds[createdOrderIds.length - 1]);
+        if (lastOrder) {
+          lastOrder.history.push(DEMO._historyEntry('Batch Created', '', poTag, JSON.stringify(createdOrderIds)));
+        }
+
+        DEMO._saveOrders(orders);
+        return { success: true, batchId: poTag, orderIds: createdOrderIds };
+      }
+
       const id = body.OrderID || DEMO._newOrderId(body.ClientID || 'GS-9999');
       const idx = orders.findIndex(o => o.OrderID === id);
 

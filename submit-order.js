@@ -8,7 +8,7 @@
 ============================================================ */
 
 const {
-  ORDERS_LIST, ORDER_SERVICES_LIST, ORDER_HISTORY_LIST, DRAFTS_LIST,
+  ORDERS_LIST, ORDER_SERVICES_LIST, ORDER_HISTORY_LIST, DRAFTS_LIST, CLIENT_ADDRESSES_LIST,
   createListItem, updateListItemByItemId, deleteListItem,
   graphFetch, siteListPath,
   jsonResponse
@@ -65,7 +65,13 @@ function nextGlobalSuffix(allOrderRows) {
     .map(it => {
       const id = String(it.fields?.OrderID || it.fields?.Title || '');
       if (id.includes('-TEMP-')) return null;
-      const s = id.split('-').pop();
+      const parts = id.split('-');
+      const last = parts[parts.length - 1];
+      /* Ordenes de un pedido multi-unidad terminan en "-PONNNN"; el
+         sufijo real (el que hay que contar) es el segmento de ANTES
+         de ese, no el ultimo. Sin esto, esos sufijos quedan invisibles
+         para el contador y se podrian repetir por accidente. */
+      const s = /^PO\d+$/.test(last) ? parts[parts.length - 2] : last;
       const n = parseInt(s, 10);
       return isNaN(n) ? null : n;
     })
@@ -73,6 +79,24 @@ function nextGlobalSuffix(allOrderRows) {
 
   const next = nums.length > 0 ? Math.max(...nums) + 1 : 1001;
   return String(next).padStart(4, '0');
+}
+
+/* PO compartido entre las unidades de un pedido multi-unidad. Mismo
+   criterio que nextGlobalSuffix: global (no por cliente), buscando el
+   maximo "-PONNNN" ya usado en cualquier OrderID. Arranca en 5000 para
+   que nunca se confunda a simple vista con un sufijo de orden normal
+   (que arranca en 1001). */
+function nextGlobalPO(allOrderRows) {
+  const nums = allOrderRows
+    .map(it => {
+      const id = String(it.fields?.OrderID || it.fields?.Title || '');
+      const m = id.match(/-PO(\d+)$/);
+      return m ? parseInt(m[1], 10) : null;
+    })
+    .filter(n => n !== null);
+
+  const next = nums.length > 0 ? Math.max(...nums) + 1 : 5000;
+  return 'PO' + next;
 }
 
 function parseServicesString(str, division) {
@@ -316,6 +340,100 @@ exports.handler = async (event) => {
       });
 
       return jsonResponse(200, { success: true, orderId: existing.OrderID });
+    }
+
+    /* ===== FLUJO D: Pedido multi-unidad → N ordenes reales con un PO compartido ===== */
+    if (Array.isArray(b.Units) && b.Units.length >= 2) {
+      if (!b.Services) return jsonResponse(400, { error: 'Services are required' });
+
+      const buildingIds = b.Units.map(u => String(u.buildingId || '').trim());
+      if (buildingIds.some(id => !id)) {
+        return jsonResponse(400, { error: 'Every unit needs a building selected.' });
+      }
+
+      const [allOrderRows, buildingRows] = await Promise.all([
+        fetchAllOrderIds(),
+        fetchByField(CLIENT_ADDRESSES_LIST, 'ClientID', b.ClientID)
+      ]);
+
+      /* Cada building tiene que ser de verdad de este cliente -- que
+         nadie pueda mandar el id de un building ajeno. */
+      const buildingsById = {};
+      buildingRows.forEach(it => { if (it.fields) buildingsById[it.id] = it.fields; });
+      for (const id of buildingIds) {
+        if (!buildingsById[id]) return jsonResponse(403, { error: 'One of the selected buildings does not belong to this account.' });
+      }
+
+      const poTag = nextGlobalPO(allOrderRows);
+      let nextSuffixNum = parseInt(nextGlobalSuffix(allOrderRows), 10);
+      const parsedServices = resolveServices(b.Services, b.Division);
+
+      const createdOrderIds = [];
+      for (const unit of b.Units) {
+        const bId = String(unit.buildingId).trim();
+        const bf = buildingsById[bId];
+        const suffix = String(nextSuffixNum++).padStart(4, '0');
+        const orderId = String(b.ClientID).trim() + '-' + suffix + '-' + poTag;
+
+        await createListItem(ORDERS_LIST, Object.assign({}, orderFields, {
+          OrderID:        orderId,
+          Status:         b.Status || 'Received',
+          BuildingNumber: bf.BuildingNumber || '',
+          UnitNumber:     unit.unitNumber || '',
+          Bedrooms:       unit.bedrooms    || '',
+          Bathrooms:      unit.bathrooms   || '',
+          Address:        bf.Address || '',
+          Suite:          bf.Suite   || '',
+          City:           bf.City    || '',
+          Zip:            bf.Zip     || '',
+          BatchId:        poTag,
+          BuildingId:     bId
+        }));
+
+        await Promise.all(parsedServices.map(s =>
+          createListItem(ORDER_SERVICES_LIST, {
+            Title:       s.ServiceName || '',
+            OrderID:     orderId,
+            Category:    s.Category,
+            ServiceName: s.ServiceName,
+            SubOption:   s.SubOption,
+            Division:    s.Division
+          })
+        ));
+
+        await createListItem(ORDER_HISTORY_LIST, {
+          Title:      orderId,
+          OrderID:    orderId,
+          ChangeType: 'Created',
+          ChangedBy:  b.ClientID,
+          ChangeDate: new Date().toISOString(),
+          Notes:      '',
+          OldValue:   '',
+          NewValue:   b.Status || 'Received'
+        });
+
+        createdOrderIds.push(orderId);
+      }
+
+      /* Fila resumen del lote, pegada a la ULTIMA unidad creada -- trae
+         la lista completa de OrderIDs hermanos en NewValue, para que
+         el flow de Power Automate arme el correo agrupado de una sola
+         vez en vez de uno por unidad. */
+      const lastOrderId = createdOrderIds[createdOrderIds.length - 1];
+      try {
+        await createListItem(ORDER_HISTORY_LIST, {
+          Title:      lastOrderId + '-batch',
+          OrderID:    lastOrderId,
+          ChangeType: 'Batch Created',
+          ChangedBy:  b.ClientID,
+          ChangeDate: new Date().toISOString(),
+          Notes:      '',
+          OldValue:   poTag,
+          NewValue:   JSON.stringify(createdOrderIds)
+        });
+      } catch (e) { console.error('Batch Created history write failed:', e.message); }
+
+      return jsonResponse(200, { success: true, batchId: poTag, orderIds: createdOrderIds });
     }
 
     /* ===== FLUJO C: Orden nueva directa ===== */

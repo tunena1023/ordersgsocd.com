@@ -1571,28 +1571,6 @@ if (client) {
     if (!$('entry-date').value) { alert('Please enter the entry date.'); return; }
     if (!$('delivery-date').value) { alert('Please enter your delivery deadline.'); return; }
 
-    /* TEMPORAL: el backend de creacion en lote para Multiple Units
-       todavia no existe (es el siguiente paso). Bloquea aqui en vez
-       de dejar que se mande un pedido a medias. Quitar este bloque
-       en cuanto submit-order.js soporte 'units'. */
-    if (multiUnitsOn) {
-      alert('Multi-unit ordering is being finished up and isn\'t available to submit yet. Please check back soon, or turn off "Multiple Units" to submit a single-unit order now.');
-      return;
-    }
-
-    const buildingNumber = $('building-number').value.trim();
-    const unitNumber = $('unit-number').value.trim();
-    const bedrooms = $('bedrooms').value.trim();
-    const bathrooms = $('bathrooms').value.trim();
-    if (!buildingNumber) { alert('Please enter the Building Number.'); return; }
-    if (!unitNumber) { alert('Please enter the Unit Number.'); return; }
-    if (!bedrooms || parseInt(bedrooms) < 1) { alert('Please enter a valid number of Bedrooms (1-5).'); return; }
-    if (!bathrooms || parseInt(bathrooms) < 1) { alert('Please enter a valid number of Bathrooms (1-3).'); return; }
-
-    const btn = $('submit-btn');
-    const originalText = btn.textContent;
-    btn.disabled = true; btn.textContent = editOrderId ? 'Saving…' : 'Submitting…';
-
     const entryDateTime = new Date($('entry-date').value + 'T' + ($('entry-time').value || '08:00')).toISOString();
     const dueDateTime = new Date($('delivery-date').value + 'T23:59:59').toISOString();
 
@@ -1605,20 +1583,54 @@ if (client) {
       DirtLevel: currentDiv === 'Janitorial' ? dirtLevel : '',
       EntryDate: entryDateTime,
       DueDate: dueDateTime,
-      Address: client.address,
-      Suite: client.suite || '',
-      City: client.city,
-      Zip: client.zip,
       Contact: client.contact || '',
       Notes: $('notes').value.trim(),
-      Status: editOrderId ? 'Change Requested' : 'Received',
-      BuildingNumber: buildingNumber,
-      UnitNumber: unitNumber,
-      Bedrooms: bedrooms,
-      Bathrooms: bathrooms
+      Status: editOrderId ? 'Change Requested' : 'Received'
     };
+
+    let unitsPayload = null;
+    if (multiUnitsOn) {
+      if (!clientBuildings.length) { alert('You need at least one saved building in your Profile before submitting a multi-unit order.'); return; }
+      const cards = document.querySelectorAll('.unit-card');
+      unitsPayload = [];
+      for (const card of cards) {
+        const idx = card.dataset.unit;
+        const buildingId = $('unit-' + idx + '-building-select')?.value || '';
+        const unitNumber = $('unit-' + idx + '-unit-number')?.value.trim() || '';
+        const bedrooms = $('unit-' + idx + '-bedrooms')?.value.trim() || '';
+        const bathrooms = $('unit-' + idx + '-bathrooms')?.value.trim() || '';
+        if (!buildingId) { alert('Please choose a building for every unit.'); return; }
+        if (!unitNumber) { alert('Please enter the Unit Number for every unit.'); return; }
+        if (!bedrooms || parseInt(bedrooms) < 1) { alert('Please enter a valid number of Bedrooms (1-5) for every unit.'); return; }
+        if (!bathrooms || parseInt(bathrooms) < 1) { alert('Please enter a valid number of Bathrooms (1-3) for every unit.'); return; }
+        unitsPayload.push({ buildingId, unitNumber, bedrooms, bathrooms });
+      }
+      order.Units = unitsPayload;
+    } else {
+      const buildingNumber = $('building-number').value.trim();
+      const unitNumber = $('unit-number').value.trim();
+      const bedrooms = $('bedrooms').value.trim();
+      const bathrooms = $('bathrooms').value.trim();
+      if (!buildingNumber) { alert('Please enter the Building Number.'); return; }
+      if (!unitNumber) { alert('Please enter the Unit Number.'); return; }
+      if (!bedrooms || parseInt(bedrooms) < 1) { alert('Please enter a valid number of Bedrooms (1-5).'); return; }
+      if (!bathrooms || parseInt(bathrooms) < 1) { alert('Please enter a valid number of Bathrooms (1-3).'); return; }
+      order.Address = client.address;
+      order.Suite = client.suite || '';
+      order.City = client.city;
+      order.Zip = client.zip;
+      order.BuildingNumber = buildingNumber;
+      order.UnitNumber = unitNumber;
+      order.Bedrooms = bedrooms;
+      order.Bathrooms = bathrooms;
+    }
+
     if (editOrderId) order.OrderID = editOrderId;
     else if (draftOrderId) order.OrderID = draftOrderId;
+
+    const btn = $('submit-btn');
+    const originalText = btn.textContent;
+    btn.disabled = true; btn.textContent = editOrderId ? 'Saving…' : 'Submitting…';
 
     try {
       const result = await GS.api('/submit-order', { method: 'POST', body: order });
@@ -1626,6 +1638,8 @@ if (client) {
         // Notificación de cambios enviados
         showToast('Your changes were sent to our office for review. You will receive a confirmation email shortly.');
         setTimeout(() => { location.href = 'tracking.html'; }, 2500);
+      } else if (result.batchId) {
+        showBatchConfirmation(result.batchId, result.orderIds || [], order);
       } else {
         showConfirmation(result.orderId || order.OrderID, order);
       }
@@ -1637,6 +1651,28 @@ if (client) {
     } finally {
       btn.disabled = false; btn.textContent = originalText;
     }
+  }
+
+  function showBatchConfirmation(batchId, orderIds, order) {
+    $('order-form-steps').style.display = 'none';
+    const sidebar = document.querySelector('.order-sidebar');
+    if (sidebar) sidebar.style.display = 'none';
+    $('confirmed-order-num').textContent = client.clientId + '-' + batchId + ' (' + orderIds.length + ' units)';
+
+    const lines = [];
+    if (order.DirtLevel) lines.push(['Dirt Level', order.DirtLevel, false]);
+    Object.entries(selected).forEach(([cat, svcs]) => {
+      Object.entries(svcs).forEach(([svc, sub]) => lines.push([cat + ' — ' + svc, sub, true]));
+    });
+    $('confirm-summary').innerHTML =
+      '<div class="summary-item">Purchase Order # <span>' + esc(client.clientId + '-' + batchId) + '</span></div>' +
+      '<div class="summary-item">Units <span>' + orderIds.length + '</span></div>' +
+      lines.map(([label, val, isSvc]) =>
+        '<div class="summary-item' + (isSvc ? ' summary-svc' : '') + '">' + esc(label) + ' <span>' + esc(val) + '</span></div>'
+      ).join('');
+
+    $('order-confirmation').style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function showConfirmation(orderId, order) {
