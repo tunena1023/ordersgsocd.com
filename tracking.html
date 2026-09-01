@@ -422,9 +422,15 @@ if (client) {
     const st = cardOpenState(context);
     const listEl = $(context === 'processing' ? 'processing-container' : 'history-container');
     if (!listEl) return;
+    const exceptCard = listEl.querySelector('.order-card[data-order="' + CSS.escape(exceptOrderId) + '"]');
     listEl.querySelectorAll('.order-card').forEach(card => {
       const cid = card.dataset.order;
       if (cid === exceptOrderId || st.pinned[cid]) return;
+      /* Si esta tarjeta es la que ENVUELVE a la que se esta abriendo
+         (ej. la tarjeta del PO al abrir una de sus unidades adentro),
+         no la cierres -- solo cierra las que de verdad son "otra
+         cosa", no un ancestro de la que se acaba de abrir. */
+      if (exceptCard && card !== exceptCard && card.contains(exceptCard)) return;
       const body = card.querySelector('.order-card-body');
       if (body) body.classList.remove('open');
     });
@@ -470,6 +476,54 @@ if (client) {
     }
   }
 
+  /* Separa las ordenes de esta seccion en sueltas (sin BatchId) y
+     agrupadas por PO (BatchId). Solo agrupa dentro de la MISMA seccion
+     -- si un PO tiene unidades activas y unidades completadas, sale
+     como un grupo chico en cada lado, no uno solo cruzando ambas. */
+  function groupByBatch(orders) {
+    const standalone = [];
+    const groupsMap = {};
+    const groupOrder = [];
+    orders.forEach(o => {
+      const bid = o.BatchId || '';
+      if (!bid) { standalone.push(o); return; }
+      if (!groupsMap[bid]) { groupsMap[bid] = []; groupOrder.push(bid); }
+      groupsMap[bid].push(o);
+    });
+    return { standalone, groupsMap, groupOrder };
+  }
+
+  function renderBatchGroupCard(batchId, units, cardRenderer) {
+    const groupOrderId = 'batch-' + batchId;
+    const innerHtml = units.map(cardRenderer).join('');
+    return `
+      <div class="order-card" data-order="${escAttr(groupOrderId)}">
+        <div class="order-card-header" onclick="toggleBatchCard(this, '${escAttr(groupOrderId)}')">
+          <div>
+            <div class="order-num">PO #${esc(client.clientId + '-' + batchId)}<span class="order-pin"></span></div>
+            <div class="order-date">${units.length} units in this order</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px">
+            <span style="font-size:11px;color:var(--gray)">▼</span>
+          </div>
+        </div>
+        <div class="order-card-body" style="padding:16px">
+          ${innerHtml}
+        </div>
+      </div>`;
+  }
+
+  function toggleBatchCard(headerEl, groupOrderId) {
+    const body = headerEl.nextElementSibling;
+    const context = body.closest('#processing-container') ? 'processing' : 'history';
+    const st = cardOpenState(context);
+    if (st.pinned[groupOrderId]) return;
+    if (body.classList.contains('open')) { body.classList.remove('open'); if (st.open === groupOrderId) st.open = null; return; }
+    closeOtherCards(context, groupOrderId);
+    body.classList.add('open');
+    st.open = groupOrderId;
+  }
+
   function renderProcessing() {
     const box = $('processing-container');
     const drafts = ordersCache.filter(o => (o.Status || '') === 'Incomplete');
@@ -481,14 +535,27 @@ if (client) {
     let html = '<div class="list-section-title">Unfinished drafts</div>';
     html += drafts.length ? drafts.map(renderDraftCard).join('') : '<p class="empty-note">No drafts.</p>';
     html += '<div class="list-section-title">Active orders</div>';
-    html += active.length ? active.map(renderActiveCard).join('') : '<p class="empty-note">No active orders yet.</p>';
+    if (!active.length) {
+      html += '<p class="empty-note">No active orders yet.</p>';
+    } else {
+      const { standalone, groupsMap, groupOrder } = groupByBatch(active);
+      html += groupOrder.map(bid => renderBatchGroupCard(bid, groupsMap[bid], renderActiveCard)).join('');
+      html += standalone.map(renderActiveCard).join('');
+    }
     box.innerHTML = html;
   }
 
   function renderHistory() {
     const box = $('history-container');
     const done = ordersCache.filter(o => (o.Status || '') === 'Completed');
-    box.innerHTML = done.length ? done.map(renderCompletedCard).join('') : '<p class="empty-note">No completed orders yet.</p>';
+    if (!done.length) {
+      box.innerHTML = '<p class="empty-note">No completed orders yet.</p>';
+      return;
+    }
+    const { standalone, groupsMap, groupOrder } = groupByBatch(done);
+    box.innerHTML =
+      groupOrder.map(bid => renderBatchGroupCard(bid, groupsMap[bid], renderCompletedCard)).join('') +
+      standalone.map(renderCompletedCard).join('');
   }
 
   /* Los cuatro bloques de servicio. Tienen que decir EXACTAMENTE lo mismo
@@ -1441,6 +1508,7 @@ return html;
   window.openChangeDialog = openChangeDialog;
   window.closeChangeDialog = closeChangeDialog;
   window.submitChange = submitChange;
+  window.toggleBatchCard = toggleBatchCard;
   window.closeNotifDialog = closeNotifDialog;
   window.saveOrderNotifications = saveOrderNotifications;
   window.undoRequest = undoRequest;
