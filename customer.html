@@ -101,16 +101,29 @@
   .multi-toggle-row span { font-size: 13px; color: var(--black); }
   .multi-toggle-row .sub { display: block; font-size: 11px; color: var(--gray); margin-top: 2px; }
 
+  .shared-building-box { border: 1.5px solid var(--border); background: var(--off); padding: 18px 20px; margin-bottom: 20px; }
+  .shared-building-box .field-row.two { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+
   .unit-card { border: 1.5px solid var(--border); padding: 18px 20px; margin-bottom: 14px; background: var(--white); position: relative; }
   .unit-card-title { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--gold-dk); font-weight: 700; margin-bottom: 14px; }
   .unit-remove-btn { position: absolute; top: 14px; right: 16px; background: none; border: none; color: var(--gray); cursor: pointer; font-size: 18px; line-height: 1; padding: 0 4px; }
   .unit-remove-btn:hover { color: #B33A3A; }
-  .unit-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
-  .unit-field-row:last-child { margin-bottom: 0; }
-  .unit-field-row.four { grid-template-columns: 1fr 1fr 1fr 1fr; }
-  .unit-field-row .field-wrap { margin-bottom: 0; }
-  .unit-address-manual { display: none; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+
+  .unit-building-block { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+  .unit-building-block.hidden { display: none; }
+  .unit-building-block .field-row.two { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 14px; }
+  .unit-building-block .field-row.two:last-child { margin-bottom: 0; }
+
+  .field-row.three { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+  .field-row .field-wrap { margin-bottom: 0; }
+  .unit-address-manual { display: none; margin-top: 14px; }
   .unit-address-manual.open { display: block; }
+
+  @media (max-width: 700px) {
+    .shared-building-box .field-row.two,
+    .unit-building-block .field-row.two,
+    .field-row.three { grid-template-columns: 1fr; gap: 12px; }
+  }
 
   .due-warning {
     display: none; background: #FFF8E6; border: 1px solid #E8D9A0; color: #8C6F2A;
@@ -517,6 +530,33 @@ style="object-fit:contain">
         </label>
 
         <div id="multi-units-container" style="display:none">
+          <label class="multi-toggle-row" style="margin-bottom:16px">
+            <input type="checkbox" id="same-building-toggle" checked onchange="toggleSameBuilding()">
+            <span>All units are in the same building</span>
+          </label>
+
+          <div class="shared-building-box" id="shared-building-box">
+            <div class="field-row two">
+              <div class="field-wrap">
+                <label>Building</label>
+                <select id="shared-building-select" onchange="onSharedBuildingChange()"></select>
+              </div>
+              <div class="field-wrap" id="shared-building-preview-wrap" style="display:flex;align-items:flex-end">
+                <div id="shared-building-preview" style="font-size:12px;color:var(--gray)"></div>
+              </div>
+            </div>
+            <div class="unit-address-manual" id="shared-building-manual">
+              <div class="field-row two" style="margin-bottom:14px">
+                <div class="field-wrap"><label>Address</label><input type="text" id="shared-address"></div>
+                <div class="field-wrap"><label>Suite</label><input type="text" id="shared-suite"></div>
+              </div>
+              <div class="field-row two">
+                <div class="field-wrap"><label>City</label><input type="text" id="shared-city"></div>
+                <div class="field-wrap"><label>Zip</label><input type="text" id="shared-zip"></div>
+              </div>
+            </div>
+          </div>
+
           <div id="unit-cards"></div>
           <button type="button" class="btn-ghost" onclick="addUnitCard()" style="margin-bottom:24px">+ Add Another Unit</button>
         </div>
@@ -671,6 +711,7 @@ if (client) {
   let draftPendingData = null;
   let saveTimer = null;
   let multiUnitsOn = false;
+  let sameBuildingOn = true;
   let clientBuildings = [];
   let unitCardCounter = 0;
 
@@ -1191,6 +1232,8 @@ if (client) {
 
     if (multiUnitsOn) {
       if (!clientBuildings.length) await loadClientBuildingsForUnits();
+      $('shared-building-select').innerHTML = buildingOptionsHtml();
+      onSharedBuildingChange();
       if (!$('unit-cards').children.length) {
         addUnitCard();
         addUnitCard();
@@ -1207,38 +1250,60 @@ if (client) {
     }
   }
 
-  function buildingOptionsHtml() {
-    let html = '<option value="">+ Enter new address</option>';
+  function buildingOptionsHtml(selectedId) {
+    let html = '<option value=""' + (!selectedId ? ' selected' : '') + '>+ Enter new address</option>';
     clientBuildings.forEach(b => {
-      html += '<option value="' + esc(b.id) + '">' + esc(b.label || 'Building') + (b.buildingNumber ? ' #' + esc(b.buildingNumber) : '') + '</option>';
+      html += '<option value="' + esc(b.id) + '"' + (selectedId === b.id ? ' selected' : '') + '>' +
+        esc(b.label || 'Building') + (b.buildingNumber ? ' #' + esc(b.buildingNumber) : '') + '</option>';
     });
     return html;
   }
 
+  function toggleSameBuilding() {
+    sameBuildingOn = $('same-building-toggle').checked;
+    $('shared-building-box').style.display = sameBuildingOn ? 'block' : 'none';
+    document.querySelectorAll('.unit-building-block').forEach(el => {
+      el.classList.toggle('hidden', sameBuildingOn);
+    });
+  }
+
+  function onSharedBuildingChange() {
+    const sel = $('shared-building-select');
+    const manual = $('shared-building-manual');
+    const preview = $('shared-building-preview');
+    if (!sel.value) {
+      manual.classList.add('open');
+      preview.textContent = '';
+    } else {
+      manual.classList.remove('open');
+      const b = clientBuildings.find(x => x.id === sel.value);
+      preview.textContent = b ? [b.address, b.suite, b.city, b.zip].filter(Boolean).join(', ') : '';
+    }
+  }
+
   function unitCardHtml(idx) {
+    const hiddenClass = sameBuildingOn ? ' hidden' : '';
     return '' +
       '<div class="unit-card-title">Unit</div>' +
       '<button type="button" class="unit-remove-btn" onclick="removeUnitCard(' + idx + ')" title="Remove unit">×</button>' +
-      '<div class="unit-field-row">' +
-        '<div class="field-wrap"><label>Building</label><select id="unit-' + idx + '-building-select" onchange="onUnitBuildingChange(' + idx + ')">' + buildingOptionsHtml() + '</select></div>' +
+      '<div class="unit-building-block' + hiddenClass + '" id="unit-' + idx + '-block">' +
+        '<div class="field-row two">' +
+          '<div class="field-wrap"><label>Building</label><select id="unit-' + idx + '-building-select" onchange="onUnitBuildingChange(' + idx + ')">' + buildingOptionsHtml() + '</select></div>' +
+          '<div class="field-wrap" style="display:flex;align-items:flex-end"><div id="unit-' + idx + '-preview" style="font-size:12px;color:var(--gray)"></div></div>' +
+        '</div>' +
+        '<div class="unit-address-manual open" id="unit-' + idx + '-manual">' +
+          '<div class="field-row two" style="margin-bottom:14px">' +
+            '<div class="field-wrap"><label>Address</label><input type="text" id="unit-' + idx + '-address"></div>' +
+            '<div class="field-wrap"><label>Suite</label><input type="text" id="unit-' + idx + '-suite"></div>' +
+          '</div>' +
+          '<div class="field-row two">' +
+            '<div class="field-wrap"><label>City</label><input type="text" id="unit-' + idx + '-city"></div>' +
+            '<div class="field-wrap"><label>Zip</label><input type="text" id="unit-' + idx + '-zip"></div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="field-row three">' +
         '<div class="field-wrap"><label>Unit #</label><input type="text" id="unit-' + idx + '-unit-number" placeholder="e.g. 205"></div>' +
-      '</div>' +
-      '<div class="unit-line" id="unit-' + idx + '-preview" style="display:none;font-size:12px;color:var(--gray);margin-bottom:14px"></div>' +
-      '<div class="unit-address-manual open" id="unit-' + idx + '-manual">' +
-        '<div class="unit-field-row">' +
-          '<div class="field-wrap"><label>Address</label><input type="text" id="unit-' + idx + '-address"></div>' +
-          '<div class="field-wrap"><label>Suite</label><input type="text" id="unit-' + idx + '-suite"></div>' +
-        '</div>' +
-        '<div class="unit-field-row">' +
-          '<div class="field-wrap"><label>City</label><input type="text" id="unit-' + idx + '-city"></div>' +
-          '<div class="field-wrap"><label>Zip</label><input type="text" id="unit-' + idx + '-zip"></div>' +
-        '</div>' +
-        '<div class="unit-field-row">' +
-          '<div class="field-wrap"><label>Building #</label><input type="text" id="unit-' + idx + '-building-number" placeholder="e.g. 1215"></div>' +
-          '<div class="field-wrap"></div>' +
-        '</div>' +
-      '</div>' +
-      '<div class="unit-field-row" style="margin-top:14px">' +
         '<div class="field-wrap"><label>Bedrooms</label><input type="number" id="unit-' + idx + '-bedrooms" min="1" max="5" placeholder="e.g. 2"></div>' +
         '<div class="field-wrap"><label>Bathrooms</label><input type="number" id="unit-' + idx + '-bathrooms" min="1" max="3" placeholder="e.g. 1"></div>' +
       '</div>';
@@ -1278,14 +1343,11 @@ if (client) {
     const preview = $('unit-' + idx + '-preview');
     if (!sel.value) {
       manual.classList.add('open');
-      preview.style.display = 'none';
+      preview.textContent = '';
     } else {
       manual.classList.remove('open');
       const b = clientBuildings.find(x => x.id === sel.value);
-      if (b) {
-        preview.style.display = 'block';
-        preview.textContent = [b.address, b.suite, b.city, b.zip].filter(Boolean).join(', ');
-      }
+      preview.textContent = b ? [b.address, b.suite, b.city, b.zip].filter(Boolean).join(', ') : '';
     }
   }
 
@@ -1710,6 +1772,8 @@ if (client) {
   window.submitOrder = submitOrder;
   window.cancelEdit = cancelEdit;
   window.toggleMultiUnits = toggleMultiUnits;
+  window.toggleSameBuilding = toggleSameBuilding;
+  window.onSharedBuildingChange = onSharedBuildingChange;
   window.addUnitCard = addUnitCard;
   window.removeUnitCard = removeUnitCard;
   window.onUnitBuildingChange = onUnitBuildingChange;
