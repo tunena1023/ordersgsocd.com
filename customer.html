@@ -494,6 +494,16 @@ style="object-fit:contain">
         <div class="step-label">Step 3 of 3</div>
         <div class="step-title">Dates &amp; property details</div>
 
+        <div class="field-wrap" style="margin-bottom:24px" id="account-location-wrap">
+          <label>Billing Address</label>
+          <div id="account-details-block" style="border:1.5px solid var(--border);background:var(--off);padding:16px 18px;font-size:13px;line-height:1.9;color:var(--black)">
+            <div><strong id="ad-business">—</strong></div>
+            <div id="ad-address">—</div>
+            <div id="ad-citystatezip">—</div>
+            <div style="margin-top:6px;color:var(--gray);font-size:12px" id="ad-email">—</div>
+          </div>
+        </div>
+
         <div class="mode-toggle">
           <button type="button" id="mode-single-btn" class="active" onclick="setOrderMode('single')">Single Unit</button>
           <button type="button" id="mode-multi-btn" onclick="setOrderMode('multi')">Multiple Units</button>
@@ -541,16 +551,6 @@ style="object-fit:contain">
 
         <div class="due-warning" id="due-warning">
           Heads-up: this order is due less than 24 hours after entry. The office will need to confirm availability.
-        </div>
-
-        <div class="field-wrap" style="margin-bottom:24px" id="account-location-wrap">
-          <label>Service location (from your account)</label>
-          <div id="account-details-block" style="border:1.5px solid var(--border);background:var(--off);padding:16px 18px;font-size:13px;line-height:1.9;color:var(--black)">
-            <div><strong id="ad-business">—</strong></div>
-            <div id="ad-address">—</div>
-            <div id="ad-citystatezip">—</div>
-            <div style="margin-top:6px;color:var(--gray);font-size:12px" id="ad-email">—</div>
-          </div>
         </div>
 
         <div class="field-wrap" style="margin-bottom:32px">
@@ -1191,7 +1191,6 @@ if (client) {
     $('mode-multi-btn').classList.toggle('active', multiUnitsOn);
     $('single-unit-fields').style.display    = multiUnitsOn ? 'none'  : '';
     $('multi-units-container').style.display = multiUnitsOn ? 'block' : 'none';
-    $('account-location-wrap').style.display  = multiUnitsOn ? 'none'  : '';
 
     if (multiUnitsOn) {
       if (!clientBuildings.length) await loadClientBuildingsForUnits();
