@@ -39,6 +39,25 @@ async function fetchAll(listName) {
   return out;
 }
 
+/* Nominatim (OpenStreetMap) -- gratis, sin cuenta, sin tarjeta. Nunca
+   debe tronar el guardado del building si falla o no encuentra nada;
+   se intenta y ya, las coordenadas se pueden rellenar despues con el
+   backfill de Developer si esta vez no jalo. */
+async function geocodeAddress(address, city, zip) {
+  try {
+    const q = [address, city, zip, 'USA'].filter(Boolean).join(', ');
+    if (!q.trim()) return null;
+    const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(q);
+    const res = await fetch(url, { headers: { 'User-Agent': 'GS-Solutions-Scheduling/1.0 (internal tool)' } });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!Array.isArray(data) || !data.length) return null;
+    const lat = parseFloat(data[0].lat), lon = parseFloat(data[0].lon);
+    if (isNaN(lat) || isNaN(lon)) return null;
+    return { lat, lon };
+  } catch (e) { return null; }
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return jsonResponse(405, { error: 'Method not allowed' });
 
@@ -96,11 +115,24 @@ exports.handler = async (event) => {
       }
       if (b.archived !== undefined) patch.Archived = !!b.archived;
 
+      /* Si la direccion en si cambio (Address/City/Zip), las
+         coordenadas viejas ya no sirven -- se vuelven a resolver con
+         los valores finales (los que cambiaron + los que se quedan
+         igual, tomados del renglon actual). */
+      if (patch.Address !== undefined || patch.City !== undefined || patch.Zip !== undefined) {
+        const finalAddress = patch.Address !== undefined ? patch.Address : (item.fields.Address || '');
+        const finalCity    = patch.City    !== undefined ? patch.City    : (item.fields.City    || '');
+        const finalZip     = patch.Zip     !== undefined ? patch.Zip     : (item.fields.Zip      || '');
+        const geo = await geocodeAddress(finalAddress, finalCity, finalZip);
+        if (geo) { patch.Latitude = geo.lat; patch.Longitude = geo.lon; }
+      }
+
       await updateListItemByItemId(CLIENT_ADDRESSES_LIST, item.id, patch);
       return jsonResponse(200, { success: true, addressId: item.id, contactId: newContactId });
     }
 
     /* ===== Direccion nueva: aqui si se llenan todos los campos ===== */
+    const geo = await geocodeAddress(b.address, b.city, b.zip);
     const fields = {
       Title:          b.label || '',
       ClientID:       b.clientId,
@@ -113,6 +145,7 @@ exports.handler = async (event) => {
       ContactId:      '',
       Archived:       b.archived !== undefined ? !!b.archived : false
     };
+    if (geo) { fields.Latitude = geo.lat; fields.Longitude = geo.lon; }
     const result = await createListItem(CLIENT_ADDRESSES_LIST, fields);
     return jsonResponse(200, { success: true, addressId: result.id });
 
