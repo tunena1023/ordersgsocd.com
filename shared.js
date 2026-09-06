@@ -85,7 +85,7 @@ const GS = {
       if (blob) url = DEMO.objectURL('logo', blob);
     } else {
       try {
-        const res = await fetch('/api/site-image?name=' + encodeURIComponent('Logo.png'));
+        const res = await fetch('/api/site-image?name=' + encodeURIComponent('Logo.jpg'));
         if (res.ok) url = DEMO.objectURL('logo', await res.blob());
       } catch (e) { /* sin logo */ }
     }
