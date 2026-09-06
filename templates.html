@@ -482,6 +482,16 @@ if (client) {
     }
   }
 
+  /* Exponer al scope global las funciones que usan los onclick del HTML.
+     Las async function declaradas dentro de este bloque NO son visibles
+     para los atributos onclick (mismo patrón que tracking.html/customer.html) --
+     este archivo nunca tuvo este bloque, por eso "Save Template",
+     "Delete" y "Send Message" no hacian nada (ReferenceError silencioso
+     en consola, invisible sin abrir devtools). */
+  window.saveTemplate = saveTemplate;
+  window.deleteTemplate = deleteTemplate;
+  window.sendContact = sendContact;
+
   /* ===== Carga inicial ===== */
   loadTemplates();
   GS.api('/get-services', { method: 'GET' }).then(data => {
