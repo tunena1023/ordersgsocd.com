@@ -44,18 +44,37 @@ async function fetchAll(listName) {
    se intenta y ya, las coordenadas se pueden rellenar despues con el
    backfill de Developer si esta vez no jalo. */
 async function geocodeAddress(address, city, zip) {
-  try {
-    const q = [address, city, zip, 'USA'].filter(Boolean).join(', ');
-    if (!q.trim()) return null;
-    const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(q);
-    const res = await fetch(url, { headers: { 'User-Agent': 'GS-Solutions-Scheduling/1.0 (internal tool)' } });
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (!Array.isArray(data) || !data.length) return null;
-    const lat = parseFloat(data[0].lat), lon = parseFloat(data[0].lon);
-    if (isNaN(lat) || isNaN(lon)) return null;
-    return { lat, lon };
-  } catch (e) { return null; }
+  const addr = String(address || '').trim();
+  const cty = String(city || '').trim();
+  const z = String(zip || '').trim();
+  if (!addr && !cty && !z) return null;
+
+  async function tryQuery(url) {
+    try {
+      const res = await fetch(url, { headers: { 'User-Agent': 'GS-Solutions-Scheduling/1.0 (internal tool)' } });
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (!Array.isArray(data) || !data.length) return null;
+      const lat = parseFloat(data[0].lat), lon = parseFloat(data[0].lon);
+      if (isNaN(lat) || isNaN(lon)) return null;
+      return { lat, lon };
+    } catch (e) { return null; }
+  }
+
+  /* Busqueda estructurada primero -- mucho mas confiable que texto
+     libre, sobre todo con Suite/local (la coma confunde a Nominatim
+     sobre donde termina la calle y empieza la ciudad). Texto libre
+     como respaldo si la estructurada no encuentra nada. */
+  const structParams = new URLSearchParams({ format: 'json', limit: '1', country: 'USA' });
+  if (addr) structParams.set('street', addr);
+  if (cty) structParams.set('city', cty);
+  if (z) structParams.set('postalcode', z);
+  const structResult = await tryQuery('https://nominatim.openstreetmap.org/search?' + structParams.toString());
+  if (structResult) return structResult;
+
+  const q = [addr, cty, z, 'USA'].filter(Boolean).join(', ');
+  if (!q.trim()) return null;
+  return await tryQuery('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(q));
 }
 
 exports.handler = async (event) => {
