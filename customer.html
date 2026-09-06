@@ -771,9 +771,18 @@ if (client) {
   }
 
   /* ===== División ===== */
-  function selectDiv(div, el) {
+  async function selectDiv(div, el) {
     document.querySelectorAll('.mode-toggle button[data-div]').forEach(c => c.classList.remove('active'));
     if (el) el.classList.add('active');
+    /* Si habia un guardado pendiente (el usuario acababa de escribir
+       algo y todavia no pasaban los 3 segundos del debounce), se
+       fuerza ya mismo antes de cambiar de division -- si no, ese
+       ultimo cambio se pierde para el borrador viejo. */
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+      await saveDraft();
+    }
     /* Venías de "Continue" y cambiaste de división → borrar el draft original para que no quede huérfano */
     if (continueOrderId && div !== currentDiv) {
       const orphan = continueOrderId;
@@ -789,6 +798,17 @@ if (client) {
        division sin apagarlo a mano, se quedaba pegado (y el formulario
        de Multiple Units seguia mostrandose para la division nueva). */
     setOrderMode('single');
+    /* BUG FIX: los campos de control (edificio, unidad, fechas, notas)
+       no se limpiaban al cambiar de division -- se quedaban pegados de
+       la division anterior hasta que se aceptaba el dialogo de
+       "continuar borrador" (y si esta division no tenia borrador
+       todavia, esos valores viejos se colaban en el borrador nuevo).
+       Se limpian aqui siempre; si checkDraftFor mas abajo encuentra un
+       borrador real de esta division y el usuario le da Continue,
+       draftContinue() los vuelve a llenar con los valores correctos. */
+    ['building-number', 'unit-number', 'bedrooms', 'bathrooms', 'entry-date', 'delivery-date', 'notes'].forEach(id => { $(id).value = ''; });
+    $('entry-time').value = '08:00';
+    checkDueWarning();
     $('summary-division').textContent = el ? el.textContent : div;
     renderServices(div);
     updateSummary();
@@ -1136,6 +1156,7 @@ if (client) {
   }
 
   async function saveDraft() {
+    saveTimer = null;
     const snap = formSnapshot();
     if (!snapshotHasContent(snap)) return;
 
