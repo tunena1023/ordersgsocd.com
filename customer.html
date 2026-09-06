@@ -1034,7 +1034,10 @@ if (client) {
   }
 
   function buildingOptionsHtml() {
-    let html = '';
+    /* 'Use my address' siempre esta disponible y va primero -- por
+       default, sin nada mas que elegir, ya usa la direccion del
+       cliente sin que tenga que guardar ningun building primero. */
+    let html = '<option value="CLIENT_ADDRESS">Use my address (' + esc(client.address || client.businessName || 'on file') + ')</option>';
     clientBuildings.forEach(b => {
       html += '<option value="' + esc(b.id) + '">' + esc(b.label || 'Building') + (b.buildingNumber ? ' #' + esc(b.buildingNumber) : '') + '</option>';
     });
@@ -1042,12 +1045,6 @@ if (client) {
   }
 
   function unitCardHtml(idx) {
-    if (!clientBuildings.length) {
-      return '' +
-        '<div class="unit-card-title">Unit</div>' +
-        '<button type="button" class="unit-remove-btn" onclick="removeUnitCard(' + idx + ')" title="Remove unit">×</button>' +
-        '<p class="unit-empty-note">You don\'t have any saved buildings yet. <a href="profile.html" target="_blank">Add one in your Profile</a> first, then come back here.</p>';
-    }
     return '' +
       '<div class="unit-card-title">Unit</div>' +
       '<button type="button" class="unit-remove-btn" onclick="removeUnitCard(' + idx + ')" title="Remove unit">×</button>' +
@@ -1521,7 +1518,6 @@ if (client) {
 
     let unitsPayload = null;
     if (multiUnitsOn) {
-      if (!clientBuildings.length) { alert('You need at least one saved building in your Profile before submitting a multi-unit order.'); return; }
       unitsPayload = gatherUnitsRaw();
       for (const u of unitsPayload) {
         if (!u.buildingId) { alert('Please choose a building for every unit.'); return; }
@@ -1530,6 +1526,15 @@ if (client) {
         if (!u.bathrooms || parseInt(u.bathrooms) < 1) { alert('Please enter a valid number of Bathrooms (1-3) for every unit.'); return; }
       }
       order.Units = unitsPayload;
+      /* 'Use my address' (CLIENT_ADDRESS) no es un building real de
+         CLIENT_ADDRESSES_LIST -- el backend necesita la direccion del
+         cliente aparte para poder usarla en esas unidades. */
+      order.ClientAddress = {
+        address: client.address || '',
+        suite:   client.suite   || '',
+        city:    client.city    || '',
+        zip:     client.zip     || ''
+      };
     } else {
       const buildingNumber = $('building-number').value.trim();
       const unitNumber = $('unit-number').value.trim();

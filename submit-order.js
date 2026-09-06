@@ -370,12 +370,16 @@ exports.handler = async (event) => {
       }
 
       /* Cada building tiene que ser de verdad de este cliente -- que
-         nadie pueda mandar el id de un building ajeno. */
+         nadie pueda mandar el id de un building ajeno. 'CLIENT_ADDRESS'
+         es un id especial (no es un renglon real de
+         CLIENT_ADDRESSES_LIST) -- significa "esta unidad no tiene
+         building guardado, usa la direccion del cliente". Se salta la
+         validacion de pertenencia para ese caso unicamente. */
       const buildingsById = {};
       buildingRows.forEach(it => { if (it.fields) buildingsById[it.id] = it.fields; });
       console.error('[D-diag] step2: buildingsById keys=', Object.keys(buildingsById));
       for (const id of buildingIds) {
-        if (!buildingsById[id]) return jsonResponse(403, { error: 'One of the selected buildings does not belong to this account.' });
+        if (id !== 'CLIENT_ADDRESS' && !buildingsById[id]) return jsonResponse(403, { error: 'One of the selected buildings does not belong to this account.' });
       }
 
       let poTag, nextSuffixNum, parsedServices;
@@ -392,7 +396,18 @@ exports.handler = async (event) => {
       const createdOrderIds = [];
       for (const unit of b.Units) {
         const bId = String(unit.buildingId).trim();
-        const bf = buildingsById[bId];
+        /* Sin building guardado -- usar la direccion del cliente que
+           mando el front en b.ClientAddress, en vez de un renglon real
+           de CLIENT_ADDRESSES_LIST. */
+        const bf = bId === 'CLIENT_ADDRESS'
+          ? {
+              BuildingNumber: '',
+              Address: (b.ClientAddress && b.ClientAddress.address) || '',
+              Suite:   (b.ClientAddress && b.ClientAddress.suite)   || '',
+              City:    (b.ClientAddress && b.ClientAddress.city)    || '',
+              Zip:     (b.ClientAddress && b.ClientAddress.zip)     || ''
+            }
+          : buildingsById[bId];
         const suffix = String(nextSuffixNum++).padStart(4, '0');
         const orderId = String(b.ClientID).trim() + '-' + suffix + '-' + poTag;
 
