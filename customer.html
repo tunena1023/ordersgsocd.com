@@ -428,10 +428,15 @@
   .btn-gold:hover { background: var(--gold-dk); color: var(--white); }
 
   #order-confirmation { display: none; }
-  .confirm-head { text-align: center; padding: 12px 0 28px; }
+  .confirm-card { border: 1px solid var(--border); background: var(--white); margin-bottom: 28px; overflow: hidden; }
+  .confirm-banner { background: var(--black); color: var(--gold); font-family: 'Cormorant Garamond', serif; font-size: 22px; letter-spacing: 1px; padding: 22px 40px; }
+  .confirm-head { text-align: center; padding: 40px; }
   .confirm-check { font-size: 36px; color: var(--gold); margin-bottom: 12px; }
   .confirm-head .step-title { margin-bottom: 8px; }
   .confirm-head p { font-size: 13px; color: var(--gray); line-height: 1.7; }
+  .confirm-ordernum-box { display: inline-block; margin-top: 22px; padding: 18px 36px; background: var(--off); border: 1px solid var(--border); }
+  .confirm-ordernum-label { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--gray); margin-bottom: 6px; }
+  .confirm-ordernum-value { font-family: 'Inter', sans-serif; font-size: 20px; font-weight: 700; color: var(--black); }
   .confirm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 28px; }
   .confirm-box { background: var(--white); border: 1px solid var(--border); padding: 24px; }
   .confirm-box h4 { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 600; margin-bottom: 14px; }
@@ -587,12 +592,18 @@ style="object-fit:contain">
       </div>
 
       <div id="order-confirmation">
-        <div class="confirm-head">
-          <div class="confirm-check">✓</div>
-          <div class="step-title" id="confirm-title">Order Confirmed</div>
-          <p id="confirm-msg">Our team is reviewing your request and will contact you within 24 hours.<br>
-             If you have any questions, call us at (515) 473-5990 or email orders@gsocd.com.</p>
-          <p style="margin-top:10px">Order Number: <strong id="confirmed-order-num">—</strong></p>
+        <div class="confirm-card">
+          <div class="confirm-banner">GS Solutions</div>
+          <div class="confirm-head">
+            <div class="confirm-check">✓</div>
+            <div class="step-title" id="confirm-title">Order Confirmed</div>
+            <p id="confirm-msg">Our team is reviewing your request and will contact you within 24 hours.<br>
+               If you have any questions, call us at (515) 473-5990 or email orders@gsocd.com.</p>
+            <div class="confirm-ordernum-box">
+              <p class="confirm-ordernum-label">Order Number</p>
+              <p class="confirm-ordernum-value" id="confirmed-order-num">—</p>
+            </div>
+          </div>
         </div>
         <div class="confirm-grid">
           <div class="confirm-box">
@@ -1565,15 +1576,17 @@ if (client) {
     $('confirmed-order-num').textContent = client.clientId + '-' + batchId + ' (' + orderIds.length + ' units)';
 
     const lines = [];
-    if (order.DirtLevel) lines.push(['Dirt Level', order.DirtLevel, false]);
-    Object.entries(selected).forEach(([cat, svcs]) => {
-      Object.entries(svcs).forEach(([svc, sub]) => lines.push([cat + ' — ' + svc, sub, true]));
+    Object.entries(selected).forEach(([propType, svcs]) => {
+      Object.entries(svcs).forEach(([svc, sku]) => {
+        const lvl = svcLevel[svcKey(propType, svc)];
+        lines.push([svc, lvl || '']);
+      });
     });
     $('confirm-summary').innerHTML =
       '<div class="summary-item">Purchase Order # <span>' + esc(client.clientId + '-' + batchId) + '</span></div>' +
       '<div class="summary-item">Units <span>' + orderIds.length + '</span></div>' +
-      lines.map(([label, val, isSvc]) =>
-        '<div class="summary-item' + (isSvc ? ' summary-svc' : '') + '">' + esc(label) + ' <span>' + esc(val) + '</span></div>'
+      lines.map(([label, lvl]) =>
+        '<div class="summary-item summary-svc">' + esc(label) + (lvl ? ' <span>' + esc(lvl) + '</span>' : '') + '</div>'
       ).join('');
 
     $('order-confirmation').style.display = 'block';
@@ -1593,9 +1606,11 @@ if (client) {
     $('confirmed-order-num').textContent = orderId;
 
     const lines = [];
-    if (order.DirtLevel) lines.push(['Dirt Level', order.DirtLevel, false]);
-    Object.entries(selected).forEach(([cat, svcs]) => {
-      Object.entries(svcs).forEach(([svc, sub]) => lines.push([cat + ' — ' + svc, sub, true]));
+    Object.entries(selected).forEach(([propType, svcs]) => {
+      Object.entries(svcs).forEach(([svc, sku]) => {
+        const lvl = svcLevel[svcKey(propType, svc)];
+        lines.push([svc, lvl || '']);
+      });
     });
     $('confirm-summary').innerHTML =
       '<div class="summary-item">Order # <span>' + esc(orderId) + '</span></div>' +
@@ -1603,8 +1618,7 @@ if (client) {
       '<div class="summary-item">Due <span>' + new Date(order.DueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + '</span></div>' +
       '<div class="summary-item">Building/Unit <span>' + esc(order.BuildingNumber) + ' / ' + esc(order.UnitNumber) + '</span></div>' +
       '<div class="summary-item">Bed/Bath <span>' + esc(order.Bedrooms) + ' / ' + esc(order.Bathrooms) + '</span></div>' +
-      lines.map(l => '<div class="summary-item"><span>' + esc(l[0]) + ':</span> ' +
-        esc(l[2] ? (l[1] + ' (Level ' + levelOf(l[1]) + ')') : l[1]) + '</div>').join('');
+      lines.map(([label, lvl]) => '<div class="summary-item summary-svc">' + esc(label) + (lvl ? ' <span>' + esc(lvl) + '</span>' : '') + '</div>').join('');
 
     const steps = [
       { name: 'Order received', detail: 'Just now', done: true },
