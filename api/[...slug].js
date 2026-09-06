@@ -20,6 +20,8 @@ const handlers = {
   'save-client-contact': require('../save-client-contact').handler,
   'save-draft':         require('../save-draft').handler,
   'save-order-notifications': require('../save-order-notifications').handler,
+  'save-expected-ready-date': require('../save-expected-ready-date').handler,
+  'set-materials-ready': require('../set-materials-ready').handler,
   'add-batch-unit': require('../add-batch-unit').handler,
   'site-image':         require('../site-image').handler,
   'submit-contact':     require('../submit-contact').handler,

@@ -146,7 +146,13 @@ exports.handler = async (event) => {
       OrderNotifyUpdates:        f.OrderNotifyUpdates        || '',
       OrderContactId:            f.OrderContactId            || '',
       BatchId:    f.BatchId    || '',
-      BuildingId: f.BuildingId || ''
+      BuildingId: f.BuildingId || '',
+      /* Renovations: aviso de materiales listos / hora de entrada, y
+         fecha esperada informativa. */
+      ExpectedReadyDate: f.ExpectedReadyDate || '',
+      MaterialsReady: f.MaterialsReady === true || f.MaterialsReady === 'true',
+      MaterialsReadySeen: f.MaterialsReadySeen === undefined ? true : (f.MaterialsReadySeen === true || f.MaterialsReadySeen === 'true'),
+      EntryTime: f.EntryTime || ''
     };
 
     const services = svcRows

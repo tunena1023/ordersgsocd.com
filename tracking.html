@@ -101,6 +101,27 @@
   .hist-by { color: var(--gray); font-weight: 400; }
 
   .order-actions { display: flex; gap: 10px; padding-top: 16px; border-top: 1px solid var(--border); flex-wrap: wrap; align-items: flex-start; }
+
+  /* Renovations: Materials Ready + Expected Ready Date -- mismo
+     toggle redondito de siempre. */
+  .ready-block { border: 1px solid var(--border); border-radius: 6px; padding: 16px 18px; margin-bottom: 14px; background: var(--off); }
+  .ready-row { display: flex; gap: 24px; flex-wrap: wrap; }
+  .ready-field { flex: 1; min-width: 180px; }
+  .ready-field:last-child { margin-bottom: 0; }
+  .field-sub { font-size: 11px; color: var(--gray); margin: 3px 0 8px; line-height: 1.5; }
+  .ready-field input[type=date], .ready-field input[type=time] { width: 100%; max-width: 200px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 3px; font-size: 13px; font-family: inherit; background: var(--white); }
+  .svc-toggle { position: relative; display: inline-block; width: 44px; height: 24px; cursor: pointer; vertical-align: middle; }
+  .svc-toggle input { opacity: 0; width: 0; height: 0; }
+  .svc-toggle-track { position: absolute; inset: 0; background: var(--border); border-radius: 24px; transition: background .2s; }
+  .svc-toggle-track::before { content: ""; position: absolute; height: 20px; width: 20px; left: 2px; top: 2px; background: var(--white); border-radius: 50%; transition: transform .2s; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+  .svc-toggle input:checked + .svc-toggle-track { background: var(--gold); }
+  .svc-toggle input:checked + .svc-toggle-track::before { transform: translateX(20px); }
+  .toggle-row { display: flex; align-items: center; gap: 10px; }
+  .toggle-state { font-size: 13px; font-weight: 600; }
+  .toggle-state.off { color: var(--gray); }
+  .toggle-state.on { color: var(--gold-dk); }
+  .ready-reveal { display: none; }
+  .ready-reveal.show { display: block; }
   /* El boton del PDF lleva su aviso debajo cuando todavia no hay documento */
   .print-wrap { display: inline-flex; flex-direction: column; }
   .btn-action {
@@ -411,6 +432,22 @@
       <button class="btn-gold" id="addunit-save-btn" onclick="submitAddBatchUnit()">Add Unit</button>
     </div>
     <p class="dialog-error" id="addunit-error"></p>
+  </div>
+</div>
+
+<div class="dialog-overlay" id="notready-dialog">
+  <div class="dialog-panel">
+    <h3>Turn off Materials Ready?</h3>
+    <p style="font-size:12px;color:var(--gray);margin-bottom:12px">Let us know why, so our office isn't left guessing.</p>
+    <div class="field">
+      <label>Note</label>
+      <textarea id="notready-note" rows="3" placeholder="e.g. delivery got pushed back"></textarea>
+    </div>
+    <div class="dialog-btns">
+      <button class="btn-ghost" onclick="closeNotReadyDialog(false)">Go Back</button>
+      <button class="btn-gold" id="notready-confirm-btn" onclick="confirmNotReady()">Turn Off</button>
+    </div>
+    <p class="dialog-error" id="notready-error"></p>
   </div>
 </div>
 
@@ -873,6 +910,8 @@ if (client) {
 
       const dirtLine = o.DirtLevel ? `<p class="meta-line">Overall condition: <strong style="color:var(--black)">${esc(o.DirtLevel)}</strong></p>` : '';
 
+      const readyBlockHtml = materialsReadyBlockHtml(o);
+
       /* NUEVO: las solicitudes numeradas muestran su código de revisión
          (GS-6060-1001-1 para cambios, -1C para cancelaciones) */
       const histHtml = (history || []).filter(h => !isHiddenFromClient(h)).map((h, idx) => {
@@ -992,6 +1031,7 @@ if (client) {
             </div>
             ${orderNotifSummaryHtml(o, contactsForSummary)}
             ${dirtLine}
+            ${readyBlockHtml}
             ${o.Notes ? '<p class="meta-line" style="margin-bottom:14px">Notes: ' + esc(o.Notes) + '</p>' : ''}
             ${noticeHtml}
             ${svcHeaderHtml}
@@ -1175,6 +1215,124 @@ if (client) {
         ? '<br><br>A delay fee may apply to this visit. Please call our office if you have any questions about it.'
         : '<br><br>Please call our office if you have any questions.') +
       '</div>';
+  }
+
+  /* ============================================================
+     RENOVATIONS — Materials Ready / Expected Ready Date / Entry Time
+     Solo Renovations, solo ordenes activas (no Cancelled/Completed).
+     No es campo requerido: puede quedar vacio en cualquier momento.
+  ============================================================ */
+  function materialsReadyBlockHtml(o) {
+    if (String(o.Division || '').toLowerCase() !== 'renovations') return '';
+    if (o.Status === 'Cancelled' || o.Status === 'Completed') return '';
+    const safe = String(o.OrderID || '').replace(/[^a-z0-9]/gi, '_');
+    const ready = !!o.MaterialsReady;
+    return `<div class="ready-block">
+      <p class="detail-label" style="margin-bottom:12px">Materials &amp; Access</p>
+      <div class="ready-row">
+        <div class="ready-field">
+          <div style="font-weight:600;font-size:13px">Expected ready date</div>
+          <div class="field-sub">If you know roughly when materials will arrive, let us know so we can plan ahead.</div>
+          <input type="date" id="expReady-${safe}" value="${esc(dateInputValue(o.ExpectedReadyDate))}" onchange="saveExpectedReadyDate('${escAttr(o.OrderID)}', this.value)">
+        </div>
+        <div class="ready-field">
+          <div style="font-weight:600;font-size:13px">Materials ready</div>
+          <div class="field-sub">Turn this on once everything is on site and we're clear to come in.</div>
+          <div class="toggle-row">
+            <label class="svc-toggle">
+              <input type="checkbox" id="readyToggle-${safe}" ${ready ? 'checked' : ''} onchange="onMaterialsReadyToggle('${escAttr(o.OrderID)}', this)">
+              <span class="svc-toggle-track"></span>
+            </label>
+            <span class="toggle-state ${ready ? 'on' : 'off'}" id="readyState-${safe}">${ready ? 'Ready for us to come in' : 'Not ready yet'}</span>
+          </div>
+        </div>
+        <div class="ready-field ready-reveal${ready ? ' show' : ''}" id="entryTimeBlock-${safe}">
+          <div style="font-weight:600;font-size:13px">What time can we come in?</div>
+          <div class="field-sub">Earliest time on that day we're clear to start.</div>
+          <input type="time" id="entryTime-${safe}" value="${esc(o.EntryTime || '')}" onchange="saveEntryTime('${escAttr(o.OrderID)}', this.value)">
+        </div>
+      </div>
+    </div>`;
+  }
+
+  async function saveExpectedReadyDate(orderId, value) {
+    try {
+      await GS.api('/save-expected-ready-date', { method: 'POST', body: { orderId, clientId: client.clientId, expectedReadyDate: value } });
+      showToast('Expected ready date saved.');
+      delete orderDetailCache[orderId];
+    } catch (e) {
+      showToast('Error: ' + e.message);
+    }
+  }
+
+  let notReadyOrderId = null;
+  let notReadyCheckbox = null;
+
+  function onMaterialsReadyToggle(orderId, checkboxEl) {
+    const safe = String(orderId).replace(/[^a-z0-9]/gi, '_');
+    if (checkboxEl.checked) {
+      /* Prender es directo, sin nota -- avisa de una vez */
+      setMaterialsReady(orderId, true, '');
+    } else {
+      /* Apagar pide nota obligatoria -- se revierte el checkbox visualmente
+         hasta que confirme, para no mentir sobre el estado real */
+      checkboxEl.checked = true;
+      notReadyOrderId = orderId;
+      notReadyCheckbox = checkboxEl;
+      $('notready-note').value = '';
+      $('notready-error').textContent = '';
+      $('notready-dialog').classList.add('open');
+    }
+  }
+
+  function closeNotReadyDialog(reverted) {
+    $('notready-dialog').classList.remove('open');
+    notReadyOrderId = null;
+    notReadyCheckbox = null;
+  }
+
+  async function confirmNotReady() {
+    const note = $('notready-note').value.trim();
+    if (!note) { $('notready-error').textContent = 'Please add a short note.'; return; }
+    const orderId = notReadyOrderId;
+    const checkboxEl = notReadyCheckbox;
+    try {
+      await setMaterialsReady(orderId, false, '', note);
+      if (checkboxEl) checkboxEl.checked = false;
+      $('notready-dialog').classList.remove('open');
+      notReadyOrderId = null;
+      notReadyCheckbox = null;
+    } catch (e) {
+      $('notready-error').textContent = e.message;
+    }
+  }
+
+  async function setMaterialsReady(orderId, materialsReady, entryTime, offNote) {
+    const safe = String(orderId).replace(/[^a-z0-9]/gi, '_');
+    try {
+      await GS.api('/set-materials-ready', {
+        method: 'POST',
+        body: { orderId, clientId: client.clientId, materialsReady, entryTime: entryTime || '', offNote: offNote || '' }
+      });
+      delete orderDetailCache[orderId];
+      const stateEl = $('readyState-' + safe);
+      const revealEl = $('entryTimeBlock-' + safe);
+      if (stateEl) {
+        stateEl.textContent = materialsReady ? 'Ready for us to come in' : 'Not ready yet';
+        stateEl.className = 'toggle-state ' + (materialsReady ? 'on' : 'off');
+      }
+      if (revealEl) revealEl.classList.toggle('show', materialsReady);
+      showToast(materialsReady ? 'We\'ve let the office know.' : 'Got it, thanks for the update.');
+    } catch (e) {
+      showToast('Error: ' + e.message);
+      throw e;
+    }
+  }
+
+  async function saveEntryTime(orderId, value) {
+    try {
+      await setMaterialsReady(orderId, true, value, '');
+    } catch (e) { /* ya se mostro el toast de error */ }
   }
 
   /* ===== Botones por estatus (regla aprobada) =====
