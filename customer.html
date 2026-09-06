@@ -784,6 +784,11 @@ if (client) {
     currentDiv = div;
     selected = {}; svcLevel = {}; propertyType = 'Commercial'; selAllActive = null;
     draftOrderId = null; draftPendingData = null;
+    /* BUG FIX: multiUnitsOn se quedaba prendido de una division a otra
+       -- si activabas Multiple Units en una y luego cambiabas de
+       division sin apagarlo a mano, se quedaba pegado (y el formulario
+       de Multiple Units seguia mostrandose para la division nueva). */
+    setOrderMode('single');
     $('summary-division').textContent = el ? el.textContent : div;
     renderServices(div);
     updateSummary();
