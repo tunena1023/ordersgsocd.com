@@ -882,10 +882,11 @@ if (client) {
       Object.entries(byCat).forEach(([cat, list]) => {
         list.forEach((s, i) => {
           const nc = (s.NotCompleted === true || String(s.NotCompleted) === 'true');
-          const subText = esc(s.SubOption || '') + (s.SubOption ? ' (Level ' + levelOf(s.SubOption) + ')' : '') +
-            (nc ? ' <b style="color:#B06A2A">· not completed' +
-                  (s.NotCompletedReason ? ': ' + esc(s.NotCompletedReason) : '') + '</b>' : '');
-          svcRows.push({ cat: i === 0 ? cat : '', name: esc(s.ServiceName || ''), sub: s.SubOption ? subText : '' });
+          const ncText = nc ? ' <b style="color:#B06A2A">· not completed' +
+                (s.NotCompletedReason ? ': ' + esc(s.NotCompletedReason) : '') + '</b>' : '';
+          const label = svcSubLabel(s);
+          const subText = (label ? esc(label) : '') + ncText;
+          svcRows.push({ cat: i === 0 ? cat : '', name: esc(s.ServiceName || ''), sub: (label || nc) ? subText : '' });
         });
       });
       const svcTableHtml = svcRows.length
@@ -936,7 +937,7 @@ if (client) {
              para que el admin sepa el origen, no para que lo lea nadie. */
           const svcLines = (services || []).map(s =>
             '<div style="font-size:12px;margin:3px 0">' + esc(s.Category || '') + ': ' +
-            esc(s.ServiceName || '') + (s.SubOption ? ' — ' + esc(s.SubOption) : '') + '</div>'
+            esc(s.ServiceName || '') + (svcSubLabel(s) ? ' — ' + esc(svcSubLabel(s)) : '') + '</div>'
           ).join('');
           detail = '<div id="' + detailId + '" style="display:none;margin-top:8px;padding:10px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
             (svcLines || '<div style="font-size:12px">No services recorded.</div>') +
@@ -961,9 +962,11 @@ if (client) {
           newSvcs.forEach(s => {
             const key = s.Category + '|' + s.ServiceName;
             const prev = oldMap[key];
-            if (!prev) { lines.push('✅ Added: <b>' + esc(s.ServiceName) + '</b> — ' + esc(s.SubOption)); return; }
-            if ((prev.SubOption || '') !== (s.SubOption || ''))
-              lines.push('🔄 Changed: <b>' + esc(s.ServiceName) + '</b> from ' + esc(prev.SubOption || '(none)') + ' to ' + esc(s.SubOption || '(none)'));
+            const label = svcSubLabel(s);
+            if (!prev) { lines.push('✅ Added: <b>' + esc(s.ServiceName) + '</b>' + (label ? ' — ' + esc(label) : '')); return; }
+            const prevLabel = svcSubLabel(prev);
+            if (prevLabel !== label)
+              lines.push('🔄 Changed: <b>' + esc(s.ServiceName) + '</b> from ' + esc(prevLabel || '(none)') + ' to ' + esc(label || '(none)'));
             if (isNC(prev) !== isNC(s))
               lines.push(isNC(s)
                 ? '⚠️ Marked as not completed: <b>' + esc(s.ServiceName) + '</b>' + (s.NotCompletedReason ? ' — ' + esc(s.NotCompletedReason) : '')
@@ -972,7 +975,7 @@ if (client) {
           /* Quitados */
           oldSvcs.forEach(s => {
             const key = s.Category + '|' + s.ServiceName;
-            if (!newMap[key]) lines.push('❌ Removed: <b>' + esc(s.ServiceName) + '</b> — ' + esc(s.SubOption));
+            if (!newMap[key]) lines.push('❌ Removed: <b>' + esc(s.ServiceName) + '</b>' + (svcSubLabel(s) ? ' — ' + esc(svcSubLabel(s)) : ''));
           });
           const dOld = (oldPay && oldPay.dirtLevel) || '', dNew = (newPay && newPay.dirtLevel) || '';
           if (dOld !== dNew && (dOld || dNew))
@@ -1061,6 +1064,16 @@ if (client) {
     if (/(deep|full|heavy|two|replace|repair)/.test(s)) return 3;
     if (/(wipe|scrub|disinfect|detail|medium|one|mop|spot)/.test(s)) return 2;
     return 1;
+  }
+
+  /* Catalogo nuevo: SubOption ya es el SKU interno (ej. "222-68"), no
+     un texto legible -- nunca se muestra tal cual. Para esos casos el
+     nivel (si aplica, solo Janitorial) viene aparte en el campo Level.
+     Ordenes viejas (antes de la migracion) siguen con SubOption como
+     texto legible -- esas se muestran igual que siempre. */
+  function isSkuFormat(sub) { return /^\d{3}-\d+$/.test(String(sub || '')); }
+  function svcSubLabel(s) {
+    return isSkuFormat(s.SubOption) ? (s.Level || '') : (s.SubOption || '');
   }
 
   /* ===== Tracker dinamico: un punto por cada evento REAL relevante,
@@ -1720,7 +1733,7 @@ return html;
           ${o.Notes ? `<tr><td>Notes</td><td>${esc(o.Notes)}</td></tr>` : ''}
         </table>
         ${Object.entries(byCat).map(([cat, list]) =>
-          `<div class="cat"><b>${esc(cat)}:</b> ${list.map(s => esc(s.ServiceName) + ' — ' + esc(s.SubOption)).join(' · ')}</div>`
+          `<div class="cat"><b>${esc(cat)}:</b> ${list.map(s => esc(s.ServiceName) + (svcSubLabel(s) ? ' — ' + esc(svcSubLabel(s)) : '')).join(' · ')}</div>`
         ).join('')}
         </body></html>`);
       w.document.close();
