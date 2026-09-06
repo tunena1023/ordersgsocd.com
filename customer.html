@@ -695,6 +695,12 @@ if (client) {
   let svcLevel = {};
   let selAllActive = null;
   let editOrderId = null;
+  /* Direccion original de la orden que se esta editando -- distinta de
+     client.address (la del perfil ACTUAL del cliente) si el perfil
+     cambio desde que se puso esta orden, o si la orden nunca uso la
+     direccion default del cliente para empezar. Se preserva aqui para
+     no perderla al guardar la edicion. */
+  let editOrderAddress = null;
   let continueOrderId = null;
   let draftOrderId = null;
   let draftPendingData = null;
@@ -1400,6 +1406,7 @@ if (client) {
         return;
       }
       editOrderId = orderId;
+      editOrderAddress = { address: o.Address || '', suite: o.Suite || '', city: o.City || '', zip: o.Zip || '' };
       $('edit-banner').style.display = 'block';
       $('edit-order-id').textContent = orderId;
       $('submit-btn').textContent = 'Save Changes';
@@ -1513,10 +1520,10 @@ if (client) {
       if (!unitNumber) { alert('Please enter the Unit Number.'); return; }
       if (!bedrooms || parseInt(bedrooms) < 1) { alert('Please enter a valid number of Bedrooms (1-5).'); return; }
       if (!bathrooms || parseInt(bathrooms) < 1) { alert('Please enter a valid number of Bathrooms (1-3).'); return; }
-      order.Address = client.address;
-      order.Suite = client.suite || '';
-      order.City = client.city;
-      order.Zip = client.zip;
+      order.Address = editOrderId ? editOrderAddress.address : client.address;
+      order.Suite = editOrderId ? editOrderAddress.suite : (client.suite || '');
+      order.City = editOrderId ? editOrderAddress.city : client.city;
+      order.Zip = editOrderId ? editOrderAddress.zip : client.zip;
       order.BuildingNumber = buildingNumber;
       order.UnitNumber = unitNumber;
       order.Bedrooms = bedrooms;
