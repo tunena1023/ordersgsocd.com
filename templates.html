@@ -440,20 +440,26 @@ if (client) {
   async function saveTemplate() {
     const name = $('tpl-name').value.trim();
     const services = buildServicesArray();
-    if (!name) { showToast('Please give this template a name.'); return; }
-    if (!services.length) { showToast('Select at least one service first.'); return; }
+    if (!name) { alert('Please give this template a name.'); return; }
+    if (!services.length) { alert('Select at least one service first — nothing is checked/filled in yet below.'); return; }
+    const btn = event && event.target;
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
     try {
-      await GS.api('/save-template', {
+      const res = await GS.api('/save-template', {
         method: 'POST',
         body: { clientId: client.clientId, name, division: currentDiv, services }
       });
+      console.log('save-template response:', res);
       showToast('Template "' + name + '" saved.');
       $('tpl-name').value = '';
       selected = {}; svcLevel = {}; selAllActive = null;
       renderGrid();
       showSubview('saved');
     } catch (e) {
-      showToast('Error: ' + e.message);
+      console.error('save-template failed:', e);
+      alert('Could not save the template: ' + e.message);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Save Template'; }
     }
   }
 
