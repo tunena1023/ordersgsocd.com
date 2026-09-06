@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GS Solutions – Templates</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black:   #111111;
+    --gold:    #C9A84C;
+    --gold-lt: #E2C97E;
+    --gold-dk: #8C6F2A;
+    --white:   #FFFFFF;
+    --off:     #F7F6F3;
+    --gray:    #6B6B6B;
+    --border:  #E0D9CC;
+  }
+
+  body { font-family: 'Inter', sans-serif; background: var(--white); color: var(--black); min-height: 100vh; }
+
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 48px; min-height: 72px;
+    border-bottom: 1px solid var(--border);
+    background: var(--white); position: sticky; top: 0; z-index: 100;
+  }
+  .logo-wrap { display: flex; align-items: center; gap: 12px; }
+  .logo-diamond { width: 80px; height: 80px; }
+  .nav-right { display: flex; align-items: center; gap: 24px; }
+  .nav-link { font-size: 13px; color: var(--gray); text-decoration: none; letter-spacing: .04em; transition: color .2s; }
+  .nav-link:hover { color: var(--gold); }
+
+  .portal-header {
+    background: var(--off); border-bottom: 1px solid var(--border);
+    padding: 16px 48px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .portal-header p { font-size: 12px; color: var(--gray); }
+  .portal-header strong { color: var(--black); }
+  .btn-signout { font-size: 11px; color: var(--gray); background: none; border: none; cursor: pointer; letter-spacing: .06em; text-decoration: underline; }
+
+  .tabs { display: flex; border-bottom: 1px solid var(--border); padding: 0 48px; background: var(--white); }
+  .tab { padding: 16px 20px; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--gray); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color .2s, border-color .2s; text-decoration: none; display: inline-block; }
+  .tab.active { color: var(--black); border-bottom-color: var(--gold); }
+
+  .wrap { padding: 40px 48px; max-width: 900px; }
+  .wrap h2 { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 600; margin-bottom: 6px; }
+  .list-sub { font-size: 12px; color: var(--gray); margin-bottom: 28px; line-height: 1.6; }
+
+  .empty-note { color: var(--gray); font-size: 13px; padding: 40px 0; text-align: center; }
+
+  .tpl-card { border: 1px solid var(--border); background: var(--white); padding: 18px 22px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .tpl-name { font-family: 'Cormorant Garamond', serif; font-size: 19px; font-weight: 600; }
+  .tpl-meta { font-size: 12px; color: var(--gray); margin-top: 3px; }
+  .tpl-badge { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gold-dk); background: #FDF3E0; padding: 2px 9px; border-radius: 12px; margin-right: 8px; }
+  .tpl-actions { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
+
+  .btn-gold { background: var(--gold); color: var(--black); border: none; padding: 10px 22px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; cursor: pointer; }
+  .btn-gold:hover { background: var(--gold-lt); }
+  .btn-text-danger { background: none; border: none; color: #B33A3A; font-size: 11px; text-decoration: underline; cursor: pointer; letter-spacing: .03em; }
+
+  .toast {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--black); color: var(--white); padding: 12px 22px; border-radius: 4px;
+    font-size: 13px; opacity: 0; pointer-events: none; transition: all .3s; z-index: 500;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  footer { padding: 30px 48px; border-top: 1px solid var(--border); font-size: 11px; color: var(--gray); display: flex; justify-content: space-between; }
+
+  @media (max-width: 640px) {
+    nav, .portal-header, .tabs, .wrap, footer { padding-left: 20px; padding-right: 20px; }
+    .tpl-card { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo-wrap">
+    <img src="" alt="GS Solutions Inc." class="logo-diamond" style="object-fit:contain">
+  </div>
+  <div class="nav-right">
+    <a href="https://gsocd.com" class="nav-link">Home</a>
+    <a href="services.html" class="nav-link">Services</a>
+    <a href="#" class="nav-link" onclick="openContact(); return false;">Contact</a>
+  </div>
+</nav>
+
+<div class="portal-header">
+  <p>Welcome back, <strong id="client-name">Client</strong> &nbsp;·&nbsp; <span id="client-num-display"></span></p>
+  <button class="btn-signout" onclick="doSignout()">Sign out</button>
+</div>
+
+<div class="tabs">
+  <a class="tab" href="customer.html">New Order</a>
+  <a class="tab active" href="templates.html">Templates</a>
+  <a class="tab" href="tracking.html#processing">Processing</a>
+  <a class="tab" href="tracking.html#history">History</a>
+  <a class="tab" href="profile.html">Profile</a>
+</div>
+
+<div class="wrap">
+  <h2>Templates</h2>
+  <p class="list-sub">Saved combos of services you use often. Load one to start a new order without rebuilding it from scratch — you'll still fill in the dates, address and any other details for that order.</p>
+  <div id="tpl-list"><p class="empty-note">Loading…</p></div>
+</div>
+
+<footer>
+  <p>© 2026 <span>GS Solutions Inc.</span> — Des Moines, Iowa</p>
+  <p>orders@gsocd.com · (515) 473-5990</p>
+</footer>
+
+<div class="contact-overlay" id="contact-overlay" onclick="if(event.target===this) closeContact();" style="display:none;position:fixed;inset:0;background:rgba(17,17,17,.5);z-index:400;align-items:center;justify-content:center">
+  <div class="contact-panel" style="background:var(--white);padding:32px;max-width:400px;width:100%;position:relative">
+    <button class="contact-close" onclick="closeContact()" style="position:absolute;top:14px;right:14px;background:none;border:none;font-size:16px;cursor:pointer">✕</button>
+    <h2 style="font-family:'Cormorant Garamond',serif;margin-bottom:10px">Contact Us</h2>
+    <p style="font-size:12px;color:var(--gray);margin-bottom:16px">Send us a message and our team will get back to you.</p>
+    <div style="margin-bottom:14px"><label style="font-size:11px;color:var(--gray);display:block;margin-bottom:4px">Your Name</label><input type="text" id="contact-name" style="width:100%;padding:10px;border:1px solid var(--border)"></div>
+    <div style="margin-bottom:14px"><label style="font-size:11px;color:var(--gray);display:block;margin-bottom:4px">Email</label><input type="text" id="contact-email" style="width:100%;padding:10px;border:1px solid var(--border)"></div>
+    <div style="margin-bottom:14px"><label style="font-size:11px;color:var(--gray);display:block;margin-bottom:4px">Message</label><textarea id="contact-message" style="width:100%;padding:10px;border:1px solid var(--border);min-height:80px"></textarea></div>
+    <button class="btn-gold" onclick="sendContact()">Send Message</button>
+    <p id="contact-error" style="font-size:11px;color:#B33A3A;margin-top:10px;text-align:center"></p>
+    <p id="contact-ok" style="font-size:12px;color:#2A7A2A;margin-top:10px;text-align:center;display:none">Message sent. We'll be in touch shortly.</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="shared.js"></script>
+<script>
+const client = GS.requireSession();
+if (client) {
+
+  const $ = id => document.getElementById(id);
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+
+  function showToast(msg) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 4000);
+  }
+
+  function doSignout() {
+    GS.session.clear();
+    location.href = 'index.html';
+  }
+
+  $('client-name').textContent = client.businessName || client.clientId;
+  $('client-num-display').textContent = client.clientId;
+  GS.applyLogo();
+
+  let templates = [];
+
+  async function loadTemplates() {
+    try {
+      const data = await GS.api('/list-templates', { method: 'POST', body: { clientId: client.clientId } });
+      templates = data.templates || [];
+      renderTemplates();
+    } catch (e) {
+      $('tpl-list').innerHTML = '<p class="empty-note">Could not load templates: ' + esc(e.message) + '</p>';
+    }
+  }
+
+  function renderTemplates() {
+    const box = $('tpl-list');
+    if (!templates.length) {
+      box.innerHTML = '<p class="empty-note">No templates saved yet — build an order on the New Order screen and save it as a template from there.</p>';
+      return;
+    }
+    box.innerHTML = templates.map(t => `
+      <div class="tpl-card">
+        <div>
+          <div class="tpl-name">${esc(t.name)}</div>
+          <div class="tpl-meta"><span class="tpl-badge">${esc(t.division)}</span>${t.services.length} service${t.services.length === 1 ? '' : 's'}</div>
+        </div>
+        <div class="tpl-actions">
+          <button class="btn-text-danger" onclick="deleteTemplate('${t.id}')">Delete</button>
+          <button class="btn-gold" onclick="useTemplate('${t.id}')">Use This Template</button>
+        </div>
+      </div>`).join('');
+  }
+
+  function useTemplate(id) {
+    location.href = 'customer.html?template=' + encodeURIComponent(id);
+  }
+
+  async function deleteTemplate(id) {
+    if (!confirm('Delete this template? This cannot be undone.')) return;
+    try {
+      await GS.api('/delete-template', { method: 'POST', body: { templateId: id, clientId: client.clientId } });
+      showToast('Template deleted.');
+      loadTemplates();
+    } catch (e) {
+      showToast('Error: ' + e.message);
+    }
+  }
+
+  function openContact() { $('contact-overlay').style.display = 'flex'; }
+  function closeContact() { $('contact-overlay').style.display = 'none'; }
+  async function sendContact() {
+    const name = $('contact-name').value.trim();
+    const email = $('contact-email').value.trim();
+    const message = $('contact-message').value.trim();
+    $('contact-error').textContent = '';
+    if (!name || !email || !message) { $('contact-error').textContent = 'Please fill in all fields.'; return; }
+    try {
+      await GS.api('/submit-contact', { method: 'POST', body: { name, email, message, clientId: client.clientId } });
+      $('contact-ok').style.display = 'block';
+      setTimeout(closeContact, 1500);
+    } catch (e) {
+      $('contact-error').textContent = e.message;
+    }
+  }
+
+  loadTemplates();
+}
+</script>
+</body>
+</html>
