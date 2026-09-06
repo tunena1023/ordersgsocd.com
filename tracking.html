@@ -112,6 +112,21 @@
   .ready-field:last-child { margin-bottom: 0; }
   .field-sub { font-size: 11px; color: var(--gray); margin: 3px 0 8px; line-height: 1.5; }
   .ready-field input[type=date], .ready-field input[type=time] { width: 100%; max-width: 200px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 3px; font-size: 13px; font-family: inherit; background: var(--white); }
+  .time-picker-trigger { width: 100%; max-width: 200px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 3px; font-size: 13px; font-family: inherit; background: var(--white); text-align: left; cursor: pointer; color: var(--black); }
+  .time-picker-trigger:hover { border-color: var(--gold); }
+
+  /* Picker de hora tipo rueda -- reemplaza el <input type=time> nativo,
+     que se ve distinto (y feo) segun el navegador/dispositivo. 3
+     columnas que se deslizan con scroll-snap nativo del navegador
+     (se siente igual de fluido que un picker nativo, sin necesitar
+     nada de drag/touch hecho a mano). */
+  .wheel-picker { position: relative; display: flex; justify-content: center; gap: 6px; height: 180px; margin: 24px 0 8px; }
+  .wheel-highlight { position: absolute; top: 72px; left: 10%; right: 10%; height: 36px; background: var(--off); border-top: 1px solid var(--gold); border-bottom: 1px solid var(--gold); pointer-events: none; z-index: 1; }
+  .wheel-col { width: 64px; height: 180px; overflow-y: scroll; scroll-snap-type: y mandatory; scrollbar-width: none; -ms-overflow-style: none; }
+  .wheel-col::-webkit-scrollbar { display: none; }
+  .wheel-col-pad { height: 72px; }
+  .wheel-item { height: 36px; display: flex; align-items: center; justify-content: center; scroll-snap-align: center; font-size: 18px; color: var(--gray); font-family: 'Inter', sans-serif; transition: color .15s, font-weight .15s; }
+  .wheel-item.selected { color: var(--black); font-weight: 700; }
   .svc-toggle { position: relative; display: inline-block; width: 44px; height: 24px; cursor: pointer; vertical-align: middle; }
   .svc-toggle input { opacity: 0; width: 0; height: 0; }
   .svc-toggle-track { position: absolute; inset: 0; background: var(--border); border-radius: 24px; transition: background .2s; }
@@ -451,6 +466,22 @@
       <button class="btn-gold" id="notready-confirm-btn" onclick="confirmNotReady()">Turn Off</button>
     </div>
     <p class="dialog-error" id="notready-error"></p>
+  </div>
+</div>
+
+<div class="dialog-overlay" id="time-picker-dialog">
+  <div class="dialog-panel" style="max-width:280px;text-align:center">
+    <h3>What time can we come in?</h3>
+    <div class="wheel-picker">
+      <div class="wheel-highlight"></div>
+      <div class="wheel-col" id="wheel-hour" onscroll="markWheelSelected(this)"></div>
+      <div class="wheel-col" id="wheel-minute" onscroll="markWheelSelected(this)"></div>
+      <div class="wheel-col" id="wheel-ampm" onscroll="markWheelSelected(this)"></div>
+    </div>
+    <div class="dialog-btns">
+      <button class="btn-ghost" onclick="closeTimePicker()">Cancel</button>
+      <button class="btn-gold" style="flex:1" onclick="confirmTimePicker()">Set Time</button>
+    </div>
   </div>
 </div>
 
@@ -1266,7 +1297,7 @@ if (client) {
         <div class="ready-field ready-reveal${ready ? ' show' : ''}" id="entryTimeBlock-${safe}">
           <div style="font-weight:600;font-size:13px">What time can we come in?</div>
           <div class="field-sub">Earliest time on that day we're clear to start.</div>
-          <input type="time" id="entryTime-${safe}" value="${esc(o.EntryTime || '')}" onchange="saveEntryTime('${escAttr(o.OrderID)}', this.value)">
+          <button type="button" class="time-picker-trigger" id="entryTime-${safe}" onclick="openTimePicker('${escAttr(o.OrderID)}', '${safe}', '${escAttr(o.EntryTime || '')}')">${o.EntryTime ? esc(fmtTimeDisplay(o.EntryTime)) : 'Select a time'}</button>
         </div>
       </div>
     </div>`;
@@ -1350,6 +1381,109 @@ if (client) {
     try {
       await setMaterialsReady(orderId, true, value, '');
     } catch (e) { /* ya se mostro el toast de error */ }
+  }
+
+  /* ===== Picker de hora tipo rueda =====
+     3 columnas (Hora 1-12 / Minuto 00-59 / AM-PM) con scroll-snap
+     nativo del navegador -- se siente igual de fluido que un picker
+     nativo tipo iOS, sin necesitar nada de drag/touch hecho a mano.
+     El valor real que se guarda sigue siendo "HH:MM" en 24 horas
+     (mismo formato que ya usaba el input viejo), solo la UI cambia. */
+  const WHEEL_ITEM_H = 36;
+  const HOURS_12 = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'));
+  const MINUTES_60 = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
+  const AMPM_OPTS = ['AM', 'PM'];
+
+  let timePickerOrderId = null;
+  let timePickerSafe = null;
+
+  function fmtTimeDisplay(hhmm) {
+    if (!hhmm) return 'Select a time';
+    const parts = String(hhmm).split(':');
+    const hh = parseInt(parts[0], 10), mm = parseInt(parts[1], 10);
+    if (isNaN(hh) || isNaN(mm)) return 'Select a time';
+    const ap = hh >= 12 ? 'PM' : 'AM';
+    let h12 = hh % 12; if (h12 === 0) h12 = 12;
+    return h12 + ':' + String(mm).padStart(2, '0') + ' ' + ap;
+  }
+
+  function buildWheelItemsHtml(values) {
+    return '<div class="wheel-col-pad"></div>' +
+      values.map(v => '<div class="wheel-item">' + v + '</div>').join('') +
+      '<div class="wheel-col-pad"></div>';
+  }
+
+  function scrollWheelTo(col, index) {
+    col.scrollTop = index * WHEEL_ITEM_H;
+  }
+
+  function getWheelSelectedIndex(col) {
+    return Math.max(0, Math.round(col.scrollTop / WHEEL_ITEM_H));
+  }
+
+  function markWheelSelected(col) {
+    const idx = getWheelSelectedIndex(col);
+    col.querySelectorAll('.wheel-item').forEach((el, i) => el.classList.toggle('selected', i === idx));
+  }
+
+  function openTimePicker(orderId, safe, currentValue) {
+    timePickerOrderId = orderId;
+    timePickerSafe = safe;
+
+    $('wheel-hour').innerHTML = buildWheelItemsHtml(HOURS_12);
+    $('wheel-minute').innerHTML = buildWheelItemsHtml(MINUTES_60);
+    $('wheel-ampm').innerHTML = buildWheelItemsHtml(AMPM_OPTS);
+
+    let h24 = 8, mm = 0;
+    if (currentValue) {
+      const parts = String(currentValue).split(':');
+      const ph = parseInt(parts[0], 10), pm = parseInt(parts[1], 10);
+      if (!isNaN(ph)) h24 = ph;
+      if (!isNaN(pm)) mm = pm;
+    }
+    const ampmIdx = h24 >= 12 ? 1 : 0;
+    let h12 = h24 % 12; if (h12 === 0) h12 = 12;
+
+    $('time-picker-dialog').classList.add('open');
+    /* El scroll inicial necesita que el dialogo ya este visible
+       (display:flex) para que las columnas tengan alto real -- si no,
+       scrollTop se pone en 0 sin importar el valor que se le de. */
+    requestAnimationFrame(() => {
+      scrollWheelTo($('wheel-hour'), h12 - 1);
+      scrollWheelTo($('wheel-minute'), mm);
+      scrollWheelTo($('wheel-ampm'), ampmIdx);
+      markWheelSelected($('wheel-hour'));
+      markWheelSelected($('wheel-minute'));
+      markWheelSelected($('wheel-ampm'));
+    });
+  }
+
+  function closeTimePicker() {
+    $('time-picker-dialog').classList.remove('open');
+    timePickerOrderId = null;
+    timePickerSafe = null;
+  }
+
+  function confirmTimePicker() {
+    const hIdx = getWheelSelectedIndex($('wheel-hour'));
+    const mIdx = getWheelSelectedIndex($('wheel-minute'));
+    const apIdx = getWheelSelectedIndex($('wheel-ampm'));
+    const h12 = hIdx + 1;
+    const isPM = apIdx === 1;
+    let h24 = h12 % 12;
+    if (isPM) h24 += 12;
+    const value = String(h24).padStart(2, '0') + ':' + String(mIdx).padStart(2, '0');
+
+    const orderId = timePickerOrderId;
+    const safe = timePickerSafe;
+    $('time-picker-dialog').classList.remove('open');
+
+    const trigger = $('entryTime-' + safe);
+    if (trigger) trigger.textContent = fmtTimeDisplay(value);
+    saveEntryTime(orderId, value);
+
+    timePickerOrderId = null;
+    timePickerSafe = null;
   }
 
   /* ===== Botones por estatus (regla aprobada) =====
