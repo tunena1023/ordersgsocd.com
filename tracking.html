@@ -1598,11 +1598,11 @@ return html;
         addUnitBuildingsCache = [];
       }
     }
-    let optHtml = '';
+    let optHtml = '<option value="CLIENT_ADDRESS">Use my address (' + esc(client.address || client.businessName || 'on file') + ')</option>';
     addUnitBuildingsCache.forEach(b => {
       optHtml += '<option value="' + escAttr(b.id) + '">' + esc(b.label || 'Building') + (b.buildingNumber ? ' #' + esc(b.buildingNumber) : '') + '</option>';
     });
-    $('addunit-building').innerHTML = optHtml || '<option value="">No saved buildings — add one in Profile first</option>';
+    $('addunit-building').innerHTML = optHtml;
 
     $('addunit-dialog').classList.add('open');
   }

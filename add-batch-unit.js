@@ -15,7 +15,7 @@
 ============================================================ */
 
 const {
-  ORDERS_LIST, ORDER_SERVICES_LIST, ORDER_HISTORY_LIST, CLIENT_ADDRESSES_LIST,
+  ORDERS_LIST, ORDER_SERVICES_LIST, ORDER_HISTORY_LIST, CLIENT_ADDRESSES_LIST, CLIENTS_LIST,
   createListItem, graphFetch, siteListPath, jsonResponse
 } = require('./lib/graph');
 
@@ -64,9 +64,10 @@ exports.handler = async (event) => {
     if (!b.entryDate)  return jsonResponse(400, { error: 'Please enter the entry date.' });
     if (!b.dueDate)    return jsonResponse(400, { error: 'Please enter the due date.' });
 
-    const [clientOrders, buildingRows] = await Promise.all([
+    const [clientOrders, buildingRows, clientRows] = await Promise.all([
       fetchByField(ORDERS_LIST, 'ClientID', b.clientId),
-      fetchByField(CLIENT_ADDRESSES_LIST, 'ClientID', b.clientId)
+      fetchByField(CLIENT_ADDRESSES_LIST, 'ClientID', b.clientId),
+      b.buildingId === 'CLIENT_ADDRESS' ? fetchByField(CLIENTS_LIST, 'ClientID', b.clientId) : Promise.resolve([])
     ]);
 
     /* El PO tiene que ser de verdad de este cliente -- se busca entre
@@ -74,9 +75,19 @@ exports.handler = async (event) => {
     const siblings = clientOrders.filter(it => it.fields && it.fields.BatchId === b.batchId);
     if (!siblings.length) return jsonResponse(404, { error: 'That order was not found.' });
 
-    const building = buildingRows.find(it => it.id === String(b.buildingId));
-    if (!building) return jsonResponse(403, { error: 'That building does not belong to this account.' });
-    const bf = building.fields;
+    /* 'CLIENT_ADDRESS' es un id especial (no es un renglon real de
+       CLIENT_ADDRESSES_LIST) -- significa "esta unidad no tiene
+       building guardado, usa la direccion del cliente". */
+    let bf;
+    if (b.buildingId === 'CLIENT_ADDRESS') {
+      const clientItem = clientRows.find(it => it.fields);
+      const cf = clientItem ? clientItem.fields : {};
+      bf = { BuildingNumber: '', Address: cf.Address || '', Suite: cf.Suite || '', City: cf.City || '', Zip: cf.Zip || '' };
+    } else {
+      const building = buildingRows.find(it => it.id === String(b.buildingId));
+      if (!building) return jsonResponse(403, { error: 'That building does not belong to this account.' });
+      bf = building.fields;
+    }
 
     const template = siblings[0].fields;
     const suffix = nextGlobalSuffix(clientOrders);
@@ -120,7 +131,8 @@ exports.handler = async (event) => {
           Category:    f.Category    || '',
           ServiceName: f.ServiceName || '',
           SubOption:   f.SubOption   || '',
-          Division:    f.Division    || template.Division
+          Division:    f.Division    || template.Division,
+          Level:       f.Level       || ''
         });
       }));
 
