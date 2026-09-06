@@ -622,9 +622,9 @@ if (client) {
 
   function renderHistory() {
     const box = $('history-container');
-    const done = ordersCache.filter(o => (o.Status || '') === 'Completed');
+    const done = ordersCache.filter(o => (o.Status || '') === 'Completed' || (o.Status || '') === 'Cancelled');
     if (!done.length) {
-      box.innerHTML = '<p class="empty-note">No completed orders yet.</p>';
+      box.innerHTML = '<p class="empty-note">No completed or cancelled orders yet.</p>';
       return;
     }
     const { standalone, groupsMap, groupOrder } = groupByBatch(done);
@@ -799,6 +799,7 @@ if (client) {
   }
 
   function renderCompletedCard(o) {
+    const status = o.Status || 'Completed';
     return `
       <div class="order-card" data-order="${escAttr(o.OrderID)}">
         <div class="order-card-header" onclick="expandOrder(this, '${escAttr(o.OrderID)}')" ondblclick="pinOrder(this,'${escAttr(o.OrderID)}','history')">
@@ -807,7 +808,7 @@ if (client) {
             <div class="order-date">${orderSummaryLine(o)}</div>
           </div>
           <div style="display:flex;align-items:center;gap:16px">
-            <span class="order-status status-confirmed">Completed</span>
+            <span class="order-status ${statusClass(status)}">${esc(status)}</span>
             <span style="font-size:11px;color:var(--gray)">▼</span>
           </div>
         </div>
