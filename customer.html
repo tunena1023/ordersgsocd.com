@@ -1387,6 +1387,14 @@ if (client) {
   }
 
   async function submitOrder() {
+    /* BUG FIX: el autoguardado tiene 3 segundos de retraso -- si se
+       manda la orden antes de que ese temporizador dispare, el
+       autoguardado se ejecuta SOLO despues de que la orden ya se creo
+       de verdad, generando un draft huerfano (con un ID temporal que
+       nadie mas conoce) que se queda para siempre. Se cancela aqui,
+       justo al entrar, antes de cualquier otra cosa. */
+    clearTimeout(saveTimer);
+
     const svcCount = Object.values(selected).reduce((n, o) => n + Object.keys(o).length, 0);
     if (svcCount === 0) { alert('Please select at least one service.'); return; }
     if (!$('entry-date').value) { alert('Please enter the entry date.'); return; }
