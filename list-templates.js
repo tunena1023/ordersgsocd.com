@@ -11,9 +11,8 @@ const {
   jsonResponse
 } = require('./lib/graph');
 
-async function fetchByField(listName, fieldName, value) {
-  const filter = encodeURIComponent(`fields/${fieldName} eq '${value}'`);
-  let url = siteListPath(listName) + `?$expand=fields&$top=200&$filter=${filter}`;
+async function fetchAll(listName) {
+  let url = siteListPath(listName) + '?$expand=fields&$top=200';
   const out = [];
   while (url) {
     const data = await graphFetch(url);
@@ -32,7 +31,9 @@ exports.handler = async (event) => {
     const { clientId } = JSON.parse(event.body || '{}');
     if (!clientId) return jsonResponse(400, { error: 'clientId is required' });
 
-    const rows = await fetchByField(SERVICE_TEMPLATES_LIST, 'ClientID', String(clientId).trim());
+    const wanted = String(clientId).trim().toLowerCase();
+    const rows = (await fetchAll(SERVICE_TEMPLATES_LIST))
+      .filter(it => it.fields && String(it.fields.ClientID || '').trim().toLowerCase() === wanted);
 
     const templates = rows
       .filter(it => it.fields)
