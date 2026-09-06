@@ -130,7 +130,8 @@ function resolveServices(raw, division) {
       Category:    s.Category    || '',
       ServiceName: s.ServiceName || '',
       SubOption:   s.SubOption   || '',
-      Division:    s.Division    || division
+      Division:    s.Division    || division,
+      Level:       s.Level       || ''
     })).filter(s => s.Category || s.ServiceName);
   }
   return parseServicesString(raw, division);
@@ -199,7 +200,8 @@ exports.handler = async (event) => {
             Category:    row.fields.Category    || '',
             ServiceName: row.fields.ServiceName || '',
             SubOption:   row.fields.SubOption   || '',
-            Division:    row.fields.Division    || b.Division
+            Division:    row.fields.Division    || b.Division,
+            Level:       row.fields.Level       || ''
           }))
         : resolveServices(b.Services, b.Division);
 
@@ -288,7 +290,8 @@ exports.handler = async (event) => {
           Category:    it.fields.Category    || '',
           ServiceName: it.fields.ServiceName || '',
           SubOption:   it.fields.SubOption   || '',
-          Division:    it.fields.Division    || existing.Division
+          Division:    it.fields.Division    || existing.Division,
+          Level:       it.fields.Level       || ''
         })),
         dirtLevel: existing.DirtLevel || ''
       });
@@ -308,7 +311,8 @@ exports.handler = async (event) => {
           Category:    s.Category,
           ServiceName: s.ServiceName,
           SubOption:   s.SubOption,
-          Division:    s.Division
+          Division:    s.Division,
+          Level:       s.Level || ''
         });
       }
 
@@ -320,7 +324,7 @@ exports.handler = async (event) => {
 
       /* Servicios nuevos que el cliente seleccionó */
       const newServices = resolveServices(b.Services, b.Division).map(s => ({
-        Category: s.Category, ServiceName: s.ServiceName, SubOption: s.SubOption, Division: s.Division
+        Category: s.Category, ServiceName: s.ServiceName, SubOption: s.SubOption, Division: s.Division, Level: s.Level || ''
       }));
 
       await createListItem(ORDER_HISTORY_LIST, {
@@ -334,7 +338,8 @@ exports.handler = async (event) => {
           Category:    it.fields.Category    || '',
           ServiceName: it.fields.ServiceName || '',
           SubOption:   it.fields.SubOption   || '',
-          Division:    it.fields.Division    || existing.Division
+          Division:    it.fields.Division    || existing.Division,
+          Level:       it.fields.Level       || ''
         }))),
         NewValue:   JSON.stringify(newServices)
       });
@@ -423,7 +428,8 @@ exports.handler = async (event) => {
               Category:    s.Category    || '',
               ServiceName: s.ServiceName || '',
               SubOption:   s.SubOption   || '',
-              Division:    s.Division    || b.Division
+              Division:    s.Division    || b.Division,
+              Level:       s.Level       || ''
             })
           ));
 
@@ -489,7 +495,8 @@ exports.handler = async (event) => {
         Category:    s.Category,
         ServiceName: s.ServiceName,
         SubOption:   s.SubOption,
-        Division:    s.Division
+        Division:    s.Division,
+        Level:       s.Level || ''
       })
     ));
 

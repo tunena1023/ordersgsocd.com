@@ -87,7 +87,8 @@ exports.handler = async (event) => {
           Category:    it.fields.Category    || '',
           ServiceName: it.fields.ServiceName || '',
           SubOption:   it.fields.SubOption   || '',
-          Division:    it.fields.Division    || order.Division
+          Division:    it.fields.Division    || order.Division,
+          Level:       it.fields.Level       || ''
         }));
 
       return jsonResponse(200, { order, services, history: [] });

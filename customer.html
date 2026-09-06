@@ -350,6 +350,46 @@
 
   .flash-empty { font-size: 12px; color: var(--gray); font-style: italic; padding: 20px 0; }
 
+  /* ===== Picker del catalogo nuevo (ServicesCatalog) -- mismo formato
+     oficial que ya se uso en admin.html: toggle Residential/Commercial
+     redondito, buscador + Select all, chips en grid de 3 columnas
+     (Renovations/Exteriors) o filas + L1/L2/L3 (Janitorial). ===== */
+  .res-toggle-wrap { display: flex; align-items: center; gap: 8px; margin: 16px 0; }
+  .res-toggle-label { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--gray); }
+  .svc-toggle { position: relative; display: inline-block; width: 40px; height: 22px; vertical-align: middle; cursor: pointer; }
+  .svc-toggle input { opacity: 0; width: 0; height: 0; }
+  .svc-toggle-track { position: absolute; inset: 0; background: var(--border); border-radius: 22px; transition: background .2s; }
+  .svc-toggle-track::before { content: ""; position: absolute; height: 18px; width: 18px; left: 2px; top: 2px; background: var(--white); border-radius: 50%; transition: transform .2s; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+  .svc-toggle input:checked + .svc-toggle-track { background: var(--gold); }
+  .svc-toggle input:checked + .svc-toggle-track::before { transform: translateX(18px); }
+
+  .svc-toolbar-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .svc-search { flex: 1; min-width: 140px; max-width: none; padding: 9px 12px; border: 1px solid var(--border); border-radius: 3px; font-size: 13px; font-family: 'Inter', sans-serif; }
+  .svc-toolbar-selall { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .selall-label { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--gray); }
+  .lvl-toggle3 { position: relative; display: flex; width: 180px; height: 34px; background: var(--border); border-radius: 17px; padding: 3px; flex-shrink: 0; }
+  .lvl-toggle3-thumb { position: absolute; top: 3px; left: 3px; width: calc(33.333% - 2px); height: calc(100% - 6px); background: var(--gold); border-radius: 14px; transition: transform .25s cubic-bezier(.4,0,.2,1), opacity .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2); opacity: 0; }
+  .lvl-toggle3-opt { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--gray); cursor: pointer; z-index: 1; transition: color .25s; }
+  .lvl-toggle3-opt.active { color: var(--black); }
+
+  .svc-chip-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .svc-chip-btn { border: 1px solid var(--border); background: var(--white); padding: 10px 12px; font-size: 12px; text-align: left; cursor: pointer; border-radius: 2px; font-family: 'Inter', sans-serif; color: var(--black); }
+  .svc-chip-btn.active { background: var(--gold); border-color: var(--gold); font-weight: 700; }
+
+  .jan-row-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .jan-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 10px; border: 1px solid var(--border); border-radius: 3px; background: var(--white); transition: border-color .15s, background .15s; }
+  .jan-row.selected { border-color: var(--gold); background: #FEFBF3; }
+  .jan-row-name { font-size: 12px; }
+  .lvl-group { display: flex; border: 1px solid var(--border); border-radius: 20px; overflow: hidden; flex-shrink: 0; }
+  .lvl-btn { width: 34px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; cursor: pointer; background: var(--white); color: var(--gray); border-right: 1px solid var(--border); }
+  .lvl-btn:last-child { border-right: none; }
+  .lvl-btn.active { background: var(--gold); color: var(--black); }
+  .lvl-btn:hover:not(.active) { background: var(--off); }
+
+  @media (max-width: 900px) { .svc-chip-grid, .jan-row-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 640px) { .svc-chip-grid, .jan-row-grid { grid-template-columns: 1fr; } }
+
+
   .flash-desc {
     display: none; margin: 14px 2px 26px; padding: 18px 22px;
     background: var(--white); border: 1px solid var(--border); border-left: 3px solid var(--gold);
@@ -475,12 +515,12 @@ style="object-fit:contain">
             <div class="div-name">Janitorial</div>
             <div class="div-desc">Residential &amp; commercial Janitorial services</div>
           </div>
-          <div class="div-card" data-div="renovations" onclick="selectDiv('renovations', this)">
+          <div class="div-card" data-div="Renovations" onclick="selectDiv('Renovations', this)">
             <div class="div-icon">🔨</div>
             <div class="div-name">Renovations</div>
             <div class="div-desc">Repairs, painting, flooring &amp; more</div>
           </div>
-          <div class="div-card" data-div="exteriors" onclick="selectDiv('exteriors', this)">
+          <div class="div-card" data-div="Exteriors" onclick="selectDiv('Exteriors', this)">
             <div class="div-icon">🌿</div>
             <div class="div-name">Exteriors</div>
             <div class="div-desc">Landscaping, pressure washing &amp; outdoor maintenance</div>
@@ -658,15 +698,12 @@ const client = GS.requireSession();
 if (client) {
 
   let serviceData = null;
+  let catalogCache = [];
   let currentDiv = 'Janitorial';
-  let activeCat = null;
-  let openCat = null;
-  let pinnedCats = new Set();
-  let catOrder = [];
+  let propertyType = 'Commercial';
   let selected = {};
-  let locked = {};
-  let escalated = {};
-  let dirtLevel = '';
+  let svcLevel = {};
+  let selAllActive = null;
   let editOrderId = null;
   let continueOrderId = null;
   let draftOrderId = null;
@@ -694,30 +731,6 @@ if (client) {
     if (/(wipe|scrub|disinfect|detail|medium|one|mop|spot)/.test(s)) return 2;
     return 1;
   }
-  function deepSubOf(subs) { return subs.find(x => levelOf(x) === 3) || null; }
-  function subForLevel(subs, level) {
-    let best = subs[0], bestDist = 99;
-    for (const s of subs) { const d = Math.abs(levelOf(s) - level); if (d < bestDist) { bestDist = d; best = s; } }
-    return best;
-  }
-
-  function categoryDescription(cat, services) {
-    const names = services.map(s => s.name.toLowerCase());
-    const has = (kw) => names.some(n => n.includes(kw));
-    let what;
-    if (has('kitchen') || has('counter') || has('applian')) what = 'Kitchen surfaces, appliances and fixtures — countertops, sink, cabinets and more.';
-    else if (has('bath') || has('toilet') || has('shower')) what = 'Bathroom surfaces and fixtures — toilet, shower, tub, vanity and mirrors.';
-    else if (has('bed') || has('closet')) what = 'Bedrooms and closets — dusting, wiping and detailed cleaning as needed.';
-    else if (has('living') || has('common') || has('hall')) what = 'Common areas — living spaces, hallways and shared surfaces throughout the unit.';
-    else if (has('window') || has('blind')) what = 'Windows and blinds — glass, frames, tracks and coverings.';
-    else if (has('duct') || has('vent') || has('air')) what = 'Air ducts, vents and grilles for healthier air circulation.';
-    else if (has('floor') || has('carpet')) what = 'Floors — sweeping, mopping and deep treatments depending on condition.';
-    else what = 'Professional cleaning services for ' + cat.toLowerCase() + '.';
-    return what + ' Pick the services you need and choose a level for each — ' +
-           '<b>Dust</b> for light upkeep, <b>Wipe Down</b> for regular cleaning, or <b>Deep Clean</b> for heavy buildup. ' +
-           'Tip: you can set one level for the whole unit with the Overall Condition Level above. ' +
-           'Rooms where a majority of services are set to Deep Clean are automatically deep-cleaned entirely for consistent results.';
-  }
 
   fillAccount(client);
   GS.applyLogo();
@@ -729,6 +742,7 @@ if (client) {
 
   GS.api('/get-services', { method: 'GET' }).then(data => {
     serviceData = data;
+    catalogCache = data.catalog || [];
     if (editParam) {
       loadForEdit(editParam);
     } else if (continueParam) {
@@ -792,396 +806,182 @@ if (client) {
       showToast('Draft ' + orphan + ' deleted — you switched to another division.');
     }
     currentDiv = div;
-    selected = {}; locked = {}; escalated = {}; dirtLevel = '';
-    activeCat = null; openCat = null; pinnedCats = new Set(); catOrder = [];
+    selected = {}; svcLevel = {}; propertyType = 'Commercial'; selAllActive = null;
     draftOrderId = null; draftPendingData = null;
     $('summary-division').textContent = el ? el.querySelector('.div-name').textContent : div;
     renderServices(div);
     updateSummary();
     if (!editParam && !continueParam) checkDraftFor(div);
   }
-  
 
-  /* ===== Render de acordeones (reemplaza carrusel) ===== */
+  function svcKey(p, n) { return p + '|' + n; }
+
+  /* ===== Picker del catalogo nuevo -- toggle Residential/Commercial +
+     buscador (+ Select all solo en Janitorial) + chips en grid de 3
+     columnas (Renovations/Exteriors) o filas + L1/L2/L3 (Janitorial) ===== */
   function renderServices(div) {
     const container = $('services-container');
     container.innerHTML = '';
 
-    if (!serviceData) { container.innerHTML = '<p class="flash-empty">Loading services…</p>'; return; }
-    const cfg = serviceData[div];
-    if (!cfg || !Object.keys(cfg.categories || {}).length) {
-      container.innerHTML = '<p class="flash-empty">No services available for this division.</p>';
+    if (!catalogCache || !catalogCache.length) {
+      container.innerHTML = '<p class="flash-empty">No services available right now — please check back shortly.</p>';
       return;
     }
+    const isJan = div === 'Janitorial';
 
-    if (div === 'Janitorial') renderDirtBox(container);
-
-    const grid = document.createElement('div');
-    grid.className = 'cat-grid';
-    container.appendChild(grid);
-
-    catOrder = Object.keys(cfg.categories);
-
-    Object.entries(cfg.categories).forEach(([cat, services], idx) => {
-      const acc = document.createElement('div');
-      acc.className = 'accordion-cat';
-      acc.dataset.cat = cat;
-      acc.style.cssText = 'border:1px solid var(--border);border-radius:4px;margin-bottom:8px;overflow:hidden;';
-
-      /* Header del acordeón: nombre + circulo de conteo agrupados a la
-         izquierda (el circulo solo se muestra si hay algo seleccionado),
-         flecha a la derecha. Pasar el mouse sobre el circulo muestra un
-         mensaje flotante con el detalle de lo elegido en esa categoria. */
-      const header = document.createElement('div');
-      header.className = 'acc-head';
-      header.innerHTML =
-        '<span class="acc-head-left">' +
-          '<span class="acc-cat-name">' + esc(cat) + '</span>' +
-          '<span class="cat-badge-wrap">' +
-            '<span class="cat-badge" data-cat="' + esc(cat) + '"></span>' +
-            '<div class="cat-badge-tip" data-tip-for="' + esc(cat) + '"></div>' +
-          '</span>' +
-          '<span class="acc-pin"></span>' +
-        '</span>' +
-        '<span class="acc-arrow">▼</span>';
-      acc.appendChild(header);
-
-      /* El circulo abre/cierra el mensaje flotante en vez de la categoria;
-         sin esto, un click en el circulo tambien abriria/cerraria el
-         acordeon completo por el listener del header de abajo. */
-      const badgeEl = header.querySelector('.cat-badge');
-      const tipEl   = header.querySelector('.cat-badge-tip');
-      badgeEl.addEventListener('mouseenter', () => showCatTip(cat, tipEl));
-      badgeEl.addEventListener('mouseleave', () => tipEl.classList.remove('show'));
-      badgeEl.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const willShow = !tipEl.classList.contains('show');
-        document.querySelectorAll('.cat-badge-tip.show').forEach(t => t.classList.remove('show'));
-        if (willShow) showCatTip(cat, tipEl);
-      });
-
-      /* Body del acordeón */
-      const body = document.createElement('div');
-      body.className = 'accordion-body';
-      body.style.cssText = 'display:none;padding:16px 20px;background:var(--off);border-top:1px solid var(--border);';
-
-      /* Esc message */
-      const escm = document.createElement('div');
-      escm.className = 'esc-msg';
-      escm.style.display = 'none';
-      escm.textContent = 'Majority of services in this room are Deep Clean — the whole room is set to Deep Clean and locked for consistent pricing.';
-      body.appendChild(escm);
-
-      /* Servicios */
-      const list = document.createElement('div');
-      list.className = 'flash-services';
-      body.appendChild(list);
-      acc.appendChild(body);
-
-      /* Toggle: un clic abre esta categoria y cierra la que estuviera
-         abierta antes (salvo que este fijada con doble clic). La
-         clase .open en el contenedor maneja el resaltado del
-         encabezado y la rotacion de la flecha por CSS. */
-      const pinEl = header.querySelector('.acc-pin');
-      header.addEventListener('click', () => {
-        if (pinnedCats.has(cat)) return; // fijada: solo el doble clic la mueve
-        const isOpen = body.style.display !== 'none';
-        if (isOpen) {
-          body.style.display = 'none';
-          acc.classList.remove('open');
-          if (openCat === cat) openCat = null;
-          return;
-        }
-        document.querySelectorAll('.accordion-cat').forEach(other => {
-          if (other === acc) return;
-          if (pinnedCats.has(other.dataset.cat)) return;
-          const otherBody = other.querySelector('.accordion-body');
-          if (otherBody) otherBody.style.display = 'none';
-          other.classList.remove('open');
-        });
-        body.style.display = 'block';
-        acc.classList.add('open');
-        activeCat = cat;
-        openCat = cat;
-        populateServices(cat, false);
-      });
-
-      header.addEventListener('dblclick', () => {
-        if (pinnedCats.has(cat)) {
-          pinnedCats.delete(cat);
-          pinEl.innerHTML = '';
-        } else {
-          pinnedCats.add(cat);
-          body.style.display = 'block';
-          acc.classList.add('open');
-          activeCat = cat;
-          openCat = cat;
-          populateServices(cat, false);
-          pinEl.innerHTML = '&#128274;';
-        }
-      });
-
-
-      grid.appendChild(acc);
-    });
-
-    refreshBadges();
-    if (openCat) populateServices(openCat, false);
+    const wrap = document.createElement('div');
+    wrap.innerHTML = `
+      <div class="res-toggle-wrap" id="res-toggle">
+        <span class="res-toggle-label">Commercial</span>
+        <label class="svc-toggle">
+          <input type="checkbox" onchange="setPropertyType(this.checked ? 'Residential' : 'Commercial')">
+          <span class="svc-toggle-track"></span>
+        </label>
+        <span class="res-toggle-label">Residential</span>
+      </div>
+      <div class="svc-toolbar-row">
+        <input type="text" class="svc-search" id="svc-search" placeholder="Search services…" oninput="renderServiceGrid()">
+        <div class="svc-toolbar-selall" id="selall-group" style="display:${isJan ? '' : 'none'}">
+          <span class="selall-label">Select all</span>
+          <div class="lvl-toggle3" id="selAllToggle">
+            <div class="lvl-toggle3-thumb" id="selAllThumb"></div>
+            <div class="lvl-toggle3-opt" onclick="selectAllLevel('Level 1',0)">L1</div>
+            <div class="lvl-toggle3-opt" onclick="selectAllLevel('Level 2',1)">L2</div>
+            <div class="lvl-toggle3-opt" onclick="selectAllLevel('Level 3',2)">L3</div>
+          </div>
+        </div>
+      </div>
+      <div id="svc-grid"></div>`;
+    container.appendChild(wrap);
+    renderServiceGrid();
   }
 
-  function populateServices(cat, animate) {
-    const acc = document.querySelector('.accordion-cat[data-cat="' + CSS.escape(cat) + '"]');
-    if (!acc) return;
-    const card = acc; // compatibilidad con el resto del código
-    const list = card.querySelector('.flash-services');
-    list.innerHTML = '';
-    const services = (serviceData[currentDiv].categories[cat]) || [];
-    services.forEach((svc, i) => {
-      const row = document.createElement('div');
-      row.className = 'svc' + (animate ? ' enter' : '');
-      if (animate) row.style.animationDelay = (i * 70) + 'ms';
+  function renderServiceGrid() {
+    const grid = $('svc-grid');
+    const isJan = currentDiv === 'Janitorial';
+    const q = ($('svc-search').value || '').trim().toLowerCase();
+    let list = catalogCache.filter(s => s.division.toLowerCase() === currentDiv.toLowerCase() && s.propertyType === propertyType);
+    if (q) list = list.filter(s => s.serviceName.toLowerCase().includes(q));
+    list.sort((a, b) => a.serviceName.localeCompare(b.serviceName));
 
-      const isLocked = locked[cat] && Object.prototype.hasOwnProperty.call(locked[cat], svc.name);
-      const currentSub = (selected[cat] || {})[svc.name];
+    if (!list.length) { grid.className = ''; grid.innerHTML = '<p class="flash-empty">No services match.</p>'; return; }
 
-      const name = document.createElement('span');
-      name.className = 'svc-name';
-      name.textContent = svc.name;
-      row.appendChild(name);
-
-      if (svc.desc) {
-        const d = document.createElement('span');
-        d.className = 'svc-desc';
-        d.textContent = svc.desc;
-        row.appendChild(d);
-      }
-
-      const chips = document.createElement('div');
-      chips.className = 'svc-chips';
-      svc.subs.forEach(sub => {
-        const chip = document.createElement('span');
-        chip.className = 'chip';
-        chip.textContent = sub;
-        chip.dataset.cat = cat;
-        chip.dataset.svc = svc.name;
-        chip.dataset.sub = sub;
-        if (currentSub === sub) chip.classList.add('checked');
-        if (isLocked) chip.classList.add('locked');
-        chips.appendChild(chip);
-      });
-      row.appendChild(chips);
-      list.appendChild(row);
-    });
-  }
-
-  function layoutCarousel(instant) { /* no-op: reemplazado por acordeones */ }
-  function updateDescription() { /* no-op: reemplazado por acordeones */ }
-
-  $('services-container').addEventListener('click', function (e) {
-    const chip = e.target.closest('.chip');
-    if (chip) { toggleSub(chip.dataset.cat, chip.dataset.svc, chip.dataset.sub); return; }
-  });
-
-  function renderDirtBox(container) {
-    const box = document.createElement('div');
-    box.className = 'dirt-level-box';
-    box.innerHTML =
-      '<label>Overall Condition Level</label>' +
-      '<div class="dirt-options">' +
-        '<label class="dirt-option"><input type="radio" name="dirt-level" value="Level 1 (Light)"> Level 1 (Light)</label>' +
-        '<label class="dirt-option"><input type="radio" name="dirt-level" value="Level 2 (Moderate)"> Level 2 (Moderate)</label>' +
-        '<label class="dirt-option"><input type="radio" name="dirt-level" value="Level 3 (Heavy / Deep)"> Level 3 (Heavy / Deep)</label>' +
-      '</div>' +
-      '<div class="dirt-hint">Sets every service to this level as a starting point. Click the selected level again to clear it.</div>';
-    container.appendChild(box);
-    box.querySelectorAll('input[name="dirt-level"]').forEach(r => {
-      r.addEventListener('click', function () {
-        if (this.dataset.wasChecked === '1') {
-          this.checked = false;
-          delete this.dataset.wasChecked;
-          applyLever('');
-        } else {
-          box.querySelectorAll('input[name="dirt-level"]').forEach(x => delete x.dataset.wasChecked);
-          this.dataset.wasChecked = '1';
-          applyLever(this.value);
-        }
-      });
-    });
-  }
-
-  function syncDirtRadios() {
-    document.querySelectorAll('input[name="dirt-level"]').forEach(r => {
-      if (dirtLevel && r.value.indexOf(dirtLevel) === 0) { r.checked = true; r.dataset.wasChecked = '1'; }
-      else { r.checked = false; delete r.dataset.wasChecked; }
-    });
-  }
-
-  function applyLever(label) {
-    dirtLevel = label ? label.split(' ').slice(0, 2).join(' ') : '';
-    selected = {}; locked = {}; escalated = {};
-    if (dirtLevel) {
-      const lvl = parseInt(dirtLevel.replace('Level ', ''), 10);
-      eachService((cat, svc) => {
-        const sub = subForLevel(svc.subs, lvl);
-        if (sub) {
-          selected[cat] = selected[cat] || {};
-          selected[cat][svc.name] = sub;
-        }
-      });
+    if (isJan) {
+      grid.className = 'jan-row-grid';
+      const levels = ['Level 1', 'Level 2', 'Level 3'];
+      grid.innerHTML = list.map(s => {
+        const sel = (selected[propertyType] || {})[s.serviceName] === s.sku;
+        const lvl = sel ? svcLevel[svcKey(propertyType, s.serviceName)] : null;
+        return '<div class="jan-row' + (lvl ? ' selected' : '') + '">' +
+          '<span class="jan-row-name">' + esc(s.serviceName) + '</span>' +
+          '<div class="lvl-group">' +
+            levels.map((l, i) => '<div class="lvl-btn' + (lvl === l ? ' active' : '') + '" onclick="pickLevel(\'' + s.sku.replace(/'/g, "\\'") + '\',\'' + l + '\')">L' + (i + 1) + '</div>').join('') +
+          '</div></div>';
+      }).join('');
+    } else {
+      grid.className = 'svc-chip-grid';
+      grid.innerHTML = list.map(s =>
+        '<button type="button" class="svc-chip-btn' + ((selected[propertyType] || {})[s.serviceName] === s.sku ? ' active' : '') + '" onclick="toggleChip(\'' + s.sku.replace(/'/g, "\\'") + '\')">' + esc(s.serviceName) + '</button>'
+      ).join('');
     }
-    if (openCat) populateServices(openCat, false);
-    refreshBadges();
+  }
+
+  function setPropertyType(type) {
+    propertyType = type;
+    renderServiceGrid();
+  }
+
+  function toggleChip(sku) {
+    const svc = catalogCache.find(s => s.sku === sku);
+    if (!svc) return;
+    if (!selected[propertyType]) selected[propertyType] = {};
+    if (selected[propertyType][svc.serviceName] === sku) {
+      delete selected[propertyType][svc.serviceName];
+      if (!Object.keys(selected[propertyType]).length) delete selected[propertyType];
+    } else {
+      selected[propertyType][svc.serviceName] = sku;
+    }
+    renderServiceGrid();
     updateSummary();
     scheduleDraftSave();
   }
 
-  function eachService(fn) {
-    const cfg = serviceData && serviceData[currentDiv];
-    if (!cfg) return;
-    Object.entries(cfg.categories).forEach(([cat, services]) => services.forEach(svc => fn(cat, svc)));
-  }
-
-  function toggleSub(cat, svcName, sub) {
-    const isLocked = locked[cat] && Object.prototype.hasOwnProperty.call(locked[cat], svcName);
-    if (isLocked) return;
-
-    selected[cat] = selected[cat] || {};
-    if (selected[cat][svcName] === sub) delete selected[cat][svcName];
-    else selected[cat][svcName] = sub;
-
-    if (currentDiv === 'Janitorial') recountEscalation(cat);
-    if (openCat) populateServices(openCat, false);
-    refreshBadges();
+  function pickLevel(sku, level) {
+    const svc = catalogCache.find(s => s.sku === sku);
+    if (!svc) return;
+    const k = svcKey(propertyType, svc.serviceName);
+    if (!selected[propertyType]) selected[propertyType] = {};
+    const already = selected[propertyType][svc.serviceName] === sku && svcLevel[k] === level;
+    if (already) {
+      delete selected[propertyType][svc.serviceName];
+      if (!Object.keys(selected[propertyType]).length) delete selected[propertyType];
+      delete svcLevel[k];
+    } else {
+      selected[propertyType][svc.serviceName] = sku;
+      svcLevel[k] = level;
+    }
+    renderServiceGrid();
     updateSummary();
     scheduleDraftSave();
   }
 
-  function recountEscalation(cat) {
-    const services = (serviceData[currentDiv].categories[cat]) || [];
-    const total = services.length;
-    if (total <= 2) return;
+  function selectAllLevel(level, idx) {
+    const q = ($('svc-search').value || '').trim().toLowerCase();
+    const visible = catalogCache.filter(s => s.division.toLowerCase() === currentDiv.toLowerCase() && s.propertyType === propertyType && (!q || s.serviceName.toLowerCase().includes(q)));
+    const thumb = $('selAllThumb');
+    if (!selected[propertyType]) selected[propertyType] = {};
 
-    const threshold = Math.floor(total / 2) + 1;
-    let manualDeep = 0;
-    services.forEach(svc => {
-      const isLocked = locked[cat] && Object.prototype.hasOwnProperty.call(locked[cat], svc.name);
-      const sub = selected[cat] && selected[cat][svc.name];
-      if (sub && levelOf(sub) === 3 && !isLocked) manualDeep++;
-    });
-
-    if (manualDeep >= threshold && !escalated[cat]) escalateRoom(cat, services);
-    else if (escalated[cat] && manualDeep < threshold) rollbackRoom(cat, services);
+    if (selAllActive === idx) {
+      visible.forEach(s => { delete selected[propertyType][s.serviceName]; delete svcLevel[svcKey(propertyType, s.serviceName)]; });
+      selAllActive = null;
+      thumb.style.opacity = '0';
+    } else {
+      visible.forEach(s => { selected[propertyType][s.serviceName] = s.sku; svcLevel[svcKey(propertyType, s.serviceName)] = level; });
+      selAllActive = idx;
+      thumb.style.opacity = '1';
+      thumb.style.transform = 'translateX(' + (idx * 100) + '%)';
+    }
+    document.querySelectorAll('#selAllToggle .lvl-toggle3-opt').forEach((el, i) => el.classList.toggle('active', i === selAllActive));
+    renderServiceGrid();
+    updateSummary();
+    scheduleDraftSave();
   }
 
-  function escalateRoom(cat, services) {
-    escalated[cat] = true;
-    locked[cat] = locked[cat] || {};
-    services.forEach(svc => {
-      const alreadyDeep = selected[cat][svc.name] && levelOf(selected[cat][svc.name]) === 3;
-      const isLocked = Object.prototype.hasOwnProperty.call(locked[cat], svc.name);
-      if (!alreadyDeep && !isLocked) {
-        const deep = deepSubOf(svc.subs);
-        if (deep) {
-          locked[cat][svc.name] = selected[cat][svc.name] || null;
-          selected[cat][svc.name] = deep;
-        }
-      }
-    });
-  }
-
-  function rollbackRoom(cat, services) {
-    escalated[cat] = false;
-    const lk = locked[cat] || {};
-    Object.entries(lk).forEach(([svcName, prev]) => {
-      /* No resucitar servicios que el cliente ya borró desde el resumen */
-      if (!(selected[cat] && Object.prototype.hasOwnProperty.call(selected[cat], svcName))) return;
-      if (prev === null) delete selected[cat][svcName];
-      else selected[cat][svcName] = prev;
-    });
-    delete locked[cat];
-  }
 
   function updateSummary() {
     const box = $('summary-services');
     const lines = [];
-    if (currentDiv === 'Janitorial' && dirtLevel) lines.push({ dirt: dirtLevel });
-    Object.entries(selected).forEach(([cat, svcs]) => {
-      Object.entries(svcs).forEach(([svc, sub]) => lines.push({ cat, svc, sub }));
+    Object.entries(selected).forEach(([propType, svcs]) => {
+      Object.entries(svcs).forEach(([svc, sku]) => {
+        const lvl = svcLevel[svcKey(propType, svc)];
+        lines.push({ propType, svc, sku, lvl });
+      });
     });
 
     if (!lines.length) {
       box.innerHTML = '<p class="summary-empty">No services selected yet</p>';
     } else {
       box.innerHTML = lines.map((l) => {
-        if (l.dirt) {
-          const isLockedByEsc = Object.values(escalated).some(Boolean);
-          return '<div class="summary-item" style="align-items:center"><span>Dirt Level: ' + esc(l.dirt) + '</span>' +
-                 (isLockedByEsc ? '' : '<button class="summary-remove" data-dirt="1" title="Clear level">✕</button>') + '</div>';
-        }
-        const lv = levelOf(l.sub);
         return '<div class="summary-item" style="align-items:center"><div style="min-width:0">' +
-               '<span>' + esc(l.cat + ' — ' + l.svc) + '</span><br>' +
-               '<span style="color:var(--gray)">' + esc(l.sub + ' (Level ' + lv + ')') + '</span></div>' +
-               '<button class="summary-remove" data-cat="' + esc(l.cat) + '" data-svc="' + esc(l.svc) + '" title="Remove service">✕</button></div>';
+               '<span>' + esc(l.svc) + '</span>' +
+               (l.lvl ? '<br><span style="color:var(--gray)">' + esc(l.lvl) + '</span>' : '') + '</div>' +
+               '<button class="summary-remove" data-proptype="' + esc(l.propType) + '" data-svc="' + esc(l.svc) + '" title="Remove service">\u2715</button></div>';
       }).join('');
     }
-    refreshBadges();
   }
 
   $('summary-services').addEventListener('click', function (e) {
     const btn = e.target.closest('.summary-remove');
     if (!btn) return;
-    if (btn.dataset.dirt) {
-      dirtLevel = '';
-      syncDirtRadios();
-    } else {
-      const cat = btn.dataset.cat, svc = btn.dataset.svc;
-      if (selected[cat]) {
-        delete selected[cat][svc];
-        if (currentDiv === 'Janitorial') recountEscalation(cat);
-      }
+    const propType = btn.dataset.proptype, svc = btn.dataset.svc;
+    if (selected[propType]) {
+      delete selected[propType][svc];
+      delete svcLevel[svcKey(propType, svc)];
+      if (!Object.keys(selected[propType]).length) delete selected[propType];
     }
     updateSummary();
-    if (openCat) populateServices(openCat, false);
+    renderServiceGrid();
     scheduleDraftSave();
-  });
-
-  /* BUG FIX (2026-08-30): esta funcion buscaba '.flash-card', una clase
-     que ya no se crea en ningun lado desde que el selector de servicios
-     se movio al acordeon ('.accordion-cat'). El circulo de conteo nunca
-     recibia su numero ni se ocultaba cuando la categoria estaba vacia —
-     por eso aparecia siempre como un punto dorado suelto, sin numero,
-     en cualquier categoria tuviera o no algo seleccionado. */
-  function refreshBadges() {
-    document.querySelectorAll('.accordion-cat').forEach(acc => {
-      const cat = acc.dataset.cat;
-      const count = Object.keys(selected[cat] || {}).length;
-      acc.classList.toggle('has-selection', count > 0);
-      acc.querySelectorAll('.cat-badge').forEach(b => {
-        b.textContent = count;
-        b.classList.toggle('show', count > 0);
-      });
-      const msg = acc.querySelector('.esc-msg');
-      if (msg) msg.classList.toggle('show', !!escalated[cat]);
-    });
-  }
-
-  /* Mensaje flotante con el detalle de lo elegido en una categoria,
-     mostrado al pasar el mouse (o tocar) el circulo dorado del conteo. */
-  function showCatTip(cat, tipEl) {
-    const items = Object.entries(selected[cat] || {});
-    if (!items.length) return;
-    tipEl.innerHTML = items.map(([svc, sub]) =>
-      '<div><b>' + esc(svc) + '</b>' + (sub ? ' — ' + esc(sub) : '') + '</div>'
-    ).join('');
-    tipEl.classList.add('show');
-  }
-
-  /* Tocar fuera de un circulo/mensaje flotante lo cierra (necesario sobre
-     todo en tactil, donde no existe un "mouseleave" real). */
-  document.addEventListener('click', (e) => {
-    if (e.target.closest('.cat-badge-wrap')) return;
-    document.querySelectorAll('.cat-badge-tip.show').forEach(t => t.classList.remove('show'));
   });
 
   /* ===== Single / Multiple Units ===== */
@@ -1297,16 +1097,20 @@ if (client) {
 
   function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
 
-  function buildServicesString() {
-    const parts = [];
-    if (currentDiv === 'Janitorial' && dirtLevel) {
-      const label = { 'Level 1': 'Level 1 (Light)', 'Level 2': 'Level 2 (Moderate)', 'Level 3': 'Level 3 (Heavy / Deep)' }[dirtLevel] || dirtLevel;
-      parts.push('Dirt Level: ' + label);
-    }
-    Object.entries(selected).forEach(([cat, svcs]) => {
-      Object.entries(svcs).forEach(([svc, sub]) => { if (sub) parts.push(cat + ' > ' + svc + ' – ' + sub); });
+  function buildServicesArray() {
+    const out = [];
+    Object.entries(selected).forEach(([propType, svcs]) => {
+      Object.entries(svcs).forEach(([svcName, sku]) => {
+        out.push({
+          Category:    propType,
+          ServiceName: svcName,
+          SubOption:   sku,
+          Division:    currentDiv,
+          Level:       svcLevel[svcKey(propType, svcName)] || ''
+        });
+      });
     });
-    return parts.join(' | ');
+    return out;
   }
 
   function checkDueWarning() {
@@ -1323,9 +1127,8 @@ if (client) {
   function formSnapshot() {
     return {
       division: currentDiv,
-      dirtLevel: dirtLevel,
-      dirtLabel: (document.querySelector('input[name="dirt-level"]:checked') || {}).value || '',
       selected: selected,
+      svcLevel: svcLevel,
       units: multiUnitsOn ? gatherUnitsRaw() : null,
       fields: {
         buildingNumber: $('building-number').value,
@@ -1340,11 +1143,9 @@ if (client) {
     };
   }
 
-  /* REGLA CORREGIDA: Evaluamos que por lo menos exista un servicio o nivel de suciedad para empezar a mandar drafts. */
   function snapshotHasContent(s) {
-    if (s.dirtLevel) return true;
-    if (Object.values(s.selected).some(o => Object.keys(o).length > 0)) return true;
-    return false; /* No mandamos draft si solo escribió en "Notes" sin seleccionar servicios */
+    return Object.values(s.selected).some(o => Object.keys(o).length > 0);
+    /* No mandamos draft si solo escribió en "Notes" sin seleccionar servicios */
   }
 
   function scheduleDraftSave() {
@@ -1356,19 +1157,9 @@ if (client) {
   async function saveDraft() {
     const snap = formSnapshot();
     if (!snapshotHasContent(snap)) return;
-    
+
     /* Construir array de servicios para el backend (1 objeto por servicio) */
-    const servicesArray = [];
-    Object.entries(snap.selected || {}).forEach(([cat, svcs]) => {
-      Object.entries(svcs).forEach(([svcName, subOption]) => {
-        servicesArray.push({
-          Category:    cat,
-          ServiceName: svcName,
-          SubOption:   subOption,
-          Division:    currentDiv
-        });
-      });
-    });
+    const servicesArray = buildServicesArray();
 
     /* Preparamos el payload a mandar */
     const payload = {
@@ -1377,7 +1168,6 @@ if (client) {
       Requester:      client.contactPerson || client.businessName || client.clientId,
       Division:       currentDiv,
       Services:       servicesArray,
-      DirtLevel:      dirtLevel,
       BuildingNumber: snap.fields.buildingNumber,
       UnitNumber:     snap.fields.unitNumber,
       Bedrooms:       snap.fields.bedrooms,
@@ -1436,13 +1226,7 @@ if (client) {
       const o = data.order || {};
       draftOrderId = orderId;
 
-      /* Restaurar servicios desde las filas individuales */
-      selected = {};
-      (data.services || []).forEach(s => {
-        selected[s.Category] = selected[s.Category] || {};
-        selected[s.Category][s.ServiceName] = s.SubOption;
-      });
-      dirtLevel = o.DirtLevel || '';
+      restoreSelectionFrom(data.services);
 
       $('building-number').value = o.BuildingNumber || '';
       $('unit-number').value     = o.UnitNumber     || '';
@@ -1456,9 +1240,8 @@ if (client) {
       if (o.DueDate) $('delivery-date').value = new Date(o.DueDate).toISOString().slice(0, 10);
       $('notes').value = o.Notes || '';
       checkDueWarning();
-      syncDirtRadios();
+      renderServiceGrid();
       updateSummary();
-      if (openCat) populateServices(openCat, false);
       if (o.UnitsData) {
         try { await restoreUnitsIntoForm(JSON.parse(o.UnitsData)); } catch (e) { /* draft viejo sin esto, se ignora */ }
       }
@@ -1475,11 +1258,11 @@ if (client) {
       try { await GS.api('/delete-draft', { method: 'POST', body: { orderId: draftPendingData.OrderID } }); refreshOrdersCount(); } catch (e) {}
     }
     draftPendingData = null; draftOrderId = null;
-    selected = {}; locked = {}; escalated = {}; dirtLevel = '';
+    selected = {}; svcLevel = {}; selAllActive = null;
     ['building-number','unit-number','bedrooms','bathrooms','entry-date','delivery-date','notes'].forEach(id => $(id).value = '');
     $('entry-time').value = '08:00';
     checkDueWarning();
-    syncDirtRadios();
+    renderServiceGrid();
     updateSummary();
   }
 
@@ -1496,6 +1279,28 @@ if (client) {
   $('draft-close-btn').addEventListener('click', draftDismiss);
 
   /* ===== Continue desde tracking ===== */
+  /* Restaura selected/svcLevel desde un array de servicios ya guardados
+     (draft o orden real). Los renglones en formato viejo (SubOption sin
+     match de SKU en el catalogo) no se pueden mapear a un chip/fila --
+     se avisan por toast y se quedan fuera de la seleccion editable
+     (no se pierden en SharePoint, solo no aparecen marcados aqui hasta
+     que se vuelvan a elegir con el picker nuevo y se guarde de nuevo). */
+  function restoreSelectionFrom(services) {
+    selected = {}; svcLevel = {};
+    const legacyNames = [];
+    (services || []).forEach(s => {
+      const known = catalogCache.some(c => c.sku === s.SubOption);
+      if (!known) { legacyNames.push(s.ServiceName); return; }
+      const propType = s.Category;
+      if (!selected[propType]) selected[propType] = {};
+      selected[propType][s.ServiceName] = s.SubOption;
+      if (s.Level) svcLevel[svcKey(propType, s.ServiceName)] = s.Level;
+    });
+    if (legacyNames.length) {
+      showToast('Some services on this order are in an old format and need to be re-selected: ' + legacyNames.join(', '));
+    }
+  }
+
   async function loadForContinue(orderId) {
     try {
             const data = await GS.api('/get-order-detail', { method: 'POST', body: { orderId: orderId, clientId: client.clientId } });
@@ -1513,13 +1318,7 @@ if (client) {
       if (card) card.classList.add('active');
       $('summary-division').textContent = (card ? card.querySelector('.div-name').textContent : currentDiv);
 
-      /* Restaurar servicios desde las filas individuales */
-      selected = {};
-      (data.services || []).forEach(s => {
-        selected[s.Category] = selected[s.Category] || {};
-        selected[s.Category][s.ServiceName] = s.SubOption;
-      });
-      dirtLevel = o.DirtLevel || '';
+      restoreSelectionFrom(data.services);
 
       $('building-number').value = o.BuildingNumber || '';
       $('unit-number').value     = o.UnitNumber     || '';
@@ -1535,7 +1334,6 @@ if (client) {
       checkDueWarning();
 
       renderServices(currentDiv);
-      syncDirtRadios();
       updateSummary();
       if (o.UnitsData) {
         try { await restoreUnitsIntoForm(JSON.parse(o.UnitsData)); } catch (e) { /* draft viejo sin esto, se ignora */ }
@@ -1569,12 +1367,7 @@ if (client) {
       if (card) card.classList.add('active');
       $('summary-division').textContent = (card ? card.querySelector('.div-name').textContent : currentDiv);
 
-      selected = {}; locked = {}; escalated = {};
-      (data.services || []).forEach(r => {
-        selected[r.Category] = selected[r.Category] || {};
-        selected[r.Category][r.ServiceName] = r.SubOption;
-      });
-      dirtLevel = o.DirtLevel || '';
+      restoreSelectionFrom(data.services);
 
       $('building-number').value = o.BuildingNumber || '';
       $('unit-number').value = o.UnitNumber || '';
@@ -1590,7 +1383,6 @@ if (client) {
       checkDueWarning();
 
       renderServices(currentDiv);
-      syncDirtRadios();
       updateSummary();
     } catch (e) {
       alert('Could not load the order: ' + e.message);
@@ -1632,8 +1424,7 @@ if (client) {
       BusinessName: client.businessName,
       Requester: client.contactPerson || client.businessName || client.clientId,
       Division: currentDiv,
-      Services: buildServicesString(),
-      DirtLevel: currentDiv === 'Janitorial' ? dirtLevel : '',
+      Services: buildServicesArray(),
       EntryDate: entryDateTime,
       DueDate: dueDateTime,
       Contact: client.contact || '',
@@ -1792,4 +1583,4 @@ if (client) {
 }
 </script>
 </body>
-</html>
+</html>
