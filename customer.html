@@ -614,7 +614,6 @@ style="object-fit:contain">
         <h4>Order Summary</h4>
         <div id="summary-division" style="font-size:11px;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px">Janitorial</div>
         <div id="summary-services"><p class="summary-empty">No services selected yet</p></div>
-        <button type="button" class="btn-ghost" style="width:100%;margin-top:14px;font-size:11px;padding:9px" onclick="openSaveTemplateDialog()">Save as Template</button>
       </div>
       <div class="summary-box">
         <h4>Your Account</h4>
@@ -640,22 +639,6 @@ style="object-fit:contain">
       <button class="btn-ghost" id="draft-startover-btn">Start Over</button>
       <button class="btn-gold" style="flex:1" id="draft-continue-btn">Continue</button>
     </div>
-  </div>
-</div>
-
-<div class="dialog-overlay" id="save-template-dialog">
-  <div class="dialog-panel">
-    <h3>Save as Template</h3>
-    <p>Give this combo of services a name so you can load it again on a future order.</p>
-    <div class="field-wrap" style="margin-bottom:14px">
-      <label>Template name</label>
-      <input type="text" id="save-template-name" placeholder="e.g. Monthly common area clean">
-    </div>
-    <div class="dialog-btns">
-      <button class="btn-ghost" onclick="closeSaveTemplateDialog()">Cancel</button>
-      <button class="btn-gold" style="flex:1" onclick="confirmSaveTemplate()">Save</button>
-    </div>
-    <p class="dialog-error" id="save-template-error" style="font-size:11px;color:#B33A3A;margin-top:12px;margin-bottom:0"></p>
   </div>
 </div>
 
@@ -1347,33 +1330,6 @@ if (client) {
       showToast('Could not load that template: ' + e.message);
       renderServices('Janitorial');
       checkDraftFor('Janitorial');
-    }
-  }
-
-  function openSaveTemplateDialog() {
-    const svcCount = Object.values(selected).reduce((n, o) => n + Object.keys(o).length, 0);
-    if (svcCount === 0) { showToast('Select at least one service first.'); return; }
-    $('save-template-name').value = '';
-    $('save-template-error').textContent = '';
-    $('save-template-dialog').classList.add('open');
-  }
-
-  function closeSaveTemplateDialog() {
-    $('save-template-dialog').classList.remove('open');
-  }
-
-  async function confirmSaveTemplate() {
-    const name = $('save-template-name').value.trim();
-    if (!name) { $('save-template-error').textContent = 'Please give this template a name.'; return; }
-    try {
-      await GS.api('/save-template', {
-        method: 'POST',
-        body: { clientId: client.clientId, name, division: currentDiv, services: buildServicesArray() }
-      });
-      closeSaveTemplateDialog();
-      showToast('Template "' + name + '" saved.');
-    } catch (e) {
-      $('save-template-error').textContent = e.message;
     }
   }
 

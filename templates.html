@@ -47,9 +47,19 @@
 
   .wrap { padding: 40px 48px; max-width: 900px; }
   .wrap h2 { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 600; margin-bottom: 6px; }
-  .list-sub { font-size: 12px; color: var(--gray); margin-bottom: 28px; line-height: 1.6; }
+  .list-sub { font-size: 12px; color: var(--gray); margin-bottom: 24px; line-height: 1.6; }
+
+  .subtabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 28px; }
+  .subtab { padding: 10px 4px; margin-right: 28px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gray); cursor: pointer; border-bottom: 2px solid transparent; background: none; border-left: none; border-right: none; border-top: none; font-family: inherit; }
+  .subtab.active { color: var(--black); border-bottom-color: var(--gold); }
+
+  .subview { display: none; }
+  .subview.active { display: block; }
 
   .empty-note { color: var(--gray); font-size: 13px; padding: 40px 0; text-align: center; }
+
+  .add-tpl-btn { display: inline-flex; align-items: center; gap: 6px; background: var(--gold); color: var(--black); border: none; padding: 11px 20px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; cursor: pointer; margin-bottom: 22px; font-family: inherit; }
+  .add-tpl-btn:hover { background: var(--gold-lt); }
 
   .tpl-card { border: 1px solid var(--border); background: var(--white); padding: 18px 22px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
   .tpl-name { font-family: 'Cormorant Garamond', serif; font-size: 19px; font-weight: 600; }
@@ -57,22 +67,61 @@
   .tpl-badge { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gold-dk); background: #FDF3E0; padding: 2px 9px; border-radius: 12px; margin-right: 8px; }
   .tpl-actions { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
 
-  .btn-gold { background: var(--gold); color: var(--black); border: none; padding: 10px 22px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; cursor: pointer; }
+  .btn-gold { background: var(--gold); color: var(--black); border: none; padding: 10px 22px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; cursor: pointer; font-family: inherit; }
   .btn-gold:hover { background: var(--gold-lt); }
-  .btn-text-danger { background: none; border: none; color: #B33A3A; font-size: 11px; text-decoration: underline; cursor: pointer; letter-spacing: .03em; }
+  .btn-text-danger { background: none; border: none; color: #B33A3A; font-size: 11px; text-decoration: underline; cursor: pointer; letter-spacing: .03em; font-family: inherit; }
 
-  .toast {
-    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px);
-    background: var(--black); color: var(--white); padding: 12px 22px; border-radius: 4px;
-    font-size: 13px; opacity: 0; pointer-events: none; transition: all .3s; z-index: 500;
-  }
-  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  /* ===== Add Template ===== */
+  .field-wrap { margin-bottom: 24px; max-width: 420px; }
+  .field-wrap label { display: block; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--gray); margin-bottom: 6px; }
+  .field-wrap input[type=text] { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); font-size: 14px; font-family: inherit; }
 
-  footer { padding: 30px 48px; border-top: 1px solid var(--border); font-size: 11px; color: var(--gray); display: flex; justify-content: space-between; }
+  .mode-toggle { display: flex; border: 1.5px solid var(--border); margin-bottom: 20px; }
+  .mode-toggle button { flex: 1; padding: 12px; border: none; background: var(--white); cursor: pointer; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gray); font-family: inherit; transition: background .2s, color .2s; }
+  .mode-toggle button.active { background: var(--gold); color: var(--black); }
+  .mode-toggle button:not(:last-child) { border-right: 1.5px solid var(--border); }
 
+  .res-toggle-wrap { display: flex; align-items: center; gap: 8px; margin: 16px 0; }
+  .res-toggle-label { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--gray); }
+  .svc-toggle { position: relative; display: inline-block; width: 40px; height: 22px; vertical-align: middle; cursor: pointer; }
+  .svc-toggle input { opacity: 0; width: 0; height: 0; }
+  .svc-toggle-track { position: absolute; inset: 0; background: var(--border); border-radius: 22px; transition: background .2s; }
+  .svc-toggle-track::before { content: ""; position: absolute; height: 18px; width: 18px; left: 2px; top: 2px; background: var(--white); border-radius: 50%; transition: transform .2s; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+  .svc-toggle input:checked + .svc-toggle-track { background: var(--gold); }
+  .svc-toggle input:checked + .svc-toggle-track::before { transform: translateX(18px); }
+
+  .svc-toolbar-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .svc-search { flex: 1; min-width: 140px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 3px; font-size: 13px; font-family: 'Inter', sans-serif; }
+  .svc-toolbar-selall { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .selall-label { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--gray); }
+  .lvl-toggle3 { position: relative; display: flex; width: 180px; height: 34px; background: var(--border); border-radius: 17px; padding: 3px; flex-shrink: 0; }
+  .lvl-toggle3-thumb { position: absolute; top: 3px; left: 3px; width: calc(33.333% - 2px); height: calc(100% - 6px); background: var(--gold); border-radius: 14px; transition: transform .25s cubic-bezier(.4,0,.2,1), opacity .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2); opacity: 0; }
+  .lvl-toggle3-opt { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--gray); cursor: pointer; z-index: 1; transition: color .25s; }
+  .lvl-toggle3-opt.active { color: var(--black); }
+
+  .svc-chip-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .svc-chip-btn { border: 1px solid var(--border); background: var(--white); padding: 10px 12px; font-size: 12px; text-align: left; cursor: pointer; border-radius: 2px; font-family: 'Inter', sans-serif; color: var(--black); }
+  .svc-chip-btn.active { background: var(--gold); border-color: var(--gold); font-weight: 700; }
+
+  .jan-row-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .jan-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 10px; border: 1px solid var(--border); border-radius: 3px; background: var(--white); transition: border-color .15s, background .15s; }
+  .jan-row.selected { border-color: var(--gold); background: #FEFBF3; }
+  .jan-row-name { font-size: 12px; }
+  .lvl-group { display: flex; border: 1px solid var(--border); border-radius: 20px; overflow: hidden; flex-shrink: 0; }
+  .lvl-btn { width: 34px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; cursor: pointer; background: var(--white); color: var(--gray); border-right: 1px solid var(--border); }
+  .lvl-btn:last-child { border-right: none; }
+  .lvl-btn.active { background: var(--gold); color: var(--black); }
+  .lvl-btn:hover:not(.active) { background: var(--off); }
+
+  .flash-empty { font-size: 12px; color: var(--gray); font-style: italic; padding: 20px 0; }
+
+  .save-row { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border); max-width: 420px; }
+
+  @media (max-width: 900px) { .svc-chip-grid, .jan-row-grid { grid-template-columns: 1fr 1fr; } }
   @media (max-width: 640px) {
     nav, .portal-header, .tabs, .wrap, footer { padding-left: 20px; padding-right: 20px; }
     .tpl-card { flex-direction: column; align-items: flex-start; }
+    .svc-chip-grid, .jan-row-grid { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -105,10 +154,40 @@
 <div class="wrap">
   <h2>Templates</h2>
   <p class="list-sub">Saved combos of services you use often. Load one to start a new order without rebuilding it from scratch — you'll still fill in the dates, address and any other details for that order.</p>
-  <div id="tpl-list"><p class="empty-note">Loading…</p></div>
+
+  <div class="subtabs">
+    <button type="button" class="subtab active" data-view="saved" onclick="showSubview('saved')">Saved</button>
+    <button type="button" class="subtab" data-view="add" onclick="showSubview('add')">+ Add Template</button>
+  </div>
+
+  <!-- ===== SAVED ===== -->
+  <div class="subview active" id="subview-saved">
+    <button type="button" class="add-tpl-btn" onclick="showSubview('add')">+ Add Template</button>
+    <div id="tpl-list"><p class="empty-note">Loading…</p></div>
+  </div>
+
+  <!-- ===== ADD TEMPLATE ===== -->
+  <div class="subview" id="subview-add">
+    <div class="field-wrap">
+      <label>Template name</label>
+      <input type="text" id="tpl-name" placeholder="e.g. Monthly common area clean">
+    </div>
+
+    <div class="mode-toggle" id="div-toggle">
+      <button type="button" class="active" data-div="Janitorial" onclick="selectDiv('Janitorial', this)">Janitorial</button>
+      <button type="button" data-div="Renovations" onclick="selectDiv('Renovations', this)">Renovations</button>
+      <button type="button" data-div="Exteriors" onclick="selectDiv('Exteriors', this)">Exteriors</button>
+    </div>
+
+    <div id="tpl-picker"><p class="flash-empty">Loading services…</p></div>
+
+    <div class="save-row">
+      <button type="button" class="btn-gold" style="padding:14px 28px;width:100%" onclick="saveTemplate()">Save Template</button>
+    </div>
+  </div>
 </div>
 
-<footer>
+<footer style="padding:30px 48px;border-top:1px solid var(--border);font-size:11px;color:var(--gray);display:flex;justify-content:space-between">
   <p>© 2026 <span>GS Solutions Inc.</span> — Des Moines, Iowa</p>
   <p>orders@gsocd.com · (515) 473-5990</p>
 </footer>
@@ -127,7 +206,7 @@
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" style="position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--black);color:var(--white);padding:12px 22px;border-radius:4px;font-size:13px;opacity:0;pointer-events:none;transition:all .3s;z-index:500"></div>
 
 <script src="shared.js"></script>
 <script>
@@ -135,14 +214,15 @@ const client = GS.requireSession();
 if (client) {
 
   const $ = id => document.getElementById(id);
-
   function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
 
   function showToast(msg) {
     const t = $('toast');
     t.textContent = msg;
     t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 4000);
+    t.style.opacity = '1'; t.style.transform = 'translateX(-50%) translateY(0)';
+    clearTimeout(window.__toastTimer);
+    window.__toastTimer = setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(-50%) translateY(20px)'; }, 4000);
   }
 
   function doSignout() {
@@ -154,6 +234,15 @@ if (client) {
   $('client-num-display').textContent = client.clientId;
   GS.applyLogo();
 
+  /* ===== Sub-tabs ===== */
+  function showSubview(v) {
+    document.querySelectorAll('.subtab').forEach(t => t.classList.toggle('active', t.dataset.view === v));
+    $('subview-saved').classList.toggle('active', v === 'saved');
+    $('subview-add').classList.toggle('active', v === 'add');
+    if (v === 'saved') loadTemplates();
+  }
+
+  /* ===== Saved ===== */
   let templates = [];
 
   async function loadTemplates() {
@@ -169,7 +258,7 @@ if (client) {
   function renderTemplates() {
     const box = $('tpl-list');
     if (!templates.length) {
-      box.innerHTML = '<p class="empty-note">No templates saved yet — build an order on the New Order screen and save it as a template from there.</p>';
+      box.innerHTML = '<p class="empty-note">No templates saved yet — click "+ Add Template" above to build one.</p>';
       return;
     }
     box.innerHTML = templates.map(t => `
@@ -200,6 +289,174 @@ if (client) {
     }
   }
 
+  /* ===== Add Template (mismo picker que New Order, sin fechas/direccion) ===== */
+  let catalogCache = [];
+  let currentDiv = 'Janitorial';
+  let propertyType = 'Commercial';
+  let selected = {};
+  let svcLevel = {};
+  let selAllActive = null;
+
+  function svcKey(p, n) { return p + '|' + n; }
+
+  function selectDiv(div, el) {
+    currentDiv = div;
+    document.querySelectorAll('#div-toggle button').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    selected = {}; svcLevel = {}; propertyType = 'Commercial'; selAllActive = null;
+    renderPicker();
+  }
+
+  function renderPicker() {
+    const container = $('tpl-picker');
+    if (!catalogCache.length) { container.innerHTML = '<p class="flash-empty">No services available right now — please check back shortly.</p>'; return; }
+    const isJan = currentDiv === 'Janitorial';
+    container.innerHTML = `
+      <div class="res-toggle-wrap">
+        <span class="res-toggle-label">Commercial</span>
+        <label class="svc-toggle">
+          <input type="checkbox" onchange="setPropertyType(this.checked ? 'Residential' : 'Commercial')">
+          <span class="svc-toggle-track"></span>
+        </label>
+        <span class="res-toggle-label">Residential</span>
+      </div>
+      <div class="svc-toolbar-row">
+        <input type="text" class="svc-search" id="svc-search" placeholder="Search services…" oninput="renderGrid()">
+        <div class="svc-toolbar-selall" id="selall-group" style="display:${isJan ? '' : 'none'}">
+          <span class="selall-label">Select all</span>
+          <div class="lvl-toggle3" id="selAllToggle">
+            <div class="lvl-toggle3-thumb" id="selAllThumb"></div>
+            <div class="lvl-toggle3-opt" onclick="selectAllLevel('Level 1',0)">L1</div>
+            <div class="lvl-toggle3-opt" onclick="selectAllLevel('Level 2',1)">L2</div>
+            <div class="lvl-toggle3-opt" onclick="selectAllLevel('Level 3',2)">L3</div>
+          </div>
+        </div>
+      </div>
+      <div id="svc-grid"></div>`;
+    renderGrid();
+  }
+
+  function renderGrid() {
+    const grid = $('svc-grid');
+    const isJan = currentDiv === 'Janitorial';
+    const q = ($('svc-search').value || '').trim().toLowerCase();
+    let list = catalogCache.filter(s => s.division.toLowerCase() === currentDiv.toLowerCase() && s.propertyType === propertyType);
+    if (q) list = list.filter(s => s.serviceName.toLowerCase().includes(q));
+    list.sort((a, b) => a.serviceName.localeCompare(b.serviceName));
+
+    if (!list.length) { grid.className = ''; grid.innerHTML = '<p class="flash-empty">No services match.</p>'; return; }
+
+    if (isJan) {
+      grid.className = 'jan-row-grid';
+      const levels = ['Level 1', 'Level 2', 'Level 3'];
+      grid.innerHTML = list.map(s => {
+        const sel = (selected[propertyType] || {})[s.serviceName] === s.sku;
+        const lvl = sel ? svcLevel[svcKey(propertyType, s.serviceName)] : null;
+        return '<div class="jan-row' + (lvl ? ' selected' : '') + '">' +
+          '<span class="jan-row-name">' + esc(s.serviceName) + '</span>' +
+          '<div class="lvl-group">' +
+            levels.map((l, i) => '<div class="lvl-btn' + (lvl === l ? ' active' : '') + '" onclick="pickLevel(\'' + s.sku.replace(/'/g, "\\'") + '\',\'' + l + '\')">L' + (i + 1) + '</div>').join('') +
+          '</div></div>';
+      }).join('');
+    } else {
+      grid.className = 'svc-chip-grid';
+      grid.innerHTML = list.map(s =>
+        '<button type="button" class="svc-chip-btn' + ((selected[propertyType] || {})[s.serviceName] === s.sku ? ' active' : '') + '" onclick="toggleChip(\'' + s.sku.replace(/'/g, "\\'") + '\')">' + esc(s.serviceName) + '</button>'
+      ).join('');
+    }
+  }
+
+  function setPropertyType(type) {
+    propertyType = type;
+    renderGrid();
+  }
+
+  function toggleChip(sku) {
+    const svc = catalogCache.find(s => s.sku === sku);
+    if (!svc) return;
+    if (!selected[propertyType]) selected[propertyType] = {};
+    if (selected[propertyType][svc.serviceName] === sku) {
+      delete selected[propertyType][svc.serviceName];
+      if (!Object.keys(selected[propertyType]).length) delete selected[propertyType];
+    } else {
+      selected[propertyType][svc.serviceName] = sku;
+    }
+    renderGrid();
+  }
+
+  function pickLevel(sku, level) {
+    const svc = catalogCache.find(s => s.sku === sku);
+    if (!svc) return;
+    const k = svcKey(propertyType, svc.serviceName);
+    if (!selected[propertyType]) selected[propertyType] = {};
+    const already = selected[propertyType][svc.serviceName] === sku && svcLevel[k] === level;
+    if (already) {
+      delete selected[propertyType][svc.serviceName];
+      if (!Object.keys(selected[propertyType]).length) delete selected[propertyType];
+      delete svcLevel[k];
+    } else {
+      selected[propertyType][svc.serviceName] = sku;
+      svcLevel[k] = level;
+    }
+    renderGrid();
+  }
+
+  function selectAllLevel(level, idx) {
+    const q = ($('svc-search').value || '').trim().toLowerCase();
+    const visible = catalogCache.filter(s => s.division.toLowerCase() === currentDiv.toLowerCase() && s.propertyType === propertyType && (!q || s.serviceName.toLowerCase().includes(q)));
+    const thumb = $('selAllThumb');
+    if (!selected[propertyType]) selected[propertyType] = {};
+
+    if (selAllActive === idx) {
+      visible.forEach(s => { delete selected[propertyType][s.serviceName]; delete svcLevel[svcKey(propertyType, s.serviceName)]; });
+      selAllActive = null;
+      thumb.style.opacity = '0';
+    } else {
+      visible.forEach(s => { selected[propertyType][s.serviceName] = s.sku; svcLevel[svcKey(propertyType, s.serviceName)] = level; });
+      selAllActive = idx;
+      thumb.style.opacity = '1';
+      thumb.style.transform = 'translateX(' + (idx * 100) + '%)';
+    }
+    document.querySelectorAll('#selAllToggle .lvl-toggle3-opt').forEach((el, i) => el.classList.toggle('active', i === selAllActive));
+    renderGrid();
+  }
+
+  function buildServicesArray() {
+    const out = [];
+    Object.entries(selected).forEach(([propType, svcs]) => {
+      Object.entries(svcs).forEach(([svcName, sku]) => {
+        out.push({
+          Category:    propType,
+          ServiceName: svcName,
+          SubOption:   sku,
+          Division:    currentDiv,
+          Level:       svcLevel[svcKey(propType, svcName)] || ''
+        });
+      });
+    });
+    return out;
+  }
+
+  async function saveTemplate() {
+    const name = $('tpl-name').value.trim();
+    const services = buildServicesArray();
+    if (!name) { showToast('Please give this template a name.'); return; }
+    if (!services.length) { showToast('Select at least one service first.'); return; }
+    try {
+      await GS.api('/save-template', {
+        method: 'POST',
+        body: { clientId: client.clientId, name, division: currentDiv, services }
+      });
+      showToast('Template "' + name + '" saved.');
+      $('tpl-name').value = '';
+      selected = {}; svcLevel = {}; selAllActive = null;
+      renderGrid();
+      showSubview('saved');
+    } catch (e) {
+      showToast('Error: ' + e.message);
+    }
+  }
+
   function openContact() { $('contact-overlay').style.display = 'flex'; }
   function closeContact() { $('contact-overlay').style.display = 'none'; }
   async function sendContact() {
@@ -217,7 +474,14 @@ if (client) {
     }
   }
 
+  /* ===== Carga inicial ===== */
   loadTemplates();
+  GS.api('/get-services', { method: 'GET' }).then(data => {
+    catalogCache = data.catalog || [];
+    renderPicker();
+  }).catch(err => {
+    $('tpl-picker').innerHTML = '<p class="flash-empty">Could not load services: ' + esc(err.message) + '</p>';
+  });
 }
 </script>
 </body>
