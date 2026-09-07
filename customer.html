@@ -116,7 +116,7 @@
 
   /* ===== Reloj y calendario oficiales (aprobados con mini) ===== */
   .rel-wrap { position: relative; }
-  .trigger-btn { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 3px; background: var(--white); font-size: 13px; font-family: inherit; cursor: pointer; color: var(--black); text-align: left; }
+  .trigger-btn { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 3px; background: var(--off); font-size: 13px; font-family: inherit; cursor: pointer; color: var(--black); text-align: left; }
   .trigger-btn:hover { border-color: var(--gold); }
   .picker-popover { display: none; position: absolute; margin-top: 8px; background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 18px; box-shadow: 0 6px 24px rgba(0,0,0,.18); z-index: 50; width: 260px; }
   .picker-popover.open { display: block; }
@@ -598,6 +598,19 @@ style="object-fit:contain">
         </div>
 
 
+        <div class="field-wrap" id="office-need-block" style="margin-bottom:20px">
+          <label>Do we need anything from the property office?</label>
+          <div class="field-sub">Keys, storage access, or anything like that before we start.</div>
+          <div class="yn-row">
+            <button type="button" id="office-need-no" class="yn-btn active" onclick="setOfficeNeed(false)">No</button>
+            <button type="button" id="office-need-yes" class="yn-btn" onclick="setOfficeNeed(true)">Yes</button>
+          </div>
+          <div id="office-need-detail" style="display:none;margin-top:12px">
+            <label>What do we need from the office?</label>
+            <textarea id="office-need-text" rows="3" placeholder="e.g. Keys for the mailroom, gate code, access to the roof..."></textarea>
+          </div>
+        </div>
+
         <div class="dates-grid">
           <div class="field-wrap">
             <label>Entry available from</label>
@@ -670,19 +683,6 @@ style="object-fit:contain">
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-
-        <div class="field-wrap" id="office-need-block" style="margin-bottom:20px">
-          <label>Do we need anything from the property office?</label>
-          <div class="field-sub">Keys, storage access, or anything like that before we start.</div>
-          <div class="yn-row">
-            <button type="button" id="office-need-no" class="yn-btn active" onclick="setOfficeNeed(false)">No</button>
-            <button type="button" id="office-need-yes" class="yn-btn" onclick="setOfficeNeed(true)">Yes</button>
-          </div>
-          <div id="office-need-detail" style="display:none;margin-top:12px">
-            <label>What do we need from the office?</label>
-            <textarea id="office-need-text" rows="3" placeholder="e.g. Keys for the mailroom, gate code, access to the roof..."></textarea>
           </div>
         </div>
 
