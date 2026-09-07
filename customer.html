@@ -80,6 +80,9 @@
   }
   .field-wrap input:focus, .field-wrap textarea:focus { border-color: var(--gold); }
   .field-wrap textarea { resize: vertical; min-height: 80px; }
+  .yn-row { display: flex; gap: 10px; }
+  .yn-btn { flex: 1; padding: 12px; border: 1.5px solid var(--border); background: var(--white); border-radius: 3px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; color: var(--black); }
+  .yn-btn.active { background: var(--gold); color: var(--black); border-color: var(--gold); }
 
   .property-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 18px; margin-bottom: 24px; }
 
@@ -564,12 +567,24 @@ style="object-fit:contain">
             <input type="date" id="entry-date">
           </div>
           <div class="field-wrap">
-            <label>Entry time</label>
+            <label id="entry-time-label">Entry time</label>
             <input type="time" id="entry-time" value="08:00">
           </div>
           <div class="field-wrap">
             <label>Service due date</label>
             <input type="date" id="delivery-date">
+          </div>
+        </div>
+
+        <div class="field-wrap" id="office-need-block" style="display:none;margin-bottom:20px">
+          <label>Do you need anything from the property office?</label>
+          <div class="yn-row">
+            <button type="button" id="office-need-no" class="yn-btn active" onclick="setOfficeNeed(false)">No</button>
+            <button type="button" id="office-need-yes" class="yn-btn" onclick="setOfficeNeed(true)">Yes</button>
+          </div>
+          <div id="office-need-detail" style="display:none;margin-top:12px">
+            <label>What do we need from the office?</label>
+            <textarea id="office-need-text" rows="3" placeholder="e.g. Keys for the mailroom, gate code, access to the roof..."></textarea>
           </div>
         </div>
 
@@ -690,6 +705,25 @@ if (client) {
   let serviceData = null;
   let catalogCache = [];
   let currentDiv = 'Janitorial';
+  let officeNeedYes = false;
+
+  /* Exteriors: "Do you need anything from the property office?" --
+     si es Si, se revela el texto y el campo de hora ya existente
+     (entry-time) cambia de nombre visible a "Office availability
+     time", reusando el mismo campo en vez de agregar uno nuevo. */
+  function setOfficeNeed(yes) {
+    officeNeedYes = yes;
+    $('office-need-no').classList.toggle('active', !yes);
+    $('office-need-yes').classList.toggle('active', yes);
+    $('office-need-detail').style.display = yes ? 'block' : 'none';
+    $('entry-time-label').textContent = yes ? 'Office availability time' : 'Entry time';
+  }
+  function resetOfficeNeed() {
+    officeNeedYes = false;
+    $('office-need-text').value = '';
+    setOfficeNeed(false);
+    $('office-need-block').style.display = currentDiv === 'Exteriors' ? 'block' : 'none';
+  }
   let propertyType = 'Commercial';
   let selected = {};
   let svcLevel = {};
@@ -831,6 +865,7 @@ if (client) {
        draftContinue() los vuelve a llenar con los valores correctos. */
     ['building-number', 'unit-number', 'bedrooms', 'bathrooms', 'entry-date', 'delivery-date', 'notes'].forEach(id => { $(id).value = ''; });
     $('entry-time').value = '08:00';
+    resetOfficeNeed();
     checkDueWarning();
     $('summary-division').textContent = el ? el.textContent : div;
     renderServices(div);
@@ -1286,6 +1321,10 @@ if (client) {
       }
       if (o.DueDate) $('delivery-date').value = new Date(o.DueDate).toISOString().slice(0, 10);
       $('notes').value = o.Notes || '';
+      if (currentDiv === 'Exteriors') {
+        $('office-need-text').value = o.OfficeNeedNotes || '';
+        setOfficeNeed(!!o.NeedsOfficeAccess);
+      }
       checkDueWarning();
       renderServiceGrid();
       updateSummary();
@@ -1308,6 +1347,7 @@ if (client) {
     selected = {}; svcLevel = {}; selAllActive = null;
     ['building-number','unit-number','bedrooms','bathrooms','entry-date','delivery-date','notes'].forEach(id => $(id).value = '');
     $('entry-time').value = '08:00';
+    resetOfficeNeed();
     checkDueWarning();
     renderServiceGrid();
     updateSummary();
@@ -1468,6 +1508,11 @@ if (client) {
       }
       if (o.DueDate) $('delivery-date').value = new Date(o.DueDate).toISOString().slice(0, 10);
       $('notes').value = o.Notes || '';
+      $('office-need-block').style.display = currentDiv === 'Exteriors' ? 'block' : 'none';
+      if (currentDiv === 'Exteriors') {
+        $('office-need-text').value = o.OfficeNeedNotes || '';
+        setOfficeNeed(!!o.NeedsOfficeAccess);
+      }
       checkDueWarning();
 
       renderServices(currentDiv);
@@ -1527,6 +1572,13 @@ if (client) {
       Notes: $('notes').value.trim(),
       Status: editOrderId ? 'Change Requested' : 'Received'
     };
+    /* Exteriors: si dijo que si necesita algo de la oficina, se manda
+       el texto -- si dijo que no, se manda vacio a proposito (por si
+       esta editando una orden y estaba cambiando de Si a No). */
+    if (currentDiv === 'Exteriors') {
+      order.NeedsOfficeAccess = officeNeedYes;
+      order.OfficeNeedNotes = officeNeedYes ? $('office-need-text').value.trim() : '';
+    }
 
     let unitsPayload = null;
     if (multiUnitsOn) {

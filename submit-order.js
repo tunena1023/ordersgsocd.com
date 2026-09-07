@@ -173,7 +173,11 @@ exports.handler = async (event) => {
       Notes:          b.Notes || '',
       EntryDate:      dateField(b.EntryDate),
       DueDate:        dateField(b.DueDate),
-      DraftData:      ''
+      DraftData:      '',
+      /* Exteriors: si necesita algo de la oficina del edificio (llaves,
+         codigo de acceso, etc.) antes de poder entrar. */
+      NeedsOfficeAccess: b.NeedsOfficeAccess === true || b.NeedsOfficeAccess === 'true',
+      OfficeNeedNotes:   b.OfficeNeedNotes || ''
     };
 
     /* ===== FLUJO A: Draft temporal → Orden real ===== */
