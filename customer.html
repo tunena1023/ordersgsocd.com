@@ -673,7 +673,7 @@ style="object-fit:contain">
           </div>
         </div>
 
-        <div class="field-wrap" id="office-need-block" style="display:none;margin-bottom:20px">
+        <div class="field-wrap" id="office-need-block" style="margin-bottom:20px">
           <label>Do we need anything from the property office?</label>
           <div class="field-sub">Keys, storage access, or anything like that before we start.</div>
           <div class="yn-row">
@@ -688,11 +688,6 @@ style="object-fit:contain">
 
         <div class="due-warning" id="due-warning">
           Heads-up: this order is due less than 24 hours after entry. The office will need to confirm availability.
-        </div>
-
-        <div class="field-wrap" style="margin-bottom:32px">
-          <label>Notes / Building Number / Special Instructions</label>
-          <textarea id="notes" placeholder="Specify building number or details..."></textarea>
         </div>
 
         <div class="submit-row">
@@ -820,7 +815,14 @@ if (client) {
     officeNeedYes = false;
     $('office-need-text').value = '';
     setOfficeNeed(false);
-    $('office-need-block').style.display = currentDiv === 'Exteriors' ? 'block' : 'none';
+  }
+  /* Restaura el estado de "Do we need anything from the office?" al
+     cargar un borrador, editar una orden existente, o cargar una
+     plantilla -- las 3 divisiones por igual, ya no es exclusivo de
+     Exteriors. */
+  function restoreOfficeNeed(o) {
+    $('office-need-text').value = o.OfficeNeedNotes || '';
+    setOfficeNeed(!!o.NeedsOfficeAccess);
   }
   let propertyType = 'Commercial';
   let selected = {};
@@ -1497,7 +1499,8 @@ if (client) {
         entryDate: $('entry-date').value,
         entryTime: $('entry-time').value,
         dueDate: $('delivery-date').value,
-        notes: $('notes').value
+        needsOfficeAccess: officeNeedYes,
+        officeNeedNotes: $('office-need-text').value
       }
     };
   }
@@ -1534,7 +1537,8 @@ if (client) {
       Bathrooms:      snap.fields.bathrooms,
       EntryDate:      snap.fields.entryDate ? new Date(snap.fields.entryDate + 'T' + (snap.fields.entryTime || '08:00')).toISOString() : '',
       DueDate:        snap.fields.dueDate ? new Date(snap.fields.dueDate + 'T23:59:59').toISOString() : '',
-      Notes:          snap.fields.notes
+      NeedsOfficeAccess: snap.fields.needsOfficeAccess,
+      OfficeNeedNotes:   snap.fields.needsOfficeAccess ? snap.fields.officeNeedNotes : ''
     };
     if (snap.units) payload.Units = snap.units;
 
@@ -1598,11 +1602,7 @@ if (client) {
         $('entry-time').value  = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
       }
       if (o.DueDate) $('delivery-date').value = new Date(o.DueDate).toISOString().slice(0, 10);
-      $('notes').value = o.Notes || '';
-      if (currentDiv === 'Exteriors') {
-        $('office-need-text').value = o.OfficeNeedNotes || '';
-        setOfficeNeed(!!o.NeedsOfficeAccess);
-      }
+      restoreOfficeNeed(o);
       checkDueWarning();
       renderServiceGrid();
       updateSummary();
@@ -1735,7 +1735,7 @@ if (client) {
         $('entry-time').value = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
       }
       if (o.DueDate) $('delivery-date').value = new Date(o.DueDate).toISOString().slice(0, 10);
-      $('notes').value = o.Notes || '';
+      restoreOfficeNeed(o);
       checkDueWarning();
 
       renderServices(currentDiv);
@@ -1785,12 +1785,7 @@ if (client) {
         $('entry-time').value = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
       }
       if (o.DueDate) $('delivery-date').value = new Date(o.DueDate).toISOString().slice(0, 10);
-      $('notes').value = o.Notes || '';
-      $('office-need-block').style.display = currentDiv === 'Exteriors' ? 'block' : 'none';
-      if (currentDiv === 'Exteriors') {
-        $('office-need-text').value = o.OfficeNeedNotes || '';
-        setOfficeNeed(!!o.NeedsOfficeAccess);
-      }
+      restoreOfficeNeed(o);
       checkDueWarning();
 
       renderServices(currentDiv);
@@ -1847,16 +1842,14 @@ if (client) {
       EntryDate: entryDateTime,
       DueDate: dueDateTime,
       Contact: client.contact || '',
-      Notes: $('notes').value.trim(),
-      Status: editOrderId ? 'Change Requested' : 'Received'
+      Status: editOrderId ? 'Change Requested' : 'Received',
+      /* Reemplaza al viejo campo de Notes libres -- aplica a las 3
+         divisiones ahora, no solo Exteriors. Se manda vacio a
+         proposito si dijo que no (por si esta editando una orden y
+         estaba cambiando de Si a No). */
+      NeedsOfficeAccess: officeNeedYes,
+      OfficeNeedNotes: officeNeedYes ? $('office-need-text').value.trim() : ''
     };
-    /* Exteriors: si dijo que si necesita algo de la oficina, se manda
-       el texto -- si dijo que no, se manda vacio a proposito (por si
-       esta editando una orden y estaba cambiando de Si a No). */
-    if (currentDiv === 'Exteriors') {
-      order.NeedsOfficeAccess = officeNeedYes;
-      order.OfficeNeedNotes = officeNeedYes ? $('office-need-text').value.trim() : '';
-    }
 
     let unitsPayload = null;
     if (multiUnitsOn) {
