@@ -32,7 +32,7 @@ exports.handler = async (event) => {
     const created = await createListItem(SERVICE_TEMPLATES_LIST, {
       Title:        name,
       ClientID:     clientId,
-      Name:         name,
+      TemplateName: name,
       Division:     division,
       ServicesJSON: JSON.stringify(services)
     });
