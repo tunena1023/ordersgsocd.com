@@ -62,6 +62,8 @@ exports.handler = async (event) => {
           Contact:         f.Contact || '',
           Notes:           f.Notes || '',
           UnitOccupied:    f.UnitOccupied === true || f.UnitOccupied === 'true',
+          NeedsOfficeAccess: f.NeedsOfficeAccess === true || f.NeedsOfficeAccess === 'true',
+          OfficeNeedNotes: f.OfficeNeedNotes || '',
           /* La ventana de servicio y el motivo de retraso se muestran en el
              portal: el cliente tiene que poder ver a que hora van y por que
              se movio la visita sin tener que llamar. */
