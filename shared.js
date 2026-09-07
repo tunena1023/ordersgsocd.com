@@ -668,6 +668,41 @@ DEMO.handle = async function (path, opts) {
       return { order: o, services: o.services || [], history: o.history || [] };
     }
 
+    case '/set-materials-ready': {
+      const o = orders.find(x => x.OrderID === body.orderId);
+      if (!o) throw new Error('Order not found.');
+      o.MaterialsReady = !!body.materialsReady;
+      o.EntryTime = body.entryTime || '';
+      o.MaterialsReadySeen = false;
+      o.history = o.history || [];
+      o.history.push({
+        Title: o.OrderID, OrderID: o.OrderID, ChangeType: 'Created',
+        ChangedBy: DEMO._demoClient().clientId, ChangeDate: new Date().toISOString(),
+        Notes: body.materialsReady
+          ? ('Ready for entry at ' + (body.entryTime || '') + '.')
+          : (body.offNote || ''),
+        OldValue: '', NewValue: body.materialsReady ? 'Ready' : 'Not ready'
+      });
+      DEMO._saveOrders(orders);
+      return { success: true };
+    }
+
+    case '/save-expected-ready-date': {
+      const o = orders.find(x => x.OrderID === body.orderId);
+      if (!o) throw new Error('Order not found.');
+      o.ExpectedReadyDate = body.expectedReadyDate || '';
+      DEMO._saveOrders(orders);
+      return { success: true };
+    }
+
+    case '/save-unit-occupied': {
+      const o = orders.find(x => x.OrderID === body.orderId);
+      if (!o) throw new Error('Order not found.');
+      o.UnitOccupied = !!body.occupied;
+      DEMO._saveOrders(orders);
+      return { success: true };
+    }
+
     case '/save-order-notifications': {
       const o = orders.find(x => x.OrderID === body.orderId);
       if (!o) throw new Error('Order not found.');
