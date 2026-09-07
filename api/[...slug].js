@@ -21,6 +21,7 @@ const handlers = {
   'save-draft':         require('../save-draft').handler,
   'save-order-notifications': require('../save-order-notifications').handler,
   'save-expected-ready-date': require('../save-expected-ready-date').handler,
+  'save-unit-occupied': require('../save-unit-occupied').handler,
   'set-materials-ready': require('../set-materials-ready').handler,
   'list-templates': require('../list-templates').handler,
   'save-template': require('../save-template').handler,

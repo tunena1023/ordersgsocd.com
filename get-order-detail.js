@@ -153,7 +153,8 @@ exports.handler = async (event) => {
       ExpectedReadyDate: f.ExpectedReadyDate || '',
       MaterialsReady: f.MaterialsReady === true || f.MaterialsReady === 'true',
       MaterialsReadySeen: f.MaterialsReadySeen === undefined ? true : (f.MaterialsReadySeen === true || f.MaterialsReadySeen === 'true'),
-      EntryTime: f.EntryTime || ''
+      EntryTime: f.EntryTime || '',
+      UnitOccupied: f.UnitOccupied === true || f.UnitOccupied === 'true'
     };
 
     const services = svcRows

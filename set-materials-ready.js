@@ -61,15 +61,23 @@ exports.handler = async (event) => {
     if (f.Status === 'Cancelled' || f.Status === 'Completed') {
       return jsonResponse(409, { error: 'This order is ' + String(f.Status).toLowerCase() + '. Please call our office.' });
     }
-    if (String(f.Division || '').toLowerCase() !== 'renovations') {
-      return jsonResponse(400, { error: 'Materials Ready only applies to Renovations orders.' });
+    if (String(f.Division || '').toLowerCase() !== 'renovations' && String(f.Division || '').toLowerCase() !== 'janitorial') {
+      return jsonResponse(400, { error: 'This only applies to Renovations or Janitorial orders.' });
+    }
+
+    /* Hora obligatoria al prender -- antes era opcional y se podia
+       dejar en "Select a time" para siempre. Ahora el frontend ya no
+       deja llegar hasta aqui sin hora, pero se valida tambien del
+       lado del servidor por si acaso. */
+    if (materialsReady && !String(entryTime || '').trim()) {
+      return jsonResponse(400, { error: 'Please choose a time before turning this on.' });
     }
 
     const wasReady = f.MaterialsReady === true || f.MaterialsReady === 'true';
     const now = new Date().toISOString();
 
     if (materialsReady) {
-      const notes = entryTime ? ('Ready for entry at ' + entryTime + '.') : 'Ready for entry — no specific time given.';
+      const notes = 'Ready for entry at ' + entryTime + '.';
       const orderPatch = { MaterialsReady: true, MaterialsReadySeen: false, EntryTime: entryTime };
 
       if (!wasReady) {
