@@ -42,7 +42,7 @@ exports.handler = async (event) => {
         try { services = JSON.parse(it.fields.ServicesJSON || '[]'); } catch (e) { services = []; }
         return {
           id:       it.id,
-          name:     it.fields.TemplateName || '',
+          name:     it.fields.Title || '',
           division: it.fields.Division || '',
           services: services
         };
