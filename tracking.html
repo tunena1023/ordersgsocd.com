@@ -102,6 +102,19 @@
   .hist-rev { font-weight: 700; color: var(--gold-dk); letter-spacing: .04em; }
   .hist-by { color: var(--gray); font-weight: 400; }
 
+  /* ===== Formato unificado de renglones de cambio en el historial ===== */
+  .change-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+  .change-icon { font-size: 13px; flex-shrink: 0; width: 18px; text-align: center; }
+  .change-label { font-size: 12px; font-weight: 600; width: 110px; flex-shrink: 0; }
+  .change-values { font-size: 12px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .old-val { color: var(--gray); text-decoration: line-through; }
+  .arrow { color: var(--gray); }
+  .new-val { color: var(--gold-dk); font-weight: 600; }
+  .added-val { color: #3F7D4F; font-weight: 600; }
+  .removed-val { color: #B33A3A; text-decoration: line-through; }
+  .plain-val { color: var(--black); }
+  .change-sub { font-size: 11px; color: var(--gray); margin-left: 28px; margin-top: -2px; padding-bottom: 4px; font-style: italic; }
+
   .order-actions { display: flex; gap: 10px; padding-top: 16px; border-top: 1px solid var(--border); flex-wrap: wrap; align-items: flex-start; }
 
   /* Renovations: Materials Ready + Expected Ready Date -- mismo
@@ -756,6 +769,27 @@ if (client) {
     return parts.join(' · ');
   }
 
+  /* ===== Formato unificado de renglones de cambio (aprobado con mini) =====
+     Un solo diseño para TODO tipo de cambio: icono + etiqueta + viejo
+     tachado + flecha + nuevo en dorado. Si no cambió, se ve en negro
+     plano sin tachar. */
+  function changeRowHtml(icon, label, oldVal, newVal) {
+    const oldStr = oldVal || '', newStr = newVal || '';
+    if (oldStr === newStr) {
+      return '<div class="change-row"><span class="change-icon">' + icon + '</span><span class="change-label">' + esc(label) + '</span><span class="change-values"><span class="plain-val">' + esc(newStr || '—') + '</span></span></div>';
+    }
+    return '<div class="change-row"><span class="change-icon">' + icon + '</span><span class="change-label">' + esc(label) + '</span><span class="change-values"><span class="old-val">' + esc(oldStr || '(none)') + '</span><span class="arrow">→</span><span class="new-val">' + esc(newStr || '(none)') + '</span></span></div>';
+  }
+  function addedRowHtml(icon, label, extra) {
+    return '<div class="change-row"><span class="change-icon">' + icon + '</span><span class="change-label">' + esc(label) + '</span><span class="change-values"><span class="added-val">Added' + (extra ? ' — ' + esc(extra) : '') + '</span></span></div>';
+  }
+  function removedRowHtml(icon, label, extra) {
+    return '<div class="change-row"><span class="change-icon">' + icon + '</span><span class="change-label">' + esc(label) + '</span><span class="change-values"><span class="removed-val">Removed' + (extra ? ' — ' + esc(extra) : '') + '</span></span></div>';
+  }
+  function subLineHtml(text) {
+    return '<div class="change-sub">' + esc(text) + '</div>';
+  }
+
   /* Un estatus con solicitud abierta: el cliente solo puede deshacerla */
   function hasOpenRequest(status) {
     return status === 'Change Requested' || status === 'Cancellation Requested';
@@ -999,9 +1033,34 @@ if (client) {
 
       const readyBlockHtml = materialsReadyBlockHtml(o);
 
+      /* 'Change Requested' seguido de inmediato por 'Reschedule Requested'
+         (mismo actor, mismo momento) es UNA sola accion del cliente --
+         se fusionan para verse como un solo renglon con la nota Y el
+         detalle de fechas juntos, en vez de 2 renglones seguidos. */
+      const GROUP_WINDOW_MS_HIST = 60000;
+      const mergedHistory = [];
+      (history || []).filter(h => !isHiddenFromClient(h)).forEach(h => {
+        const last = mergedHistory[mergedHistory.length - 1];
+        const isReschedule = String(h.ChangeType || '') === 'Reschedule Requested';
+        const lastIsChangeRequested = last && String(last.ChangeType || '') === 'Change Requested';
+        const sameActor = last && String(last.ChangedBy || '') === String(h.ChangedBy || '');
+        const closeInTime = last &&
+          Math.abs(new Date(h.ChangeDate) - new Date(last.ChangeDate)) < GROUP_WINDOW_MS_HIST;
+        if (isReschedule && lastIsChangeRequested && sameActor && closeInTime) {
+          /* El renglon fusionado se muestra como 'Reschedule Requested'
+             (mas especifico), pero conserva la nota original del
+             'Change Requested' para que no se pierda. */
+          mergedHistory[mergedHistory.length - 1] = Object.assign({}, h, {
+            MergedNotes: last.Notes || ''
+          });
+          return;
+        }
+        mergedHistory.push(h);
+      });
+
       /* NUEVO: las solicitudes numeradas muestran su código de revisión
          (GS-6060-1001-1 para cambios, -1C para cancelaciones) */
-      const histHtml = (history || []).filter(h => !isHiddenFromClient(h)).map((h, idx) => {
+      const histHtml = mergedHistory.map((h, idx) => {
         const detailId = 'hd-' + o.OrderID.replace(/[^a-z0-9]/gi,'_') + '-' + idx;
         let detail = '';
 
@@ -1028,11 +1087,19 @@ if (client) {
             (svcLines || '<div style="font-size:12px">No services recorded.</div>') +
             '</div>';
         } else if (oldDates || newDates) {
-          const from = datesPayloadText(oldDates), to = datesPayloadText(newDates);
-          const nt = clientNoteText(h.Notes);
-          detail = '<div id="' + detailId + '" style="display:none;margin-top:8px;padding:10px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
-            '<div style="font-size:12px;margin:3px 0">📅 ' + esc(from || '(none)') + ' → ' + esc(to || '(none)') + '</div>' +
-            (nt ? '<div style="font-size:12px;margin:3px 0">' + esc(nt) + '</div>' : '') +
+          const old = oldDates || {}, neu = newDates || {};
+          const rows2 = [];
+          rows2.push(changeRowHtml('📅', 'Entry', old.entryDate ? fmtDate(old.entryDate) : '', neu.entryDate ? fmtDate(neu.entryDate) : ''));
+          rows2.push(changeRowHtml('📅', 'Due', old.dueDate ? fmtDate(old.dueDate) : '', neu.dueDate ? fmtDate(neu.dueDate) : ''));
+          rows2.push(changeRowHtml('🕐', 'Window', old.serviceWindow || '', neu.serviceWindow || ''));
+          /* MergedNotes trae la nota del 'Change Requested' original
+             cuando este renglon viene fusionado con el (ver mas arriba,
+             mergedHistory) -- se muestra junto con el detalle de fecha,
+             no en un renglon aparte. */
+          const nt = clientNoteText(h.MergedNotes || h.Notes);
+          detail = '<div id="' + detailId + '" style="display:none;margin-top:8px;padding:4px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
+            rows2.join('') +
+            (nt ? '<div style="font-size:12px;margin:6px 0 4px;padding-top:6px;border-top:1px solid var(--border)">' + esc(nt) + '</div>' : '') +
             '</div>';
         } else if (Array.isArray(oldSvcs) && Array.isArray(newSvcs)) {
           /* Comparar servicios: agregados, quitados, modificados */
@@ -1042,33 +1109,34 @@ if (client) {
           const newMap = {};
           newSvcs.forEach(s => { newMap[s.Category + '|' + s.ServiceName] = s; });
 
-          const lines = [];
+          const rows3 = [];
           /* Agregados y modificados */
           newSvcs.forEach(s => {
             const key = s.Category + '|' + s.ServiceName;
             const prev = oldMap[key];
             const label = svcSubLabel(s);
-            if (!prev) { lines.push('✅ Added: <b>' + esc(s.ServiceName) + '</b>' + (label ? ' — ' + esc(label) : '')); return; }
+            if (!prev) { rows3.push(addedRowHtml('➕', s.ServiceName, label)); return; }
             const prevLabel = svcSubLabel(prev);
             if (prevLabel !== label)
-              lines.push('🔄 Changed: <b>' + esc(s.ServiceName) + '</b> from ' + esc(prevLabel || '(none)') + ' to ' + esc(label || '(none)'));
-            if (isNC(prev) !== isNC(s))
-              lines.push(isNC(s)
-                ? '⚠️ Marked as not completed: <b>' + esc(s.ServiceName) + '</b>' + (s.NotCompletedReason ? ' — ' + esc(s.NotCompletedReason) : '')
-                : '✅ No longer marked as not completed: <b>' + esc(s.ServiceName) + '</b>');
+              rows3.push(changeRowHtml('🔄', s.ServiceName, prevLabel || '(none)', label || '(none)'));
+            if (isNC(prev) !== isNC(s)) {
+              rows3.push(changeRowHtml(isNC(s) ? '⚠️' : '✅', s.ServiceName,
+                isNC(s) ? 'Completed' : 'Not completed', isNC(s) ? 'Not completed' : 'Completed'));
+              if (isNC(s) && s.NotCompletedReason) rows3.push(subLineHtml('Reason: ' + s.NotCompletedReason));
+            }
           });
           /* Quitados */
           oldSvcs.forEach(s => {
             const key = s.Category + '|' + s.ServiceName;
-            if (!newMap[key]) lines.push('❌ Removed: <b>' + esc(s.ServiceName) + '</b>' + (svcSubLabel(s) ? ' — ' + esc(svcSubLabel(s)) : ''));
+            if (!newMap[key]) rows3.push(removedRowHtml('➖', s.ServiceName, svcSubLabel(s)));
           });
           const dOld = (oldPay && oldPay.dirtLevel) || '', dNew = (newPay && newPay.dirtLevel) || '';
           if (dOld !== dNew && (dOld || dNew))
-            lines.push('🔄 Overall condition: ' + esc(dOld || '(none)') + ' → ' + esc(dNew || '(none)'));
+            rows3.push(changeRowHtml('🧹', 'Condition', dOld, dNew));
 
-          if (lines.length) {
-            detail = '<div id="' + detailId + '" style="display:none;margin-top:8px;padding:10px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
-              lines.map(l => '<div style="font-size:12px;margin:3px 0">' + l + '</div>').join('') +
+          if (rows3.length) {
+            detail = '<div id="' + detailId + '" style="display:none;margin-top:8px;padding:4px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
+              rows3.join('') +
               '</div>';
           }
         } else if (h.FieldChanged === 'Status') {
@@ -1085,9 +1153,8 @@ if (client) {
           /* Cambios de un solo campo (Dispatch Date, Service Window,
              Supervisor, Due Date...): antes no se veia nada aqui. */
           const nt = clientNoteText(h.Notes);
-          detail = '<div id="' + detailId + '" style="display:none;margin-top:8px;padding:10px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
-            '<div style="font-size:12px;margin:3px 0">🔄 <b>' + esc(h.FieldChanged) + ':</b> ' +
-            esc(h.OldValue || '(empty)') + ' → ' + esc(h.NewValue || '(empty)') + '</div>' +
+          detail = '<div id="' + detailId + '" style="display:none;margin-top:8px;padding:4px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
+            changeRowHtml('🔄', h.FieldChanged, h.OldValue || '(empty)', h.NewValue || '(empty)') +
             (nt ? '<div style="font-size:12px;margin:3px 0">' + esc(nt) + '</div>' : '') +
             '</div>';
         } else if (clientNoteText(h.Notes) && h.Notes.indexOf('SERVICES:') !== 0) {
@@ -1254,6 +1321,27 @@ if (client) {
       events2.push(h);
     });
 
+    /* 'Change Requested' seguido de inmediato por 'Reschedule Requested'
+       (mismo actor, mismo momento) es UNA sola accion del cliente --
+       pedir un cambio que incluye fecha/hora escribe 2 renglones
+       aparte por diseno (ver request-change.js), pero para el cliente
+       es un solo paso. Se fusionan usando 'Reschedule Requested' como
+       el visible (mas especifico que el generico 'Change Requested'). */
+    const events2b = [];
+    events2.forEach(h => {
+      const last = events2b[events2b.length - 1];
+      const isReschedule = String(h.ChangeType || '') === 'Reschedule Requested';
+      const lastIsChangeRequested = last && String(last.ChangeType || '') === 'Change Requested';
+      const sameActor = last && String(last.ChangedBy || '') === String(h.ChangedBy || '');
+      const closeInTime = last &&
+        Math.abs(new Date(h.ChangeDate) - new Date(last.ChangeDate)) < GROUP_WINDOW_MS;
+      if (isReschedule && lastIsChangeRequested && sameActor && closeInTime) {
+        events2b[events2b.length - 1] = h;
+        return;
+      }
+      events2b.push(h);
+    });
+
     /* Mismo criterio aplicado en el historial detallado del admin: al
        aprobar, 'Dates Confirmed' queda seguido de inmediato por un
        evento generico de decision ('Change Approved'/etc.) en la misma
@@ -1262,7 +1350,7 @@ if (client) {
        confirmed' seguido de otro paso sin nada nuevo que decir). */
     const DECISION_TYPES = ['Change Approved', 'Change Rejected', 'Cancellation Approved', 'Cancellation Rejected'];
     const events3 = [];
-    events2.forEach(h => {
+    events2b.forEach(h => {
       const last = events3[events3.length - 1];
       const isDecision = DECISION_TYPES.indexOf(String(h.ChangeType || '')) !== -1;
       const lastIsDatesConfirmed = last && String(last.ChangeType || '') === 'Dates Confirmed';
