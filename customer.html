@@ -144,19 +144,7 @@
   }
   .summary-remove:hover { color: #B33A3A; transform: scale(1.2); }
 
-  .tracker-steps { display: flex; flex-direction: column; }
-  .t-step { display: flex; align-items: flex-start; gap: 14px; padding-bottom: 20px; position: relative; }
-  .t-step:not(:last-child)::before { content: ''; position: absolute; left: 10px; top: 22px; bottom: 0; width: 1px; background: var(--border); }
-  .t-step.done::before { background: var(--gold); }
-  .t-dot { width: 22px; height: 22px; border: 2px solid var(--border); border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--white); position: relative; z-index: 1; }
-  .t-step.done .t-dot { border-color: var(--gold); background: var(--gold); }
-  .t-step.done .t-dot::after { content: ''; width: 8px; height: 4px; border-left: 1.5px solid white; border-bottom: 1.5px solid white; transform: rotate(-45deg) translateY(-1px); }
-  .t-step.active .t-dot { border-color: var(--gold); }
-  .t-step.active .t-dot::after { content: ''; width: 8px; height: 8px; background: var(--gold); border-radius: 50%; }
-  .t-name { font-size: 12px; font-weight: 600; }
-  .t-step:not(.done):not(.active) .t-name { color: var(--gray); }
-  .t-detail { font-size: 11px; color: var(--gray); margin-top: 2px; }
-
+  
   footer { background: var(--black); padding: 24px 48px; display: flex; align-items: center; justify-content: space-between; }
   footer p { font-size: 11px; color: #555; letter-spacing: .06em; }
   footer span { color: var(--gold); }
@@ -437,11 +425,24 @@
   .confirm-ordernum-box { display: inline-block; margin-top: 22px; padding: 18px 36px; background: var(--off); border: 1px solid var(--border); }
   .confirm-ordernum-label { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--gray); margin-bottom: 6px; }
   .confirm-ordernum-value { font-family: 'Inter', sans-serif; font-size: 20px; font-weight: 700; color: var(--black); }
-  .confirm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 28px; }
+  .confirm-grid { display: flex; flex-direction: column; gap: 24px; margin-top: 28px; }
   .confirm-box { background: var(--white); border: 1px solid var(--border); padding: 24px; }
   .confirm-box h4 { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 600; margin-bottom: 14px; }
   .confirm-actions { text-align: center; margin-top: 32px; }
   .confirm-actions .btn-gold { max-width: 320px; }
+
+  /* Tabla de servicios de solo lectura -- mismo formato exacto que
+     admin.html usa en Active/History/Review (reviewSvcTableHtml),
+     agrupada por categoria, sin fecha por servicio (todos los
+     servicios de una orden se hacen el mismo dia). */
+  .svc-table-box { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .svc-table-box table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .svc-table-box td { padding: 9px 14px; border-bottom: 1px solid var(--border); }
+  .svc-table-box tr:last-child td { border-bottom: none; }
+  .svc-table-box .svc-cat { color: var(--gold-dk); font-weight: 600; width: 36%; }
+  .svc-table-box .svc-name { width: 32%; }
+  .svc-table-box .svc-opt { color: var(--gray); }
+  .svc-table-box .svc-opt.has-val { color: var(--black); }
 
   @media (max-width: 860px) {
     nav { padding: 0 20px; }
@@ -462,7 +463,6 @@
     .flash-card.active { height: 500px; }
     .flash-mini { flex-direction: row; justify-content: flex-start; padding: 0 16px; align-items: center; }
     .flash-mini-title { writing-mode: horizontal-tb; transform: none; }
-    .confirm-grid { grid-template-columns: 1fr; }
     .toast { left: 20px; right: 20px; bottom: 20px; max-width: none; }
   }
 </style>
@@ -611,8 +611,8 @@ style="object-fit:contain">
             <div id="confirm-summary"></div>
           </div>
           <div class="confirm-box">
-            <h4>Order Tracker</h4>
-            <div class="tracker-steps" id="confirm-tracker"></div>
+            <h4>Services</h4>
+            <div id="confirm-services"></div>
           </div>
         </div>
         <div class="confirm-actions">
@@ -839,6 +839,31 @@ if (client) {
   }
 
   function svcKey(p, n) { return p + '|' + n; }
+
+  /* Tabla de solo lectura para la pantalla de confirmacion -- mismo
+     formato exacto (3 columnas, agrupado por categoria, categoria solo
+     en el primer renglon de su grupo) que admin.html usa en
+     Active/History/Review via reviewSvcTableHtml. Sin fecha por
+     servicio: todos los servicios de una orden se hacen el mismo dia,
+     las fechas de la orden ya viven en "Order Summary". */
+  function renderConfirmServicesTable(lines) {
+    if (!lines.length) return '<p style="color:var(--gray);font-size:13px">No services on this order.</p>';
+    const byCat = {};
+    lines.forEach(l => { const c = l.category || 'General'; if (!byCat[c]) byCat[c] = []; byCat[c].push(l); });
+    const rows = [];
+    Object.entries(byCat).forEach(([cat, list]) => {
+      list.forEach((l, i) => rows.push({ cat: i === 0 ? cat : '', name: l.name, sub: l.sub }));
+    });
+    return '<div class="svc-table-box"><table>' +
+      rows.map(r =>
+        '<tr>' +
+          '<td class="svc-cat">' + esc(r.cat) + '</td>' +
+          '<td class="svc-name">' + esc(r.name) + '</td>' +
+          '<td class="svc-opt' + (r.sub ? ' has-val' : '') + '">' + (r.sub ? esc(r.sub) : '—') + '</td>' +
+        '</tr>'
+      ).join('') +
+      '</table></div>';
+  }
 
   /* ===== Picker del catalogo nuevo -- toggle Residential/Commercial +
      buscador (+ Select all solo en Janitorial) + chips en grid de 3
@@ -1627,7 +1652,7 @@ if (client) {
     Object.entries(selected).forEach(([propType, svcs]) => {
       Object.entries(svcs).forEach(([svc, sku]) => {
         const lvl = svcLevel[svcKey(propType, svc)];
-        lines.push([svc, lvl || '']);
+        lines.push({ category: propType, name: svc, sub: lvl || '' });
       });
     });
     $('confirm-summary').innerHTML =
@@ -1635,19 +1660,13 @@ if (client) {
       '<div class="summary-item">Entry <span>' + new Date(order.EntryDate).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + '</span></div>' +
       '<div class="summary-item">Due <span>' + new Date(order.DueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + '</span></div>' +
       '<div class="summary-item">Building/Unit <span>' + esc(order.BuildingNumber) + ' / ' + esc(order.UnitNumber) + '</span></div>' +
-      '<div class="summary-item">Bed/Bath <span>' + esc(order.Bedrooms) + ' / ' + esc(order.Bathrooms) + '</span></div>' +
-      lines.map(([label, lvl]) => '<div class="summary-item summary-svc">' + esc(label) + (lvl ? ' <span>' + esc(lvl) + '</span>' : '') + '</div>').join('');
+      '<div class="summary-item">Bed/Bath <span>' + esc(order.Bedrooms) + ' / ' + esc(order.Bathrooms) + '</span></div>';
 
-    const steps = [
-      { name: 'Order received', detail: 'Just now', done: true },
-      { name: 'Under review', detail: 'Pending', done: false },
-      { name: 'Assigned', detail: 'Pending', done: false },
-      { name: 'In progress', detail: 'Pending', done: false },
-      { name: 'Completed', detail: 'Pending', done: false }
-    ];
-    $('confirm-tracker').innerHTML = steps.map(s =>
-      '<div class="t-step ' + (s.done ? 'done' : '') + '"><div class="t-dot"></div><div><div class="t-name">' + s.name + '</div><div class="t-detail">' + s.detail + '</div></div></div>'
-    ).join('');
+    /* Tabla de servicios de solo lectura, agrupada por categoria --
+       mismo formato exacto que admin.html usa en Active/History/Review
+       (reviewSvcTableHtml). Sin fecha por servicio: todos los
+       servicios de una orden se hacen el mismo dia. */
+    $('confirm-services').innerHTML = renderConfirmServicesTable(lines);
 
     $('order-confirmation').style.display = 'block';
     window.scrollTo({ top: 0, behavior: 'smooth' });
