@@ -1099,6 +1099,28 @@ if (client) {
           detail = '<div id="' + detailId + '" style="display:none;margin-top:8px;padding:10px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
             (svcLines || '<div style="font-size:12px">No services recorded.</div>') +
             '</div>';
+        } else if (h.ChangeType === 'Order Assigned') {
+          /* Primera vez que se asigna -- mismo formato de renglon que el
+             resto del historial (icono + etiqueta + valor), pero sin
+             flecha de cambio: no hay un "antes", es la primera vez que
+             existe este dato. changeRowHtml ya muestra un solo valor en
+             negro cuando old===new, se reusa igual aqui. Reasignaciones
+             despues (cambiar de supervisor) nunca generan un segundo
+             evento de este tipo -- eso se queda interno, el cliente
+             nunca lo ve (ver admin-update-order.js). */
+          let assigned = null;
+          try { assigned = JSON.parse(h.NewValue || '{}'); } catch (e) {}
+          const rowsA = [];
+          if (assigned) {
+            if (assigned.supervisor) rowsA.push(changeRowHtml('👤', 'Supervisor', assigned.supervisor, assigned.supervisor));
+            if (assigned.dispatchDate) rowsA.push(changeRowHtml('📅', 'Date', fmtDate(assigned.dispatchDate), fmtDate(assigned.dispatchDate)));
+            if (assigned.serviceWindow) rowsA.push(changeRowHtml('🕐', 'Window', assigned.serviceWindow, assigned.serviceWindow));
+          }
+          if (rowsA.length) {
+            detail = '<div id="' + detailId + '" style="display:none;margin-top:8px;padding:4px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
+              rowsA.join('') +
+              '</div>';
+          }
         } else if (oldDates || newDates) {
           const old = oldDates || {}, neu = newDates || {};
           const rows2 = [];
@@ -1299,6 +1321,7 @@ if (client) {
       'Requested Dates Rejected':    'Requested dates not approved',
       'Requested Dates Withdrawn':   'Requested dates withdrawn',
       'Reschedule Requested':        'New dates requested',
+      'Order Assigned':              'Order assigned',
       'Services Updated':            'Services updated',
       'Completed':                   'Order completed',
       'Expected Ready Date':         'Ready Date & Time'
