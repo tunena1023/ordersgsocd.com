@@ -9,12 +9,6 @@
 
 const { CLIENTS_LIST, graphFetch, siteListPath, jsonResponse } = require('./lib/graph');
 
-/* Mismo patron que validate-client.js y Admingsocd.com para el campo
-   Active: sin la columna (undefined) se cuenta como activo. */
-function truthy(v) {
-  return v === true || v === 'true' || v === 1 || v === '1' || v === 'Yes';
-}
-
 async function fetchAll(listName) {
   let url = siteListPath(listName) + '?$expand=fields&$top=200';
   const out = [];
@@ -57,16 +51,6 @@ exports.handler = async (event) => {
     );
     if (dup) {
       const f = dup.fields;
-
-      /* Mismo bloqueo que validate-client.js -- sin esto, alguien
-         podia "registrarse" con el correo de un cliente ya
-         desactivado y el sistema lo dejaba entrar directo, sin pasar
-         por el login normal ni el checarlo. */
-      if (f.Active !== undefined && !truthy(f.Active)) {
-        return jsonResponse(200, { valid: false, deactivated: true,
-          error: 'This account is currently inactive. Please contact GS Solutions at (515) 473-5990 for assistance.' });
-      }
-
       return jsonResponse(200, {
         valid: true,
         existing: true,

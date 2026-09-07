@@ -288,12 +288,7 @@ async function doLogin() {
   try {
     const result = await GS.api('/validate-client', { method: 'POST', body: { clientId: val } });
     if (!result.valid) {
-      /* Cuenta desactivada es un caso distinto a "no existe" -- decirle
-         que llame a la oficina, no mandarlo a Register (eso solo
-         confundiria mas a un cliente que ya esta registrado). */
-      errorEl.textContent = result.deactivated
-        ? result.error
-        : 'Client number not found. New here? Use "First Time? Register" below.';
+      errorEl.textContent = 'Client number not found. New here? Use "First Time? Register" below.';
       return;
     }
     GS.session.set(result);
@@ -329,12 +324,6 @@ async function submitRegistration() {
       method: 'POST',
       body: { businessName, contactPerson, address, suite, city, zip, contact, phone }
     });
-    if (!result.valid) {
-      errorEl.textContent = result.deactivated
-        ? result.error
-        : (result.error || 'Could not complete registration.');
-      return;
-    }
     GS.session.set(result);
     location.href = 'customer.html';
   } catch (err) {
