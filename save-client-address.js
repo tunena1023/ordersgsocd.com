@@ -156,7 +156,26 @@ exports.handler = async (event) => {
       return jsonResponse(200, { success: true, addressId: item.id, contactId: newContactId });
     }
 
-    /* ===== Direccion nueva: aqui si se llenan todos los campos ===== */
+    /* ===== Direccion nueva: aqui si se llenan todos los campos =====
+       Mismo mecanismo de newContact que ya existe arriba al EDITAR una
+       direccion -- antes solo funcionaba ahi, nunca al CREAR una
+       nueva, por eso un edificio recien creado nunca podia tener
+       telefono. */
+    let newContactIdOnCreate = null;
+    if (b.newContact && b.newContact.name && String(b.newContact.name).trim()
+        && b.newContact.value && String(b.newContact.value).trim()) {
+      const created = await createListItem(CLIENT_CONTACTS_LIST, {
+        Title:           b.newContact.name,
+        ClientID:        b.clientId,
+        Name:            b.newContact.name  || '',
+        ContactType:     b.newContact.type  || 'Email',
+        Value:           b.newContact.value || '',
+        Archived:        false,
+        NotifyRecipient: false
+      });
+      newContactIdOnCreate = created.id;
+    }
+
     const geo = await geocodeAddress(b.address, b.city, b.zip);
     const fields = {
       Title:          b.label || '',
@@ -167,12 +186,12 @@ exports.handler = async (event) => {
       Suite:          b.suite          || '',
       City:           b.city           || '',
       Zip:            b.zip            || '',
-      ContactId:      '',
+      ContactId:      newContactIdOnCreate || '',
       Archived:       b.archived !== undefined ? !!b.archived : false
     };
     if (geo) { fields.Latitude = geo.lat; fields.Longitude = geo.lon; }
     const result = await createListItem(CLIENT_ADDRESSES_LIST, fields);
-    return jsonResponse(200, { success: true, addressId: result.id });
+    return jsonResponse(200, { success: true, addressId: result.id, contactId: newContactIdOnCreate });
 
   } catch (e) {
     return jsonResponse(500, { error: e.message });

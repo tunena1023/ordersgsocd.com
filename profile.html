@@ -589,6 +589,14 @@ if (client) {
     const isNew = buildingId === 'new' || !buildingId;
     if (!isNew) body.addressId = buildingId;
 
+    /* El campo Phone solo existe en el formulario de "Add building"
+       (no en el de editar, que ya tiene su propio manejo de contactos
+       via Notifications) -- si se lleno, se manda como contacto nuevo
+       tipo Phone. */
+    const phoneEl = $f('phone');
+    const phoneVal = phoneEl ? phoneEl.value.trim() : '';
+    if (phoneVal) body.newContact = { name: label, type: 'Phone', value: phoneVal };
+
     try {
       const res = await GS.api('/save-client-address', { method: 'POST', body });
       showToast(isNew ? 'Building saved.' : 'Building updated.');
@@ -707,6 +715,7 @@ if (client) {
         field('suite', 'Suite', '') +
         field('city', 'City', '') +
         field('zip', 'Zip', '') +
+        field('phone', 'Phone (optional)', '') +
       '</div>' +
       '<button class="btn-gold" style="width:100%;margin-top:6px" onclick="saveBuildingEdit(\'new\')">Save</button>' +
       '<p class="dialog-error" id="ctl-error"></p>';
