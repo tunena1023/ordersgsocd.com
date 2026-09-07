@@ -1051,7 +1051,9 @@ if (client) {
          se fusionan para verse como un solo renglon con la nota Y el
          detalle de fechas juntos, en vez de 2 renglones seguidos. */
       const GROUP_WINDOW_MS_HIST = 60000;
+      const DECISION_TYPES_HIST = ['Change Approved', 'Change Rejected', 'Cancellation Approved', 'Cancellation Rejected'];
       const mergedHistory = [];
+      let pendingDatesConfirmed = [];
       (history || []).filter(h => !isHiddenFromClient(h)).forEach(h => {
         const last = mergedHistory[mergedHistory.length - 1];
         const isReschedule = String(h.ChangeType || '') === 'Reschedule Requested';
@@ -1068,8 +1070,34 @@ if (client) {
           });
           return;
         }
+        /* 'Dates Confirmed' (uno por cada campo que se confirmo al
+           aprobar: Entry/Due/Service Window) se junta con el evento de
+           decision (Change Approved/etc.) que le sigue de inmediato --
+           mismo cambio real, para no verse como 2 renglones seguidos
+           donde el segundo no dice nada nuevo (mismo criterio ya
+           aplicado en admin.html). Si por lo que sea no llega un
+           evento de decision cercano despues, se muestran tal cual
+           (fallback, no se pierden). */
+        const isDatesConfirmed = String(h.ChangeType || '') === 'Dates Confirmed';
+        if (isDatesConfirmed) {
+          pendingDatesConfirmed.push(h);
+          return;
+        }
+        const isDecision = DECISION_TYPES_HIST.indexOf(String(h.ChangeType || '')) !== -1;
+        if (isDecision && pendingDatesConfirmed.length) {
+          const lastConfirmed = pendingDatesConfirmed[pendingDatesConfirmed.length - 1];
+          const closeToConfirm = Math.abs(new Date(h.ChangeDate) - new Date(lastConfirmed.ChangeDate)) < GROUP_WINDOW_MS_HIST;
+          if (closeToConfirm) {
+            mergedHistory.push(Object.assign({}, h, { MergedDateRows: pendingDatesConfirmed }));
+            pendingDatesConfirmed = [];
+            return;
+          }
+        }
+        pendingDatesConfirmed.forEach(p => mergedHistory.push(p));
+        pendingDatesConfirmed = [];
         mergedHistory.push(h);
       });
+      pendingDatesConfirmed.forEach(p => mergedHistory.push(p));
 
       /* NUEVO: las solicitudes numeradas muestran su código de revisión
          (GS-6060-1001-1 para cambios, -1C para cancelaciones) */
@@ -1119,6 +1147,23 @@ if (client) {
           if (rowsA.length) {
             detail = '<div id="' + detailId + '" style="display:none;margin-top:8px;padding:4px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
               rowsA.join('') +
+              '</div>';
+          }
+        } else if (h.MergedDateRows) {
+          /* Decision (Change Approved/etc.) fusionada con sus renglones
+             de 'Dates Confirmed' -- mismo campo que el cliente ya vio
+             pedido en 'New dates requested' justo arriba, pero aqui es
+             la confirmacion real de que se aplico. No se compara contra
+             ese renglon anterior para evitar repetir el mismo texto dos
+             veces -- se usa el mismo truco de changeRowHtml(icon,label,
+             valor,valor) para verse en negro plano (confirmado), no como
+             un cambio otra vez. */
+          const rowsD = h.MergedDateRows.map(r =>
+            changeRowHtml(r.FieldChanged === 'Service Window' ? '🕐' : '📅', r.FieldChanged || 'Changed', r.NewValue || '', r.NewValue || '')
+          );
+          if (rowsD.length) {
+            detail = '<div id="' + detailId + '" style="display:none;margin-top:8px;padding:4px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
+              rowsD.join('') +
               '</div>';
           }
         } else if (oldDates || newDates) {
