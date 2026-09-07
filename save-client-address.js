@@ -44,10 +44,16 @@ async function fetchAll(listName) {
    se intenta y ya, las coordenadas se pueden rellenar despues con el
    backfill de Developer si esta vez no jalo. */
 async function geocodeAddress(address, city, zip) {
-  const addr = String(address || '').trim();
+  const rawAddr = String(address || '').trim();
   const cty = String(city || '').trim();
   const z = String(zip || '').trim();
-  if (!addr && !cty && !z) return null;
+  if (!rawAddr && !cty && !z) return null;
+
+  /* Nunca nos importa la suite/local para geocodificar -- solo
+     necesitamos el punto del EDIFICIO (lat/lon), y Nominatim casi
+     nunca tiene registrada la suite individual, solo el edificio
+     completo. Se quita de una vez, sin intentar mandarla primero. */
+  const addr = rawAddr.replace(/,?\s*(suite|ste|apt|apartment|unit|#)\s*[a-z0-9-]+\s*$/i, '').trim();
 
   async function tryQuery(url) {
     try {

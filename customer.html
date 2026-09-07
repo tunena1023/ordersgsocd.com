@@ -858,7 +858,7 @@ if (client) {
       <div class="res-toggle-wrap" id="res-toggle">
         <span class="res-toggle-label">Commercial</span>
         <label class="svc-toggle">
-          <input type="checkbox" onchange="setPropertyType(this.checked ? 'Residential' : 'Commercial')">
+          <input type="checkbox" ${propertyType === 'Residential' ? 'checked' : ''} onchange="setPropertyType(this.checked ? 'Residential' : 'Commercial')">
           <span class="svc-toggle-track"></span>
         </label>
         <span class="res-toggle-label">Residential</span>
@@ -1321,6 +1321,17 @@ if (client) {
     if (legacyNames.length) {
       showToast('Some services on this order are in an old format and need to be re-selected: ' + legacyNames.join(', '));
     }
+    /* BUG FIX: propertyType (Commercial/Residential) se queda pegado
+       en 'Commercial' (su default) a menos que algo lo cambie -- el
+       grid filtra y marca los checkboxes contra ESE valor nomas. Si
+       la orden que se esta editando/el template que se esta cargando
+       en realidad era Residential, el grid seguia mostrando
+       Commercial con todo vacio, sin ningun aviso (los datos si
+       estaban en selected['Residential'], nomas nunca se veian). Se
+       toma el Category del primer servicio conocido como el
+       propertyType real de esta orden. */
+    const firstKnownCategory = Object.keys(selected)[0];
+    if (firstKnownCategory) propertyType = firstKnownCategory;
   }
 
   /* ===== Templates ===== */

@@ -69,21 +69,50 @@ exports.handler = async (event) => {
     const now = new Date().toISOString();
 
     if (materialsReady) {
-      await Promise.all([
-        updateListItemByItemId(ORDERS_LIST, orderItem.id, {
-          MaterialsReady: true,
-          MaterialsReadySeen: false,
-          EntryTime: entryTime
-        }),
-        createListItem(ORDER_HISTORY_LIST, {
-          Title: orderId + '-ready',
-          OrderID: orderId,
-          ChangeType: 'Materials Ready',
-          ChangedBy: clientId,
-          ChangeDate: now,
-          Notes: entryTime ? ('Ready for entry at ' + entryTime + '.') : 'Ready for entry — no specific time given.'
-        })
-      ]);
+      const notes = entryTime ? ('Ready for entry at ' + entryTime + '.') : 'Ready for entry — no specific time given.';
+      const orderPatch = { MaterialsReady: true, MaterialsReadySeen: false, EntryTime: entryTime };
+
+      if (!wasReady) {
+        /* Primera vez que se prende en este ciclo -- un renglon nuevo. */
+        await Promise.all([
+          updateListItemByItemId(ORDERS_LIST, orderItem.id, orderPatch),
+          createListItem(ORDER_HISTORY_LIST, {
+            Title: orderId + '-ready',
+            OrderID: orderId,
+            ChangeType: 'Materials Ready',
+            ChangedBy: clientId,
+            ChangeDate: now,
+            Notes: notes
+          })
+        ]);
+      } else {
+        /* Ya estaba prendido -- esto es nomas la hora llegando por
+           separado (el cliente prende el switch primero, y el picker
+           de hora manda su propia llamada despues). Es la MISMA
+           accion, no una segunda -- se actualiza el renglon de
+           historial que ya existe en vez de crear uno duplicado. Si
+           por lo que sea no hay un renglon anterior que actualizar
+           (no deberia pasar, pero por si acaso), se crea uno. */
+        const histRows = await fetchByField(ORDER_HISTORY_LIST, 'OrderID', orderId);
+        const latestReady = histRows
+          .filter(it => it.fields && it.fields.ChangeType === 'Materials Ready')
+          .sort((a, b) => String(b.fields.ChangeDate || '').localeCompare(String(a.fields.ChangeDate || '')))[0];
+
+        const tasks = [updateListItemByItemId(ORDERS_LIST, orderItem.id, orderPatch)];
+        if (latestReady) {
+          tasks.push(updateListItemByItemId(ORDER_HISTORY_LIST, latestReady.id, { Notes: notes, ChangeDate: now }));
+        } else {
+          tasks.push(createListItem(ORDER_HISTORY_LIST, {
+            Title: orderId + '-ready',
+            OrderID: orderId,
+            ChangeType: 'Materials Ready',
+            ChangedBy: clientId,
+            ChangeDate: now,
+            Notes: notes
+          }));
+        }
+        await Promise.all(tasks);
+      }
       return jsonResponse(200, { success: true, materialsReady: true });
     }
 

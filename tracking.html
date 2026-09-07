@@ -122,7 +122,7 @@
      nada de drag/touch hecho a mano). */
   .wheel-picker { position: relative; display: flex; justify-content: center; gap: 6px; height: 180px; margin: 24px 0 8px; }
   .wheel-highlight { position: absolute; top: 72px; left: 10%; right: 10%; height: 36px; background: var(--off); border-top: 1px solid var(--gold); border-bottom: 1px solid var(--gold); pointer-events: none; z-index: 1; }
-  .wheel-col { width: 64px; height: 180px; overflow-y: scroll; scroll-snap-type: y mandatory; scrollbar-width: none; -ms-overflow-style: none; }
+  .wheel-col { width: 64px; height: 180px; overflow-y: scroll; scroll-snap-type: y proximity; scroll-behavior: smooth; scrollbar-width: none; -ms-overflow-style: none; }
   .wheel-col::-webkit-scrollbar { display: none; }
   .wheel-col-pad { height: 72px; }
   .wheel-item { height: 36px; display: flex; align-items: center; justify-content: center; scroll-snap-align: center; font-size: 18px; color: var(--gray); font-family: 'Inter', sans-serif; transition: color .15s, font-weight .15s; }
@@ -1433,6 +1433,20 @@ if (client) {
     $('wheel-hour').innerHTML = buildWheelItemsHtml(HOURS_12);
     $('wheel-minute').innerHTML = buildWheelItemsHtml(MINUTES_60);
     $('wheel-ampm').innerHTML = buildWheelItemsHtml(AMPM_OPTS);
+
+    /* Marca cual numero esta resaltado EN VIVO mientras se hace
+       scroll -- antes solo se marcaba una vez al abrir, y con la
+       rueda del mouse (o el trackpad) se sentia como que "no pasaba
+       nada" porque el resaltado se quedaba pegado en el numero
+       original sin importar hacia donde se moviera la lista. */
+    ['wheel-hour', 'wheel-minute', 'wheel-ampm'].forEach(id => {
+      const col = $(id);
+      let raf = null;
+      col.onscroll = () => {
+        if (raf) return;
+        raf = requestAnimationFrame(() => { markWheelSelected(col); raf = null; });
+      };
+    });
 
     let h24 = 8, mm = 0;
     if (currentValue) {
