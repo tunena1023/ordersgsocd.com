@@ -963,7 +963,7 @@ if (client) {
        Se limpian aqui siempre; si checkDraftFor mas abajo encuentra un
        borrador real de esta division y el usuario le da Continue,
        draftContinue() los vuelve a llenar con los valores correctos. */
-    ['building-number', 'unit-number', 'bedrooms', 'bathrooms', 'entry-date', 'delivery-date', 'notes'].forEach(id => { $(id).value = ''; });
+    ['building-number', 'unit-number', 'bedrooms', 'bathrooms', 'entry-date', 'delivery-date'].forEach(id => { $(id).value = ''; });
     $('entry-time').value = '08:00';
     resetOfficeNeed();
     checkDueWarning();
@@ -1561,7 +1561,7 @@ if (client) {
     }
   }
 
-  ['building-number', 'unit-number', 'bedrooms', 'bathrooms', 'notes'].forEach(id => $(id).addEventListener('input', scheduleDraftSave));
+  ['building-number', 'unit-number', 'bedrooms', 'bathrooms'].forEach(id => $(id).addEventListener('input', scheduleDraftSave));
 
   async function checkDraftFor(div) {
     try {
@@ -1623,7 +1623,7 @@ if (client) {
     }
     draftPendingData = null; draftOrderId = null;
     selected = {}; svcLevel = {}; selAllActive = null;
-    ['building-number','unit-number','bedrooms','bathrooms','entry-date','delivery-date','notes'].forEach(id => $(id).value = '');
+    ['building-number','unit-number','bedrooms','bathrooms','entry-date','delivery-date'].forEach(id => $(id).value = '');
     $('entry-time').value = '08:00';
     resetOfficeNeed();
     checkDueWarning();
