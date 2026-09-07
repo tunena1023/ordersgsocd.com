@@ -11,6 +11,13 @@
 
 const { CLIENTS_LIST, graphFetch, siteListPath, jsonResponse } = require('./lib/graph');
 
+/* Mismo patron que ya usa Admingsocd.com para el campo Active: sin la
+   columna (undefined) se cuenta como activo, para no romper clientes
+   viejos que nunca tuvieron este campo. */
+function truthy(v) {
+  return v === true || v === 'true' || v === 1 || v === '1' || v === 'Yes';
+}
+
 /* Descarga TODOS los items de una lista siguiendo la paginación de Graph */
 async function fetchAll(listName) {
   let url = siteListPath(listName) + '?$expand=fields&$top=200';
@@ -42,6 +49,14 @@ exports.handler = async (event) => {
     if (!item) return jsonResponse(200, { valid: false });
 
     const f = item.fields;
+
+    /* Cliente desactivado desde Developer -- no puede entrar a su
+       portal ni meter ordenes nuevas hasta que se reactive. */
+    if (f.Active !== undefined && !truthy(f.Active)) {
+      return jsonResponse(200, { valid: false, deactivated: true,
+        error: 'This account is currently inactive. Please contact GS Solutions at (515) 473-5990 for assistance.' });
+    }
+
     return jsonResponse(200, {
       valid: true,
       clientId: f.ClientID,
