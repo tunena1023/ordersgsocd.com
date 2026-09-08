@@ -2269,8 +2269,22 @@ return html;
      Formato provisional mientras se define el definitivo
      (réplica del Excel con Nivel 1/2/3 + X en la celda contigua). */
   async function printOrder(orderId) {
+    /* window.open() debe pasar en el MISMO instante sincronico del
+       clic -- si se abre despues de un await (como estaba antes), el
+       navegador ya no lo reconoce como "resultado directo del clic" y
+       puede bloquear el popup en silencio, sin ningun aviso visible
+       para el usuario mas alla de un iconito chico en la barra de
+       direcciones, facil de no notar. Se abre la ventana YA, con un
+       mensaje de carga, y se llena con el contenido real cuando
+       llegue la respuesta. */
+    const w = window.open('', '_blank');
+    if (w) {
+      w.document.write('<!DOCTYPE html><html><head><title>Order ' + esc(orderId) + '</title></head>' +
+        '<body style="font-family:Arial,sans-serif;padding:40px;color:#666">Loading order details…</body></html>');
+      w.document.close();
+    }
     try {
-            const data = await GS.api('/get-order-detail', { method: 'POST', body: { orderId: orderId, clientId: client.clientId } });
+      const data = await GS.api('/get-order-detail', { method: 'POST', body: { orderId: orderId, clientId: client.clientId } });
       const o = data.order || {};
       const services = data.services || [];
 
@@ -2281,7 +2295,11 @@ return html;
         byCat[cat].push(s);
       });
 
-      const w = window.open('', '_blank');
+      if (!w) {
+        alert('Your browser blocked the print window. Please allow pop-ups for this site and try again.');
+        return;
+      }
+      w.document.open();
       w.document.write(`<!DOCTYPE html><html><head><title>Order ${esc(orderId)}</title>
         <style>
           body { font-family: Arial, sans-serif; padding: 40px; color: #111; }
@@ -2313,7 +2331,13 @@ return html;
       w.focus();
       setTimeout(() => { w.print(); }, 400);
     } catch (e) {
-      alert('Could not prepare the print view: ' + e.message);
+      if (w) {
+        w.document.open();
+        w.document.write('<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;padding:40px;color:#B33A3A">Could not prepare the print view: ' + esc(e.message) + '</body></html>');
+        w.document.close();
+      } else {
+        alert('Could not prepare the print view: ' + e.message);
+      }
     }
   }
 
