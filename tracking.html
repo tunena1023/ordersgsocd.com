@@ -83,6 +83,21 @@
   .status-incomplete { background: #F0EFEA; color: #6B6B6B; }
   .status-confirmed  { background: #F0FAF0; color: #2A7A2A; }
   .order-card-body { padding: 20px; display: none; }
+  /* ===== Request Change / Notifications: panel inline de 2 columnas,
+     no ventana emergente -- mismo patron ya usado en Update Services
+     del portal de Supervisor (tech.gsocd.com). ===== */
+  .order-2col{display:grid;grid-template-columns:1fr}
+  .order-2col.open{grid-template-columns:1fr 1fr;gap:20px}
+  .col-left{min-width:0}
+  .col-right{display:none;min-width:0;padding:18px;background:var(--off)}
+  .order-2col.open .col-right{display:block}
+  @media (min-width:701px){
+    .order-2col.open .col-right{border-left:1px solid var(--border)}
+  }
+  @media (max-width:700px){
+    .order-2col.open{grid-template-columns:1fr}
+    .order-2col.open .col-right{border-top:1px solid var(--border)}
+  }
   .order-card-body.open { display: block; animation: bodyIn .3s ease both; }
   @keyframes bodyIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 
@@ -278,6 +293,7 @@
   .contact-panel h2 { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 600; text-align: center; margin-bottom: 6px; }
   .contact-panel .contact-sub { font-size: 12px; color: var(--gray); text-align: center; margin-bottom: 24px; line-height: 1.6; }
   .field label { display: block; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--gray); font-weight: 600; margin-bottom: 8px; }
+  .field { margin-bottom: 18px; }
   .field select { width: 100%; border: 1.5px solid var(--border); padding: 13px 14px; font-size: 14px;
     font-family: 'Inter', sans-serif; outline: none; background: #fff; }
   .field select:focus { border-color: var(--gold); }
@@ -420,71 +436,6 @@
       <button class="btn-danger" id="cancel-confirm-btn" onclick="confirmCancel()">Request Cancellation</button>
     </div>
     <p class="dialog-error" id="cancel-error"></p>
-  </div>
-</div>
-
-<div class="dialog-overlay" id="change-dialog">
-  <div class="dialog-panel">
-    <h3 id="change-dialog-title">Request a change</h3>
-    <p id="change-dialog-intro">Tell us what you'd like to change about this order. Our office will review your request and contact you.</p>
-    <div class="field">
-      <label id="change-text-label">Describe the change</label>
-      <textarea id="change-text" placeholder="e.g. I need to reschedule the entry date..."></textarea>
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <label>New entry date (optional)</label>
-        <input type="date" id="change-entry">
-      </div>
-      <div class="field">
-        <label>New due date (optional)</label>
-        <input type="date" id="change-due">
-      </div>
-    </div>
-    <div class="field">
-      <label>Preferred service window (optional)</label>
-      <select id="change-window"></select>
-    </div>
-    <p class="dialog-note">Dates and service windows are a request only. Nothing changes until our
-      office approves it, and you will receive the confirmed dates by email.</p>
-    <div class="dialog-btns">
-      <button class="btn-ghost" onclick="closeChangeDialog()">Cancel</button>
-      <button class="btn-gold" id="change-submit-btn" onclick="submitChange()">Send Request</button>
-    </div>
-    <p class="dialog-error" id="change-error"></p>
-  </div>
-</div>
-
-<div class="dialog-overlay" id="notif-dialog">
-  <div class="dialog-panel">
-    <h3>Notifications for <span id="notif-order-id"></span></h3>
-    <p style="font-size:12px;color:var(--gray);margin-bottom:16px">These settings apply only to this order. Leave as "Account default" to use your regular Profile settings.</p>
-    <div class="field">
-      <label>Notifications for this order</label>
-      <select id="notif-enabled"><option value="inherit">Account default</option><option value="on">On</option><option value="off">Off</option></select>
-    </div>
-    <div class="field">
-      <label>Confirmations</label>
-      <select id="notif-confirmations"><option value="inherit">Account default</option><option value="on">On</option><option value="off">Off</option></select>
-      <p id="notif-confirm-note" style="font-size:11px;color:var(--gold-dk);margin-top:6px;display:none">This order currently needs your confirmation — you'll still be notified about that specific request even if this is off.</p>
-    </div>
-    <div class="field">
-      <label>Changes</label>
-      <select id="notif-changes"><option value="inherit">Account default</option><option value="on">On</option><option value="off">Off</option></select>
-    </div>
-    <div class="field">
-      <label>Updates</label>
-      <select id="notif-updates"><option value="inherit">Account default</option><option value="on">On</option><option value="off">Off</option></select>
-    </div>
-    <div class="field">
-      <label>Who receives notifications for this order</label>
-      <select id="notif-contact"></select>
-    </div>
-    <div class="dialog-btns">
-      <button class="btn-ghost" onclick="closeNotifDialog()">Cancel</button>
-      <button class="btn-gold" id="notif-save-btn" onclick="saveOrderNotifications()">Save</button>
-    </div>
-    <p class="dialog-error" id="notif-error"></p>
   </div>
 </div>
 
@@ -1255,6 +1206,8 @@ if (client) {
       }).join('') || '<p class="empty-note">No events recorded.</p>';
 
       body.innerHTML = `
+        <div class="order-2col" id="ord2col-${escAttr(orderId)}">
+        <div class="col-left">
         <div class="detail-grid">
           <div>
             <p class="detail-label">Order Details</p>
@@ -1282,7 +1235,10 @@ if (client) {
           <p class="detail-label">Order Tracker</p>
           ${trackerStepsFor(o, history)}
         </div>
-        <div class="order-actions">${actionButtonsFor(o, history, data.document || null)}</div>`;
+        <div class="order-actions">${actionButtonsFor(o, history, data.document || null)}</div>
+        </div>
+        <div class="col-right" id="sidepanel-${escAttr(orderId)}"></div>
+        </div>`;
 
       bindActions(body, o);
       orderDetailCache[orderId] = { html: body.innerHTML, order: o };
@@ -1977,14 +1933,14 @@ return html;
       btn.addEventListener('click', () => {
         const act = btn.dataset.act;
         if (act === 'edit') editOrder(o.OrderID);
-        if (act === 'change') openChangeDialog(o.OrderID);
+        if (act === 'change') toggleChangePanel(o.OrderID);
         if (act === 'cancel') openCancelDialog(o.OrderID);
         if (act === 'undo') undoRequest(o.OrderID);
         if (act === 'confirm-change') confirmChange(o.OrderID);
         if (act === 'confirm-reactivation') confirmReactivation(o.OrderID);
         if (act === 'print') openOrderDocument(o.OrderID);
         if (act === 'printhist') printOrder(o.OrderID);
-        if (act === 'notifications') openOrderNotifications(o);
+        if (act === 'notifications') toggleNotifPanel(o);
       });
     });
   }
@@ -2066,99 +2022,219 @@ return html;
     }
   }
 
-  /* ===== Change request ===== */
-  function openChangeDialog(orderId) {
-    $('change-dialog').dataset.orderId = orderId;
-    $('change-text').value = '';
-    $('change-error').textContent = '';
-    $('change-dialog-title').textContent = 'Request a change';
-    $('change-dialog-intro').textContent = 'Tell us what you\'d like to change about order ' + orderId + '. Our office will review your request and contact you.';
-    $('change-text-label').textContent = 'Describe the change';
-    $('change-text').placeholder = 'e.g. I need to reschedule the entry date...';
-    $('change-submit-btn').textContent = 'Send Request';
+  /* ============================================================
+     Request Change / Notifications -- panel inline de 2 columnas
+     dentro de la misma tarjeta, NO ventana emergente. Mismo patron
+     ya usado en Update Services del portal de Supervisor
+     (tech.gsocd.com): un solo panel compartido por tarjeta
+     (.col-right, id="sidepanel-<orderId>"), que se llena segun cual
+     boton se aprieta. Solo un panel abierto a la vez -- abrir uno
+     nuevo cierra cualquier otro que estuviera abierto, sea de la
+     misma orden o de otra.
+  ============================================================ */
+  let openPanelOrderId = null;
+  let openPanelType = null; // 'change' | 'notif'
 
+  function closeOpenPanel() {
+    if (openPanelOrderId) {
+      const wrap = $('ord2col-' + openPanelOrderId);
+      if (wrap) wrap.classList.remove('open');
+    }
+    openPanelOrderId = null;
+    openPanelType = null;
+  }
+
+  /* ===== Change request ===== */
+  function toggleChangePanel(orderId) {
+    if (openPanelOrderId === orderId && openPanelType === 'change') { closeOpenPanel(); return; }
+    closeOpenPanel();
+    const wrap = $('ord2col-' + orderId);
+    if (!wrap) return;
+    openPanelOrderId = orderId;
+    openPanelType = 'change';
+    wrap.classList.add('open');
+    renderChangePanel(orderId);
+  }
+
+  function renderChangePanel(orderId) {
+    const panel = $('sidepanel-' + orderId);
+    if (!panel) return;
     /* Las fechas llegan prellenadas con las que la orden tiene hoy, para
        que el cliente vea de donde parte. Si no las toca, no pide cambio
        de fecha: solo se manda lo que realmente sea distinto. */
     const o = (ordersCache || []).find(x => x.OrderID === orderId) || {};
-    $('change-entry').value = dateInputValue(o.EntryDate);
-    $('change-due').value = dateInputValue(o.DueDate);
-    $('change-entry').dataset.original = dateInputValue(o.EntryDate);
-    $('change-due').dataset.original = dateInputValue(o.DueDate);
-
-    const sel = $('change-window');
+    const entryVal = dateInputValue(o.EntryDate);
+    const dueVal = dateInputValue(o.DueDate);
     const current = o.ServiceWindow || '';
-    sel.innerHTML = ['<option value="">Keep the current window' + (current ? ' (' + current + ')' : '') + '</option>']
+    const windowOptions = ['<option value="">Keep the current window' + (current ? ' (' + current + ')' : '') + '</option>']
       .concat(SERVICE_WINDOWS.map(w => '<option value="' + escAttr(w) + '"' +
         (w === current ? ' selected' : '') + '>' + esc(w) + '</option>')).join('');
-    if (!current) sel.value = '';
 
-    $('change-dialog').classList.add('open');
+    panel.innerHTML = `
+      <p class="detail-label" style="margin-bottom:4px">Request a change</p>
+      <p style="font-size:12px;color:var(--gray);margin-bottom:18px;line-height:1.6">Tell us what you'd like to change about order ${esc(orderId)}. Our office will review your request and contact you.</p>
+      <div class="field">
+        <label>Describe the change</label>
+        <textarea id="panel-change-text" placeholder="e.g. I need to reschedule the entry date..."></textarea>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>New entry date (optional)</label>
+          <input type="date" id="panel-change-entry" value="${entryVal}" data-original="${entryVal}">
+        </div>
+        <div class="field">
+          <label>New due date (optional)</label>
+          <input type="date" id="panel-change-due" value="${dueVal}" data-original="${dueVal}">
+        </div>
+      </div>
+      <div class="field">
+        <label>Preferred service window (optional)</label>
+        <select id="panel-change-window">${windowOptions}</select>
+      </div>
+      <p style="font-size:11px;color:var(--gray);line-height:1.6;margin-bottom:16px">Dates and service windows are a request only. Nothing changes until our office approves it, and you will receive the confirmed dates by email.</p>
+      <div class="dialog-btns">
+        <button type="button" class="btn-ghost" onclick="closeOpenPanel()">Cancel</button>
+        <button type="button" class="btn-gold" id="panel-change-submit-btn" onclick="submitChangePanel('${escAttr(orderId)}')">Send Request</button>
+      </div>
+      <p class="dialog-error" id="panel-change-error"></p>`;
   }
-  function closeChangeDialog() { $('change-dialog').classList.remove('open'); }
+
+  async function submitChangePanel(orderId) {
+    const txt = $('panel-change-text').value.trim();
+    if (!txt) { $('panel-change-error').textContent = 'Please describe the change.'; return; }
+
+    const entryEl = $('panel-change-entry'), dueEl = $('panel-change-due');
+    const entryDate = entryEl.value !== (entryEl.dataset.original || '') ? entryEl.value : '';
+    const dueDate   = dueEl.value !== (dueEl.dataset.original || '') ? dueEl.value : '';
+    const serviceWindow = $('panel-change-window').value;
+
+    if (entryDate && dueDate && entryDate > dueDate) {
+      $('panel-change-error').textContent = 'The due date cannot be earlier than the entry date.';
+      return;
+    }
+
+    const btn = $('panel-change-submit-btn');
+    btn.disabled = true; btn.textContent = 'Sending…';
+    try {
+      await GS.api('/request-change', { method: 'POST', body: {
+        orderId: orderId, type: 'change', description: txt,
+        entryDate: entryDate, dueDate: dueDate, serviceWindow: serviceWindow
+      } });
+      closeOpenPanel();
+      showToast('Your request was sent. Our office will review it and you will receive the confirmed dates by email.');
+      loadOrders();
+    } catch (e) {
+      $('panel-change-error').textContent = 'Error: ' + e.message;
+    } finally {
+      btn.disabled = false; btn.textContent = 'Send Request';
+    }
+  }
 
   /* ===== Notifications por orden individual ===== */
-  let notifDialogOrder = null;
-  let notifDialogContacts = [];
-
-  async function openOrderNotifications(o) {
-    notifDialogOrder = o;
-    $('notif-order-id').textContent = o.OrderID;
-    $('notif-enabled').value      = orderToggleUiValue(o.OrderNotificationsEnabled);
-    $('notif-confirmations').value = orderToggleUiValue(o.OrderNotifyConfirmations);
-    $('notif-changes').value      = orderToggleUiValue(o.OrderNotifyChanges);
-    $('notif-updates').value      = orderToggleUiValue(o.OrderNotifyUpdates);
-    $('notif-error').textContent = '';
-
-    const needsConfirmation = !!orderNeedsConfirmationCache[o.OrderID];
-    $('notif-confirm-note').style.display = needsConfirmation ? 'block' : 'none';
-
-    try {
-      const data = await GS.api('/get-client-contacts', { method: 'POST', body: { clientId: client.clientId, includeArchived: false } });
-      notifDialogContacts = data.contacts || [];
-    } catch (e) {
-      notifDialogContacts = [];
-    }
-    let optHtml = '<option value="">Account default</option>';
-    notifDialogContacts.forEach(c => {
-      optHtml += '<option value="' + escAttr(c.id) + '"' + (o.OrderContactId === c.id ? ' selected' : '') + '>' + esc(c.name) + ' (' + esc(c.type) + ')</option>';
-    });
-    $('notif-contact').innerHTML = optHtml;
-    if (!o.OrderContactId) $('notif-contact').value = '';
-
-    $('notif-dialog').classList.add('open');
-  }
-
   function orderToggleUiValue(v) {
     if (v === 'Yes') return 'on';
     if (v === 'No') return 'off';
     return 'inherit';
   }
 
-  function closeNotifDialog() { $('notif-dialog').classList.remove('open'); }
+  function toggleNotifPanel(o) {
+    const orderId = o.OrderID;
+    if (openPanelOrderId === orderId && openPanelType === 'notif') { closeOpenPanel(); return; }
+    closeOpenPanel();
+    const wrap = $('ord2col-' + orderId);
+    if (!wrap) return;
+    openPanelOrderId = orderId;
+    openPanelType = 'notif';
+    wrap.classList.add('open');
+    renderNotifPanel(o);
+  }
 
-  async function saveOrderNotifications() {
-    if (!notifDialogOrder) return;
+  function notifSelectHtml(id, value) {
+    const v = orderToggleUiValue(value);
+    return '<select id="' + id + '">' +
+      '<option value="inherit"' + (v === 'inherit' ? ' selected' : '') + '>Account default</option>' +
+      '<option value="on"' + (v === 'on' ? ' selected' : '') + '>On</option>' +
+      '<option value="off"' + (v === 'off' ? ' selected' : '') + '>Off</option>' +
+      '</select>';
+  }
+
+  async function renderNotifPanel(o) {
+    const panel = $('sidepanel-' + o.OrderID);
+    if (!panel) return;
+    panel.innerHTML = '<p class="empty-note">Loading…</p>';
+
+    let contacts = [];
+    try {
+      const data = await GS.api('/get-client-contacts', { method: 'POST', body: { clientId: client.clientId, includeArchived: false } });
+      contacts = data.contacts || [];
+    } catch (e) { contacts = []; }
+
+    /* Si se cerro el panel o se cambio a otro mientras esto cargaba,
+       no pintar nada -- evita que una respuesta tardia sobreescriba
+       lo que el usuario ya esta viendo. */
+    if (openPanelOrderId !== o.OrderID || openPanelType !== 'notif') return;
+
+    let contactOptHtml = '<option value="">Account default</option>';
+    contacts.forEach(c => {
+      contactOptHtml += '<option value="' + escAttr(c.id) + '"' + (o.OrderContactId === c.id ? ' selected' : '') + '>' + esc(c.name) + ' (' + esc(c.type) + ')</option>';
+    });
+
+    const needsConfirmation = !!orderNeedsConfirmationCache[o.OrderID];
+
+    panel.innerHTML = `
+      <p class="detail-label" style="margin-bottom:4px">Notifications for ${esc(o.OrderID)}</p>
+      <p style="font-size:12px;color:var(--gray);margin-bottom:18px;line-height:1.6">These settings apply only to this order. Leave as "Account default" to use your regular Profile settings.</p>
+      <div class="field">
+        <label>Notifications for this order</label>
+        ${notifSelectHtml('panel-notif-enabled', o.OrderNotificationsEnabled)}
+      </div>
+      <div class="field">
+        <label>Confirmations</label>
+        ${notifSelectHtml('panel-notif-confirmations', o.OrderNotifyConfirmations)}
+        ${needsConfirmation ? '<p style="font-size:11px;color:var(--gold-dk);margin-top:6px">This order currently needs your confirmation — you\'ll still be notified about that specific request even if this is off.</p>' : ''}
+      </div>
+      <div class="field">
+        <label>Changes</label>
+        ${notifSelectHtml('panel-notif-changes', o.OrderNotifyChanges)}
+      </div>
+      <div class="field">
+        <label>Updates</label>
+        ${notifSelectHtml('panel-notif-updates', o.OrderNotifyUpdates)}
+      </div>
+      <div class="field">
+        <label>Who receives notifications for this order</label>
+        <select id="panel-notif-contact">${contactOptHtml}</select>
+      </div>
+      <div class="dialog-btns">
+        <button type="button" class="btn-ghost" onclick="closeOpenPanel()">Cancel</button>
+        <button type="button" class="btn-gold" id="panel-notif-save-btn" onclick="submitNotifPanel('${escAttr(o.OrderID)}')">Save</button>
+      </div>
+      <p class="dialog-error" id="panel-notif-error"></p>`;
+    if (!o.OrderContactId) $('panel-notif-contact').value = '';
+  }
+
+  async function submitNotifPanel(orderId) {
     const body = {
       clientId:             client.clientId,
-      orderId:               notifDialogOrder.OrderID,
-      notificationsEnabled: $('notif-enabled').value,
-      notifyConfirmations:  $('notif-confirmations').value,
-      notifyChanges:        $('notif-changes').value,
-      notifyUpdates:        $('notif-updates').value,
-      contactId:            $('notif-contact').value
+      orderId:              orderId,
+      notificationsEnabled: $('panel-notif-enabled').value,
+      notifyConfirmations:  $('panel-notif-confirmations').value,
+      notifyChanges:        $('panel-notif-changes').value,
+      notifyUpdates:        $('panel-notif-updates').value,
+      contactId:            $('panel-notif-contact').value
     };
-    $('notif-save-btn').disabled = true;
+    const btn = $('panel-notif-save-btn');
+    btn.disabled = true;
     try {
       await GS.api('/save-order-notifications', { method: 'POST', body });
-      closeNotifDialog();
+      closeOpenPanel();
       showToast('Notification settings updated for this order.');
-      delete orderDetailCache[notifDialogOrder.OrderID];
+      delete orderDetailCache[orderId];
       loadOrders();
     } catch (e) {
-      $('notif-error').textContent = e.message;
+      $('panel-notif-error').textContent = e.message;
     } finally {
-      $('notif-save-btn').disabled = false;
+      btn.disabled = false;
     }
   }
 
@@ -2241,37 +2317,9 @@ return html;
     }
   }
 
-  async function submitChange() {
-    const orderId = $('change-dialog').dataset.orderId;
-    const txt = $('change-text').value.trim();
-    if (!txt) { $('change-error').textContent = 'Please describe the change.'; return; }
-
-    const entryEl = $('change-entry'), dueEl = $('change-due');
-    const entryDate = entryEl.value !== (entryEl.dataset.original || '') ? entryEl.value : '';
-    const dueDate   = dueEl.value !== (dueEl.dataset.original || '') ? dueEl.value : '';
-    const serviceWindow = $('change-window').value;
-
-    if (entryDate && dueDate && entryDate > dueDate) {
-      $('change-error').textContent = 'The due date cannot be earlier than the entry date.';
-      return;
-    }
-
-    const btn = $('change-submit-btn');
-    btn.disabled = true; btn.textContent = 'Sending…';
-    try {
-      await GS.api('/request-change', { method: 'POST', body: {
-        orderId: orderId, type: 'change', description: txt,
-        entryDate: entryDate, dueDate: dueDate, serviceWindow: serviceWindow
-      } });
-      closeChangeDialog();
-      showToast('Your request was sent. Our office will review it and you will receive the confirmed dates by email.');
-      loadOrders();
-    } catch (e) {
-      $('change-error').textContent = 'Error: ' + e.message;
-    } finally {
-      btn.disabled = false; btn.textContent = 'Send Request';
-    }
-  }
+  /* submitChange() (vieja, basada en el modal) fue reemplazada por
+     submitChangePanel() arriba -- ver el bloque de Request Change /
+     Notifications al inicio de esta seccion. */
 
   /* ===== PDF guardado de la orden =====
      Nunca se genera aqui: se abre el archivo que ya vive en SharePoint,
@@ -2414,15 +2462,15 @@ return html;
   window.openCancelDialog = openCancelDialog;
   window.closeCancelDialog = closeCancelDialog;
   window.confirmCancel = confirmCancel;
-  window.openChangeDialog = openChangeDialog;
-  window.closeChangeDialog = closeChangeDialog;
-  window.submitChange = submitChange;
+  window.closeOpenPanel = closeOpenPanel;
+  window.toggleChangePanel = toggleChangePanel;
+  window.submitChangePanel = submitChangePanel;
   window.toggleBatchCard = toggleBatchCard;
   window.openAddBatchUnit = openAddBatchUnit;
   window.closeAddBatchUnit = closeAddBatchUnit;
   window.submitAddBatchUnit = submitAddBatchUnit;
-  window.closeNotifDialog = closeNotifDialog;
-  window.saveOrderNotifications = saveOrderNotifications;
+  window.toggleNotifPanel = toggleNotifPanel;
+  window.submitNotifPanel = submitNotifPanel;
   window.undoRequest = undoRequest;
   window.printOrder = printOrder;
   window.openOrderDocument = openOrderDocument;
