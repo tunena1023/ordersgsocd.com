@@ -1843,7 +1843,18 @@ if (client) {
     if (checkboxEl.checked) {
       /* Ya no se prende directo sin hora -- se revierte visualmente y
          se abre el reloj de una vez, obligatorio. Solo al elegir la
-         hora (onClockMinutePicked) se prende de verdad. */
+         hora (onClockMinutePicked) se prende de verdad.
+         BUG REAL: el contenedor del reloj (entryTimeBlock-safe) usa
+         la clase .ready-reveal, que es display:none hasta que
+         "ready" ya es true -- pero "ready" nunca llega a true sin
+         antes pasar por AQUI, eligiendo la hora en ESE MISMO reloj.
+         Sin esta linea, el usuario le daba clic al switch, se
+         revertia solo, y el reloj "se abria" en el sentido de que
+         el JS le ponia la clase .open al popover -- pero el propio
+         padre seguia en display:none, asi que nunca se veia nada.
+         Por eso el switch "no hacia nada" en apariencia. */
+      const block = $('entryTimeBlock-' + safe);
+      if (block) block.classList.add('show');
       checkboxEl.checked = false;
       pickerStateFor(safe).pendingActivation = true;
       toggleClockPicker(safe);
