@@ -130,7 +130,8 @@ exports.handler = async (event) => {
         ['Suite',          b.suite],
         ['City',           b.city],
         ['Zip',            b.zip],
-        ['ContactId',      newContactId !== null ? newContactId : b.contactId]
+        ['ContactId',      newContactId !== null ? newContactId : b.contactId],
+        ['OfficeHours',    b.officeHours]
       ];
       const patch = {};
       for (const [col, incoming, alsoTitle] of map) {
@@ -138,6 +139,12 @@ exports.handler = async (event) => {
         patch[col] = incoming || '';
         if (alsoTitle) patch.Title = incoming || '';
       }
+      /* Booleanos (horarios de oficina abierta por dia) aparte del map
+         generico de arriba -- ese usa "incoming || ''" para texto,
+         lo cual convertiria false (dia cerrado) en '' por accidente. */
+      const DAY_FIELDS = ['monOpen', 'tueOpen', 'wedOpen', 'thuOpen', 'friOpen', 'satOpen', 'sunOpen'];
+      const DAY_COLUMNS = { monOpen: 'MonOpen', tueOpen: 'TueOpen', wedOpen: 'WedOpen', thuOpen: 'ThuOpen', friOpen: 'FriOpen', satOpen: 'SatOpen', sunOpen: 'SunOpen' };
+      DAY_FIELDS.forEach(f => { if (b[f] !== undefined) patch[DAY_COLUMNS[f]] = !!b[f]; });
       if (b.archived !== undefined) patch.Archived = !!b.archived;
 
       /* Si la direccion en si cambio (Address/City/Zip), las
@@ -187,6 +194,14 @@ exports.handler = async (event) => {
       City:           b.city           || '',
       Zip:            b.zip            || '',
       ContactId:      newContactIdOnCreate || '',
+      MonOpen:        !!b.monOpen,
+      TueOpen:        !!b.tueOpen,
+      WedOpen:        !!b.wedOpen,
+      ThuOpen:        !!b.thuOpen,
+      FriOpen:        !!b.friOpen,
+      SatOpen:        !!b.satOpen,
+      SunOpen:        !!b.sunOpen,
+      OfficeHours:    b.officeHours    || '',
       Archived:       b.archived !== undefined ? !!b.archived : false
     };
     if (geo) { fields.Latitude = geo.lat; fields.Longitude = geo.lon; }

@@ -55,6 +55,14 @@ exports.handler = async (event) => {
           city:           f.City           || '',
           zip:            f.Zip            || '',
           contactId:      f.ContactId      || '',
+          monOpen:        truthy(f.MonOpen),
+          tueOpen:        truthy(f.TueOpen),
+          wedOpen:        truthy(f.WedOpen),
+          thuOpen:        truthy(f.ThuOpen),
+          friOpen:        truthy(f.FriOpen),
+          satOpen:        truthy(f.SatOpen),
+          sunOpen:        truthy(f.SunOpen),
+          officeHours:    f.OfficeHours    || '',
           archived:       truthy(f.Archived)
         };
       })

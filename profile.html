@@ -427,6 +427,9 @@ if (client) {
           field('city', 'City', b.city) +
           field('zip', 'Zip', b.zip) +
         '</div>' +
+        '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:20px 0 10px;padding-top:16px;border-top:1px solid var(--border)">Office hours at this building</div>' +
+        '<p style="font-size:11px;color:var(--gray);margin-bottom:10px">So our crew knows when someone will be there to let them in.</p>' +
+        officeHoursFieldsHtml(b) +
         '<button class="btn-gold" style="width:100%;margin-top:6px" onclick="saveBuildingEdit(\'' + esc(b.id) + '\')">Save</button>' +
         '<p class="dialog-error" id="ctl-error"></p>';
     }
@@ -445,6 +448,24 @@ if (client) {
 
   function field(key, label, value, fullWidth) {
     return '<div class="field-small"' + (fullWidth ? ' style="grid-column:1/-1"' : '') + '><label>' + label + '</label><input type="text" id="ctl-' + key + '" value="' + esc(value || '') + '"></div>';
+  }
+
+  const DAY_FIELDS = ['monOpen', 'tueOpen', 'wedOpen', 'thuOpen', 'friOpen', 'satOpen', 'sunOpen'];
+  const DAY_LABELS = { monOpen: 'Mon', tueOpen: 'Tue', wedOpen: 'Wed', thuOpen: 'Thu', friOpen: 'Fri', satOpen: 'Sat', sunOpen: 'Sun' };
+
+  /* Mismos campos que ya existen en Developer (Opcion E aprobada) --
+     ahora tambien editables por el propio cliente desde su perfil,
+     no solo por la oficina desde el panel interno. */
+  function officeHoursFieldsHtml(b) {
+    const dayCells = DAY_FIELDS.map(f =>
+      '<label style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10px;color:var(--gray)">' +
+        DAY_LABELS[f] +
+        '<input type="checkbox" id="ctl-' + f + '" ' + (b[f] ? 'checked' : '') + '>' +
+      '</label>'
+    ).join('');
+    return '<div style="display:flex;gap:10px;justify-content:space-between;margin-bottom:14px;max-width:320px">' + dayCells + '</div>' +
+      '<div class="field-small" style="margin-bottom:14px"><label>Shared office hours (optional)</label>' +
+      '<input type="text" id="ctl-officeHours" placeholder="e.g. 9 AM – 5 PM" value="' + esc(b.officeHours || '') + '"></div>';
   }
 
   function openNotifications() {
@@ -584,8 +605,10 @@ if (client) {
       address:        $f('address').value.trim(),
       suite:          $f('suite').value.trim(),
       city:           $f('city').value.trim(),
-      zip:            $f('zip').value.trim()
+      zip:            $f('zip').value.trim(),
+      officeHours:    $f('officeHours') ? $f('officeHours').value.trim() : ''
     };
+    DAY_FIELDS.forEach(f => { if ($f(f)) body[f] = $f(f).checked; });
     const isNew = buildingId === 'new' || !buildingId;
     if (!isNew) body.addressId = buildingId;
 
@@ -717,6 +740,9 @@ if (client) {
         field('zip', 'Zip', '') +
         field('phone', 'Phone (optional)', '') +
       '</div>' +
+      '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:20px 0 10px;padding-top:16px;border-top:1px solid var(--border)">Office hours at this building</div>' +
+      '<p style="font-size:11px;color:var(--gray);margin-bottom:10px">So our crew knows when someone will be there to let them in. You can also set this later.</p>' +
+      officeHoursFieldsHtml({}) +
       '<button class="btn-gold" style="width:100%;margin-top:6px" onclick="saveBuildingEdit(\'new\')">Save</button>' +
       '<p class="dialog-error" id="ctl-error"></p>';
   }
