@@ -2261,8 +2261,7 @@ return html;
      Nunca se genera aqui: se abre el archivo que ya vive en SharePoint,
      idéntico al que el cliente recibió por correo. */
   function openOrderDocument(orderId) {
-    window.open('/api/get-order-document?orderId=' + encodeURIComponent(orderId) +
-                '&clientId=' + encodeURIComponent(client.clientId || ''), '_blank');
+    window.open('/api/get-order-document?orderId=' + encodeURIComponent(orderId), '_blank');
   }
 
   /* ===== Print PDF (History) — CONECTADO al botón de las Completed.
