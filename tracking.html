@@ -900,10 +900,10 @@ if (client) {
     return '<span class="occupied-badge"><span class="occupied-dot"></span>Occupied unit</span>';
   }
 
-  /* Badge morado de "necesita algo de la oficina" -- Exteriors
-     unicamente. Le confirma al cliente que su pedido quedo anotado. */
+  /* Badge morado de "necesita algo de la oficina" -- aplica a las 3
+     divisiones (Janitorial, Renovations, Exteriors). Le confirma al
+     cliente que su pedido quedo anotado. */
   function officeNeedBadgeHtml(o) {
-    if (String(o.Division || '').toLowerCase() !== 'exteriors') return '';
     if (!o.NeedsOfficeAccess) return '';
     return '<span class="office-need-badge"><span class="office-need-dot"></span>Office access needed</span>';
   }
@@ -1040,7 +1040,7 @@ if (client) {
       const noticeHtml = delayNoticeHtml(o);
 
       const dirtLine = o.DirtLevel ? `<p class="meta-line">Overall condition: <strong style="color:var(--black)">${esc(o.DirtLevel)}</strong></p>` : '';
-      const officeNeedLine = (String(o.Division || '').toLowerCase() === 'exteriors' && o.NeedsOfficeAccess && o.OfficeNeedNotes)
+      const officeNeedLine = (o.NeedsOfficeAccess && o.OfficeNeedNotes)
         ? `<p class="meta-line" style="padding:10px 12px;background:#F0E8FA;border-radius:4px;border-left:3px solid #6B3FA0"><b style="color:#6B3FA0">What you told us you need from the office:</b> ${esc(o.OfficeNeedNotes)}</p>`
         : '';
 
