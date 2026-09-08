@@ -5,6 +5,16 @@
    - Validación de email duplicado antes de crear
    - Content-Type OBLIGATORIO en el POST (sin él Graph
      responde "Invalid request")
+
+   HALLAZGO DE SEGURIDAD CORREGIDO: antes, si el email ya pertenecia a
+   OTRO cliente, este endpoint regresaba valid:true junto con los
+   datos de esa cuenta -- y el frontend nunca revisaba valid, asi que
+   cualquiera que supiera el email de otro cliente entraba directo a
+   su cuenta con solo "registrarse", sin contrasena, sin nada. Ahora
+   regresa valid:false + duplicateEmail:true, sin ningun dato de la
+   cuenta ajena -- el frontend debe ofrecer recuperar el Client ID por
+   correo (mecanismo ya existente, recover-client-id.js), nunca
+   iniciar sesion directo.
 ============================================================ */
 
 const { CLIENTS_LIST, graphFetch, siteListPath, jsonResponse } = require('./lib/graph');
@@ -43,26 +53,18 @@ exports.handler = async (event) => {
       return jsonResponse(400, { error: 'Missing required fields' });
     }
 
-    /* Evitar duplicados por email */
+    /* Evitar duplicados por email -- NUNCA regresar los datos de la
+       cuenta existente, ni dejar pasar como si fuera valida. */
     const rows = await fetchAll(CLIENTS_LIST);
     const wantedEmail = String(contact).trim().toLowerCase();
     const dup = (rows || []).find(it =>
       it.fields && String(it.fields.Contact || '').trim().toLowerCase() === wantedEmail
     );
     if (dup) {
-      const f = dup.fields;
       return jsonResponse(200, {
-        valid: true,
-        existing: true,
-        clientId: f.ClientID,
-        businessName: f.Title,
-        contactPerson: f.ClientName || '',
-        address: f.Address || '',
-        suite: f.Suite || '',
-        city: f.City || '',
-        zip: f.Zip || '',
-        contact: f.Contact || '',
-        phone: f.Phone || ''
+        valid: false,
+        duplicateEmail: true,
+        error: 'An account with this email address already exists.'
       });
     }
 

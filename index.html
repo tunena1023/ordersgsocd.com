@@ -184,6 +184,7 @@ style="object-fit:contain">
   </div>
   <button class="btn-gold" onclick="submitRegistration()">Complete Registration</button>
   <p id="register-error" style="font-size:11px;color:#B33A3A;margin-top:10px"></p>
+  <button class="link-btn" id="register-recover-btn" style="display:none" onclick="goRecoverFromRegister()">Recover my Client ID</button>
   <button class="link-btn" onclick="showRegister(false)">Back to Login</button>
 </div>
 <!-- RECOVERY GATE (Forgot ID) -->
@@ -243,6 +244,8 @@ function showRegister(show) {
   document.getElementById('login-gate').style.display    = show ? 'none'  : 'block';
   document.getElementById('register-gate').style.display = show ? 'block' : 'none';
   document.getElementById('recover-gate').style.display  = 'none';
+  document.getElementById('register-error').textContent = '';
+  document.getElementById('register-recover-btn').style.display = 'none';
 }
 
 function showRecover(show) {
@@ -311,6 +314,7 @@ async function submitRegistration() {
   const contact       = document.getElementById('reg-email').value.trim();
   const phone         = document.getElementById('reg-phone').value.trim();
   const errorEl = document.getElementById('register-error');
+  const recoverBtn = document.getElementById('register-recover-btn');
 
   if (!businessName || !contactPerson || !address || !city || !zip || !contact || !phone) {
     errorEl.textContent = 'Please fill in all required fields.';
@@ -318,12 +322,25 @@ async function submitRegistration() {
   }
 
   const btn = document.querySelector('#register-gate .btn-gold');
-  btn.disabled = true; btn.textContent = 'Registering…'; errorEl.textContent = '';
+  btn.disabled = true; btn.textContent = 'Registering…'; errorEl.textContent = ''; recoverBtn.style.display = 'none';
   try {
     const result = await GS.api('/register-client', {
       method: 'POST',
       body: { businessName, contactPerson, address, suite, city, zip, contact, phone }
     });
+    /* CRITICO: revisar valid antes de iniciar sesion -- un email
+       duplicado NUNCA debe dejar entrar a la cuenta de otro cliente.
+       Se ofrece recuperar el Client ID (mecanismo ya existente) en
+       vez de iniciar sesion directo. */
+    if (!result.valid) {
+      if (result.duplicateEmail) {
+        errorEl.textContent = 'An account with this email already exists.';
+        recoverBtn.style.display = 'inline-block';
+      } else {
+        errorEl.textContent = result.error || 'Could not complete registration.';
+      }
+      return;
+    }
     GS.session.set(result);
     location.href = 'customer.html';
   } catch (err) {
@@ -332,6 +349,16 @@ async function submitRegistration() {
   } finally {
     btn.disabled = false; btn.textContent = 'Complete Registration';
   }
+}
+
+/* Desde el mensaje de "ya existe una cuenta con este email" -- lleva
+   directo al panel de recuperacion, con el mismo email ya puesto
+   (el cliente solo confirma "Send My Client Number", sin tener que
+   escribirlo de nuevo). */
+function goRecoverFromRegister() {
+  const email = document.getElementById('reg-email').value.trim();
+  showRecover(true);
+  document.getElementById('recover-email').value = email;
 }
 </script>
 </body>
