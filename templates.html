@@ -94,43 +94,12 @@
   .mode-toggle button.active { background: var(--gold); color: var(--black); }
   .mode-toggle button:not(:last-child) { border-right: 1.5px solid var(--border); }
 
-  .res-toggle-wrap { display: flex; align-items: center; gap: 8px; margin: 16px 0; }
-  .res-toggle-label { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--gray); }
-  .svc-toggle { position: relative; display: inline-block; width: 40px; height: 22px; vertical-align: middle; cursor: pointer; }
-  .svc-toggle input { opacity: 0; width: 0; height: 0; }
-  .svc-toggle-track { position: absolute; inset: 0; background: var(--border); border-radius: 22px; transition: background .2s; }
-  .svc-toggle-track::before { content: ""; position: absolute; height: 18px; width: 18px; left: 2px; top: 2px; background: var(--white); border-radius: 50%; transition: transform .2s; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
-  .svc-toggle input:checked + .svc-toggle-track { background: var(--gold); }
-  .svc-toggle input:checked + .svc-toggle-track::before { transform: translateX(18px); }
-
-  .svc-toolbar-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
-  .svc-search { flex: 1; min-width: 140px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 3px; font-size: 13px; font-family: 'Inter', sans-serif; }
-  .svc-toolbar-selall { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-  .selall-label { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--gray); }
-  .lvl-toggle3 { position: relative; display: flex; width: 180px; height: 34px; background: var(--border); border-radius: 17px; padding: 3px; flex-shrink: 0; }
-  .lvl-toggle3-thumb { position: absolute; top: 3px; left: 3px; width: calc(33.333% - 2px); height: calc(100% - 6px); background: var(--gold); border-radius: 14px; transition: transform .25s cubic-bezier(.4,0,.2,1), opacity .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2); opacity: 0; }
-  .lvl-toggle3-opt { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--gray); cursor: pointer; z-index: 1; transition: color .25s; }
-  .lvl-toggle3-opt.active { color: var(--black); }
-
-  .svc-chip-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-  .svc-chip-btn { border: 1px solid var(--border); background: var(--white); padding: 10px 12px; font-size: 12px; text-align: left; cursor: pointer; border-radius: 2px; font-family: 'Inter', sans-serif; color: var(--black); }
-  .svc-chip-btn.active { background: var(--gold); border-color: var(--gold); font-weight: 700; }
-
-  .jan-row-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-  .jan-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 10px; border: 1px solid var(--border); border-radius: 3px; background: var(--white); transition: border-color .15s, background .15s; }
-  .jan-row.selected { border-color: var(--gold); background: #FEFBF3; }
-  .jan-row-name { font-size: 12px; }
-  .lvl-group { display: flex; border: 1px solid var(--border); border-radius: 20px; overflow: hidden; flex-shrink: 0; }
-  .lvl-btn { width: 34px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; cursor: pointer; background: var(--white); color: var(--gray); border-right: 1px solid var(--border); }
-  .lvl-btn:last-child { border-right: none; }
-  .lvl-btn.active { background: var(--gold); color: var(--black); }
-  .lvl-btn:hover:not(.active) { background: var(--off); }
+  /* ===== Selector de servicios: gsocd-shared/service-picker ===== */
 
   .flash-empty { font-size: 12px; color: var(--gray); font-style: italic; padding: 20px 0; }
 
   .save-row { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border); max-width: 420px; }
 
-  @media (max-width: 900px) { .svc-chip-grid, .jan-row-grid { grid-template-columns: 1fr 1fr; } }
   @media (max-width: 640px) {
     nav, .portal-header, .tabs, .wrap, footer { padding-left: 20px; padding-right: 20px; }
     .tpl-card { flex-direction: column; align-items: flex-start; }
@@ -222,6 +191,7 @@
 <div class="toast" id="toast" style="position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--black);color:var(--white);padding:12px 22px;border-radius:4px;font-size:13px;opacity:0;pointer-events:none;transition:all .3s;z-index:500"></div>
 
 <script src="shared.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.2.0/service-picker/service-picker.js"></script>
 <script>
 const client = GS.requireSession();
 if (client) {
@@ -330,8 +300,7 @@ if (client) {
   let propertyType = 'Commercial';
   let selected = {};
   let svcLevel = {};
-  let selAllActive = null;
-  let editingTemplateId = null;   /* null = crear nuevo; id = actualizando este template */
+    let editingTemplateId = null;   /* null = crear nuevo; id = actualizando este template */
 
   function svcKey(p, n) { return p + '|' + n; }
 
@@ -342,7 +311,7 @@ if (client) {
     editingTemplateId = null;
     $('tpl-name').value = '';
     currentDiv = 'Janitorial';
-    selected = {}; svcLevel = {}; propertyType = 'Commercial'; selAllActive = null;
+    selected = {}; svcLevel = {}; propertyType = 'Commercial';
     document.querySelectorAll('#div-toggle button').forEach(b => b.classList.toggle('active', b.dataset.div === currentDiv));
     showSubview('add');
     renderPicker();
@@ -357,7 +326,7 @@ if (client) {
     editingTemplateId = id;
     $('tpl-name').value = t.name;
     currentDiv = t.division || 'Janitorial';
-    selected = {}; svcLevel = {}; propertyType = 'Commercial'; selAllActive = null;
+    selected = {}; svcLevel = {}; propertyType = 'Commercial';
     (t.services || []).forEach(s => {
       const cat = s.Category || 'Commercial';
       if (!selected[cat]) selected[cat] = {};
@@ -377,130 +346,32 @@ if (client) {
     currentDiv = div;
     document.querySelectorAll('#div-toggle button').forEach(b => b.classList.remove('active'));
     el.classList.add('active');
-    selected = {}; svcLevel = {}; propertyType = 'Commercial'; selAllActive = null;
+    selected = {}; svcLevel = {}; propertyType = 'Commercial';
     renderPicker();
   }
+
+  let tplPicker = null;
 
   function renderPicker() {
     const container = $('tpl-picker');
     if (!catalogCache.length) { container.innerHTML = '<p class="flash-empty">No services available right now — please check back shortly.</p>'; return; }
     const isJan = currentDiv === 'Janitorial';
-    container.innerHTML = `
-      <div class="res-toggle-wrap">
-        <span class="res-toggle-label">Commercial</span>
-        <label class="svc-toggle">
-          <input type="checkbox" ${propertyType === 'Residential' ? 'checked' : ''} onchange="setPropertyType(this.checked ? 'Residential' : 'Commercial')">
-          <span class="svc-toggle-track"></span>
-        </label>
-        <span class="res-toggle-label">Residential</span>
-      </div>
-      <div class="svc-toolbar-row">
-        <input type="text" class="svc-search" id="svc-search" placeholder="Search services…" oninput="renderGrid()">
-        <div class="svc-toolbar-selall" id="selall-group" style="display:${isJan ? '' : 'none'}">
-          <span class="selall-label">Select all</span>
-          <div class="lvl-toggle3" id="selAllToggle">
-            <div class="lvl-toggle3-thumb" id="selAllThumb"></div>
-            <div class="lvl-toggle3-opt" onclick="selectAllLevel('Level 1',0)">L1</div>
-            <div class="lvl-toggle3-opt" onclick="selectAllLevel('Level 2',1)">L2</div>
-            <div class="lvl-toggle3-opt" onclick="selectAllLevel('Level 3',2)">L3</div>
-          </div>
-        </div>
-      </div>
-      <div id="svc-grid"></div>`;
-    renderGrid();
-  }
 
-  function renderGrid() {
-    const grid = $('svc-grid');
-    const isJan = currentDiv === 'Janitorial';
-    const q = ($('svc-search').value || '').trim().toLowerCase();
-    const selectedNames = new Set(Object.keys(selected[propertyType] || {}));
-    /* Mismo criterio ya usado en Edit de Active Orders (Admin) y
-       Update Services (tech): los servicios YA elegidos en este
-       template siempre se ven, listos para quitar o cambiar de nivel;
-       el resto del catalogo espera a que se escriba algo, para no
-       aventar decenas de servicios de un jalon. */
-    let list = catalogCache.filter(s => s.division.toLowerCase() === currentDiv.toLowerCase() && s.propertyType === propertyType);
-    list = list.filter(s => selectedNames.has(s.serviceName) || (q && s.serviceName.toLowerCase().includes(q)));
-    list.sort((a, b) => a.serviceName.localeCompare(b.serviceName));
-
-    if (!list.length) { grid.className = ''; grid.innerHTML = '<p class="flash-empty">Type to search services…</p>'; return; }
-
-    if (isJan) {
-      grid.className = 'jan-row-grid';
-      const levels = ['Level 1', 'Level 2', 'Level 3'];
-      grid.innerHTML = list.map(s => {
-        const sel = String((selected[propertyType] || {})[s.serviceName]) === String(s.sku);
-        const lvl = sel ? svcLevel[svcKey(propertyType, s.serviceName)] : null;
-        return '<div class="jan-row' + (lvl ? ' selected' : '') + '">' +
-          '<span class="jan-row-name">' + esc(s.serviceName) + '</span>' +
-          '<div class="lvl-group">' +
-            levels.map((l, i) => '<div class="lvl-btn' + (lvl === l ? ' active' : '') + '" onclick="pickLevel(\'' + s.sku.replace(/'/g, "\\'") + '\',\'' + l + '\')">L' + (i + 1) + '</div>').join('') +
-          '</div></div>';
-      }).join('');
-    } else {
-      grid.className = 'svc-chip-grid';
-      grid.innerHTML = list.map(s =>
-        '<button type="button" class="svc-chip-btn' + (String((selected[propertyType] || {})[s.serviceName]) === String(s.sku) ? ' active' : '') + '" onclick="toggleChip(\'' + s.sku.replace(/'/g, "\\'") + '\')">' + esc(s.serviceName) + '</button>'
-      ).join('');
-    }
-  }
-
-  function setPropertyType(type) {
-    propertyType = type;
-    renderGrid();
-  }
-
-  function toggleChip(sku) {
-    const svc = catalogCache.find(s => String(s.sku) === String(sku));
-    if (!svc) return;
-    if (!selected[propertyType]) selected[propertyType] = {};
-    if (String(selected[propertyType][svc.serviceName]) === String(sku)) {
-      delete selected[propertyType][svc.serviceName];
-      if (!Object.keys(selected[propertyType]).length) delete selected[propertyType];
-    } else {
-      selected[propertyType][svc.serviceName] = sku;
-    }
-    renderGrid();
-  }
-
-  function pickLevel(sku, level) {
-    const svc = catalogCache.find(s => String(s.sku) === String(sku));
-    if (!svc) return;
-    const k = svcKey(propertyType, svc.serviceName);
-    if (!selected[propertyType]) selected[propertyType] = {};
-    const already = String(selected[propertyType][svc.serviceName]) === String(sku) && svcLevel[k] === level;
-    if (already) {
-      delete selected[propertyType][svc.serviceName];
-      if (!Object.keys(selected[propertyType]).length) delete selected[propertyType];
-      delete svcLevel[k];
-    } else {
-      selected[propertyType][svc.serviceName] = sku;
-      svcLevel[k] = level;
-    }
-    renderGrid();
-  }
-
-  function selectAllLevel(level, idx) {
-    const q = ($('svc-search').value || '').trim().toLowerCase();
-    if (!selected[propertyType]) selected[propertyType] = {};
-    const selectedNames = new Set(Object.keys(selected[propertyType] || {}));
-    const visible = catalogCache.filter(s => s.division.toLowerCase() === currentDiv.toLowerCase() && s.propertyType === propertyType &&
-      (selectedNames.has(s.serviceName) || (q && s.serviceName.toLowerCase().includes(q))));
-    const thumb = $('selAllThumb');
-
-    if (selAllActive === idx) {
-      visible.forEach(s => { delete selected[propertyType][s.serviceName]; delete svcLevel[svcKey(propertyType, s.serviceName)]; });
-      selAllActive = null;
-      thumb.style.opacity = '0';
-    } else {
-      visible.forEach(s => { selected[propertyType][s.serviceName] = s.sku; svcLevel[svcKey(propertyType, s.serviceName)] = level; });
-      selAllActive = idx;
-      thumb.style.opacity = '1';
-      thumb.style.transform = 'translateX(' + (idx * 100) + '%)';
-    }
-    document.querySelectorAll('#selAllToggle .lvl-toggle3-opt').forEach((el, i) => el.classList.toggle('active', i === selAllActive));
-    renderGrid();
+    tplPicker = GSServicePicker.mount('template-editor', container, {
+      catalog: catalogCache,
+      division: currentDiv,
+      mode: isJan ? 'levels' : 'toggle',
+      filterMode: 'selected-plus-search',
+      showSelectAll: isJan,
+      propertyType: propertyType,
+      initialSelected: selected,
+      initialLevels: svcLevel,
+      onChange: function (sel, lvl, propType) {
+        selected = sel;
+        svcLevel = lvl;
+        propertyType = propType;
+      }
+    });
   }
 
   function buildServicesArray() {
@@ -534,8 +405,8 @@ if (client) {
       console.log('save-template response:', res);
       showToast(editingTemplateId ? 'Template "' + name + '" updated.' : 'Template "' + name + '" saved.');
       $('tpl-name').value = '';
-      selected = {}; svcLevel = {}; selAllActive = null; editingTemplateId = null;
-      renderGrid();
+      selected = {}; svcLevel = {}; editingTemplateId = null;
+      if (tplPicker) tplPicker.setSelected({}, {});
       showSubview('saved');
     } catch (e) {
       console.error('save-template failed:', e);
