@@ -430,7 +430,7 @@ if (client) {
       grid.className = 'jan-row-grid';
       const levels = ['Level 1', 'Level 2', 'Level 3'];
       grid.innerHTML = list.map(s => {
-        const sel = (selected[propertyType] || {})[s.serviceName] === s.sku;
+        const sel = String((selected[propertyType] || {})[s.serviceName]) === String(s.sku);
         const lvl = sel ? svcLevel[svcKey(propertyType, s.serviceName)] : null;
         return '<div class="jan-row' + (lvl ? ' selected' : '') + '">' +
           '<span class="jan-row-name">' + esc(s.serviceName) + '</span>' +
@@ -441,7 +441,7 @@ if (client) {
     } else {
       grid.className = 'svc-chip-grid';
       grid.innerHTML = list.map(s =>
-        '<button type="button" class="svc-chip-btn' + ((selected[propertyType] || {})[s.serviceName] === s.sku ? ' active' : '') + '" onclick="toggleChip(\'' + s.sku.replace(/'/g, "\\'") + '\')">' + esc(s.serviceName) + '</button>'
+        '<button type="button" class="svc-chip-btn' + (String((selected[propertyType] || {})[s.serviceName]) === String(s.sku) ? ' active' : '') + '" onclick="toggleChip(\'' + s.sku.replace(/'/g, "\\'") + '\')">' + esc(s.serviceName) + '</button>'
       ).join('');
     }
   }
@@ -452,10 +452,10 @@ if (client) {
   }
 
   function toggleChip(sku) {
-    const svc = catalogCache.find(s => s.sku === sku);
+    const svc = catalogCache.find(s => String(s.sku) === String(sku));
     if (!svc) return;
     if (!selected[propertyType]) selected[propertyType] = {};
-    if (selected[propertyType][svc.serviceName] === sku) {
+    if (String(selected[propertyType][svc.serviceName]) === String(sku)) {
       delete selected[propertyType][svc.serviceName];
       if (!Object.keys(selected[propertyType]).length) delete selected[propertyType];
     } else {
@@ -465,11 +465,11 @@ if (client) {
   }
 
   function pickLevel(sku, level) {
-    const svc = catalogCache.find(s => s.sku === sku);
+    const svc = catalogCache.find(s => String(s.sku) === String(sku));
     if (!svc) return;
     const k = svcKey(propertyType, svc.serviceName);
     if (!selected[propertyType]) selected[propertyType] = {};
-    const already = selected[propertyType][svc.serviceName] === sku && svcLevel[k] === level;
+    const already = String(selected[propertyType][svc.serviceName]) === String(sku) && svcLevel[k] === level;
     if (already) {
       delete selected[propertyType][svc.serviceName];
       if (!Object.keys(selected[propertyType]).length) delete selected[propertyType];
