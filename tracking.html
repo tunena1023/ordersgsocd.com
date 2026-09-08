@@ -2414,6 +2414,15 @@ return html;
   window.confirmNotReady = confirmNotReady;
   window.saveExpectedReadyDate = saveExpectedReadyDate;
   window.showSection = showSection;
+  /* async function llamada por onchange="..." (atributo HTML inline)
+     -- las 'function' normales dentro de este bloque if(client){} SI
+     se filtran solas al scope global por compatibilidad legacy de
+     navegadores (Annex B), pero las 'async function' estan EXCLUIDAS
+     a proposito de ese mecanismo. Sin esto, el switch de "is someone
+     living there" tronaba en silencio (onUnitOccupiedToggle is not
+     defined) y nunca guardaba nada -- por eso nunca pasaba de No a
+     Yes de verdad. */
+  window.onUnitOccupiedToggle = onUnitOccupiedToggle;
 
 }
 </script>
