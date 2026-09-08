@@ -132,8 +132,19 @@ exports.handler = async (event) => {
       return jsonResponse(400, { error: 'Please add a short note explaining why you\'re turning this off.' });
     }
 
+    /* Item 18 -- "unidad no lista": apagar el switch con nota ES el
+       reporte del cliente. Se marca el delay reason de una vez (dispara
+       el aviso de posible delay fee al cliente, ya construido) --
+       la oficina decide despues, al revisarlo desde Admin, si la fecha
+       real necesita cambiar (la orden regresa a Scheduling) o solo fue
+       cuestion de horas (se queda asignada). Ver admin-update-order.js
+       y admin-approve-order.js. */
     await Promise.all([
-      updateListItemByItemId(ORDERS_LIST, orderItem.id, { MaterialsReady: false }),
+      updateListItemByItemId(ORDERS_LIST, orderItem.id, {
+        MaterialsReady: false,
+        DelayReasonType: 'Site not ready',
+        DelayReasonNotes: offNote
+      }),
       createListItem(ORDER_HISTORY_LIST, {
         Title: orderId + '-notready',
         OrderID: orderId,

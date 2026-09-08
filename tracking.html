@@ -425,10 +425,10 @@
 
 <div class="dialog-overlay" id="change-dialog">
   <div class="dialog-panel">
-    <h3>Request a change</h3>
-    <p>Tell us what you'd like to change about order <strong id="change-order-id"></strong>. Our office will review your request and contact you.</p>
+    <h3 id="change-dialog-title">Request a change</h3>
+    <p id="change-dialog-intro">Tell us what you'd like to change about this order. Our office will review your request and contact you.</p>
     <div class="field">
-      <label>Describe the change</label>
+      <label id="change-text-label">Describe the change</label>
       <textarea id="change-text" placeholder="e.g. I need to reschedule the entry date..."></textarea>
     </div>
     <div class="field-row">
@@ -2057,9 +2057,14 @@ return html;
 
   /* ===== Change request ===== */
   function openChangeDialog(orderId) {
-    $('change-order-id').textContent = orderId;
+    $('change-dialog').dataset.orderId = orderId;
     $('change-text').value = '';
     $('change-error').textContent = '';
+    $('change-dialog-title').textContent = 'Request a change';
+    $('change-dialog-intro').textContent = 'Tell us what you\'d like to change about order ' + orderId + '. Our office will review your request and contact you.';
+    $('change-text-label').textContent = 'Describe the change';
+    $('change-text').placeholder = 'e.g. I need to reschedule the entry date...';
+    $('change-submit-btn').textContent = 'Send Request';
 
     /* Las fechas llegan prellenadas con las que la orden tiene hoy, para
        que el cliente vea de donde parte. Si no las toca, no pide cambio
@@ -2226,7 +2231,7 @@ return html;
   }
 
   async function submitChange() {
-    const orderId = $('change-order-id').textContent;
+    const orderId = $('change-dialog').dataset.orderId;
     const txt = $('change-text').value.trim();
     if (!txt) { $('change-error').textContent = 'Please describe the change.'; return; }
 
