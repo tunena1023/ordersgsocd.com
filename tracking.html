@@ -43,8 +43,8 @@
   .portal-header strong { color: var(--black); }
   .btn-signout { font-size: 11px; color: var(--gray); background: none; border: none; cursor: pointer; letter-spacing: .06em; text-decoration: underline; }
 
-  .tabs { display: flex; border-bottom: 1px solid var(--border); padding: 0 48px; background: var(--white); }
-  .tab { padding: 16px 20px; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--gray); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color .2s, border-color .2s; text-decoration: none; display: inline-block; }
+  .tabs { display: flex; border-bottom: 1px solid var(--border); padding: 0 48px; background: var(--white); overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .tab { padding: 16px 20px; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--gray); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color .2s, border-color .2s; text-decoration: none; display: inline-block; flex-shrink: 0; white-space: nowrap; }
   .tab.active { color: var(--black); border-bottom-color: var(--gold); }
 
   .tab-panel { display: none; }
