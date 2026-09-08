@@ -713,15 +713,6 @@ if (client) {
     } catch (e) { return null; }
   }
 
-  function datesPayloadText(o) {
-    if (!o) return '';
-    const parts = [];
-    if (o.entryDate) parts.push('Entry ' + fmtDate(o.entryDate));
-    if (o.dueDate) parts.push('Due ' + fmtDate(o.dueDate));
-    if (o.serviceWindow) parts.push(o.serviceWindow);
-    return parts.join(' · ');
-  }
-
   /* ===== Formato unificado de renglones de cambio (aprobado con mini) =====
      Un solo diseño para TODO tipo de cambio: icono + etiqueta + viejo
      tachado + flecha + nuevo en dorado. Si no cambió, se ve en negro
@@ -1248,13 +1239,6 @@ if (client) {
     }
   }
 
-  function levelOf(sub) {
-    const s = (sub || '').toLowerCase();
-    if (/(deep|full|heavy|two|replace|repair)/.test(s)) return 3;
-    if (/(wipe|scrub|disinfect|detail|medium|one|mop|spot)/.test(s)) return 2;
-    return 1;
-  }
-
   /* Catalogo nuevo: SubOption ya es el SKU interno (ej. "222-68"), no
      un texto legible -- nunca se muestra tal cual. Para esos casos el
      nivel (si aplica, solo Janitorial) viene aparte en el campo Level.
@@ -1587,11 +1571,6 @@ if (client) {
       };
     }
     return pickerState[safe];
-  }
-
-  function closeAllPickers(safe) {
-    document.getElementById('calPop-' + safe)?.classList.remove('open');
-    document.getElementById('clockPop-' + safe)?.classList.remove('open');
   }
 
   function toggleCalPicker(safe) {

@@ -845,23 +845,6 @@ if (client) {
 
   const $ = id => document.getElementById(id);
 
-  function placeholderFor(cat) {
-    return 'data:image/svg+xml;utf8,' + encodeURIComponent(
-      '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="600">' +
-      '<rect width="400" height="600" fill="#EFEDE7"/>' +
-      '<text x="200" y="290" font-family="Arial" font-size="18" fill="#8C6F2A" text-anchor="middle" font-weight="bold">No image for:</text>' +
-      '<text x="200" y="320" font-family="Arial" font-size="20" fill="#111" text-anchor="middle">' + cat + '</text>' +
-      '</svg>'
-    );
-  }
-
-  function levelOf(sub) {
-    const s = (sub || '').toLowerCase();
-    if (/(deep|full|heavy|two|replace|repair)/.test(s)) return 3;
-    if (/(wipe|scrub|disinfect|detail|medium|one|mop|spot)/.test(s)) return 2;
-    return 1;
-  }
-
   fillAccount(client);
   GS.applyLogo();
   refreshOrdersCount();
