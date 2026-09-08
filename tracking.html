@@ -163,52 +163,7 @@
   .ready-reveal { display: none; }
   .ready-reveal.show { display: block; }
 
-  /* ============================================================
-     RELOJ Y CALENDARIO OFICIALES -- aprobados con mini, mismo
-     diseno en cualquier lugar del proyecto que necesite elegir
-     hora o fecha. Reemplazan los pickers nativos del navegador.
-     Se excluyen entre si (abrir uno cierra el otro) via las
-     funciones openClockPicker/openCalPicker mas abajo.
-  ============================================================ */
-  .picker-popover { display: none; position: absolute; margin-top: 8px; background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 18px; box-shadow: 0 6px 24px rgba(0,0,0,.18); z-index: 50; width: min(260px, calc(100vw - 40px)); }
-  .picker-popover.open { display: block; }
-  .picker-title { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--gray); text-align: center; margin-bottom: 14px; }
-
-  .clock-face-row { display: flex; justify-content: center; margin-bottom: 14px; }
-  .clock-face { position: relative; width: 190px; height: 190px; border-radius: 22px; background: var(--off); border: 1px solid var(--border); flex-shrink: 0; margin: 0 auto; }
-  .clock-num { position: absolute; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; border-radius: 50%; cursor: pointer; color: var(--black); }
-  .clock-num:hover, .clock-num.selected { background: var(--gold); color: var(--black); }
-  .clock-num.minute-tick { font-size: 10px; color: var(--gray); font-weight: 500; }
-  .clock-center { position: absolute; width: 6px; height: 6px; background: var(--gold-dk); border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%,-50%); }
-  .clock-bottom-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
-  .ampm-col { display: flex; flex-direction: row; gap: 6px; }
-  .ampm-col button { padding: 8px 14px; border: 1px solid var(--border); background: var(--white); border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--black); font-family: inherit; }
-  .ampm-col button.active { background: var(--gold); color: var(--black); border-color: var(--gold); }
-  .clock-readout { font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 600; color: var(--black); }
-  .clock-readout .part { padding: 2px 4px; border-radius: 4px; cursor: pointer; }
-  .clock-readout .part.active { background: rgba(201,168,76,0.2); color: var(--gold-dk); }
-
-  .cal-card { border-radius: 22px; padding: 4px; }
-  .cal-header { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 12px; }
-  .cal-nav-group { display: flex; align-items: center; gap: 2px; background: var(--off); border-radius: 20px; padding: 3px; }
-  .cal-nav-group button { background: none; border: none; font-size: 15px; color: var(--gold-dk); cursor: pointer; width: 22px; height: 22px; border-radius: 50%; }
-  .cal-nav-group button:hover { background: rgba(201,168,76,0.2); }
-  .cal-month, .cal-year { font-family: 'Cormorant Garamond', serif; font-size: 15px; font-weight: 600; text-align: center; color: var(--black); }
-  .cal-month { min-width: 78px; }
-  .cal-year { min-width: 40px; }
-  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
-  .cal-dow { font-size: 9px; color: var(--gray); text-align: center; text-transform: uppercase; font-weight: 700; padding-bottom: 4px; }
-  .cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 12px; border-radius: 8px; cursor: pointer; color: var(--black); }
-  .cal-day:hover { background: rgba(201,168,76,0.18); }
-  .cal-day.selected { background: var(--gold); color: var(--black); font-weight: 700; }
-  .cal-day.muted { color: #C9C2B4; cursor: default; }
-  .cal-day.muted:hover { background: none; }
-
-  .picker-trigger-row { display: flex; gap: 12px; }
-  .picker-trigger-row .rel-wrap { flex: 1; }
-  .rel-wrap { position: relative; }
-  .picker-trigger-btn { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 3px; font-size: 13px; font-family: inherit; background: var(--white); text-align: left; cursor: pointer; color: var(--black); }
-  .picker-trigger-btn:hover { border-color: var(--gold); }
+  /* ===== Reloj y calendario: gsocd-shared/date-time-picker ===== */
 
   /* Nuevo: unidad ocupada (Renovations + Janitorial) */
   .occupied-note { font-size: 11px; color: var(--gray); margin-top: 6px; line-height: 1.5; }
@@ -494,6 +449,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="shared.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.1.4/date-time-picker/date-time-picker.js"></script>
 <script>
 const client = GS.requireSession();
 if (client) {
@@ -1439,8 +1395,7 @@ if (client) {
     if (o.Status === 'Cancelled' || o.Status === 'Completed') return '';
     const safe = String(o.OrderID || '').replace(/[^a-z0-9]/gi, '_');
     const ready = !!o.MaterialsReady;
-    const st = pickerStateFor(safe);
-    st.orderId = o.OrderID;
+    orderIdBySafe[safe] = o.OrderID;
 
     /* Unico texto que cambia por division: el nombre del switch
        ("Materials ready" para Renovations, "Unit ready" para
@@ -1455,22 +1410,6 @@ if (client) {
       : 'If you know roughly when materials will arrive, let us know so we can plan ahead.';
 
     const dateVal = dateInputValue(o.ExpectedReadyDate);
-    let dateBtnText = 'Pick a date';
-    if (dateVal) {
-      const parts = dateVal.split('-');
-      if (parts.length === 3) {
-        st.calSelYear = parseInt(parts[0], 10); st.calSelMonth = parseInt(parts[1], 10) - 1; st.calSelDay = parseInt(parts[2], 10);
-        dateBtnText = MONTH_NAMES[st.calSelMonth].slice(0, 3) + ' ' + st.calSelDay + ', ' + st.calSelYear;
-      }
-    }
-    if (o.EntryTime) {
-      const parts = String(o.EntryTime).split(':');
-      const h24 = parseInt(parts[0], 10), mm = parseInt(parts[1], 10);
-      if (!isNaN(h24) && !isNaN(mm)) {
-        st.hour = h24 % 12 === 0 ? 12 : h24 % 12; st.minute = mm; st.ampm = h24 >= 12 ? 'PM' : 'AM';
-      }
-    }
-
     const occupied = !!o.UnitOccupied;
 
     return `<div class="ready-block">
@@ -1479,27 +1418,7 @@ if (client) {
         <div class="ready-field">
           <div style="font-weight:600;font-size:13px">Ready Date &amp; Time</div>
           <div class="field-sub">${readyDateSub}</div>
-          <div class="rel-wrap">
-            <button type="button" class="picker-trigger-btn" id="readyDateTrigger-${safe}" onclick="toggleCalPicker('${safe}')">${esc(dateBtnText)}</button>
-            <div class="picker-popover" id="calPop-${safe}">
-              <div class="picker-title">Pick a date</div>
-              <div class="cal-card">
-                <div class="cal-header">
-                  <div class="cal-nav-group">
-                    <button type="button" onclick="calPrevMonth('${safe}')">‹</button>
-                    <div class="cal-month" id="calMonthLabel-${safe}"></div>
-                    <button type="button" onclick="calNextMonth('${safe}')">›</button>
-                  </div>
-                  <div class="cal-nav-group">
-                    <button type="button" onclick="calPrevYear('${safe}')">‹</button>
-                    <div class="cal-year" id="calYearLabel-${safe}"></div>
-                    <button type="button" onclick="calNextYear('${safe}')">›</button>
-                  </div>
-                </div>
-                <div class="cal-grid" id="calGrid-${safe}"></div>
-              </div>
-            </div>
-          </div>
+          ${GSDateTimePicker.dateHtml('readyDate-' + safe, dateVal || null)}
         </div>
 
         <div class="ready-field">
@@ -1517,26 +1436,7 @@ if (client) {
         <div class="ready-field ready-reveal${ready ? ' show' : ''}" id="entryTimeBlock-${safe}">
           <div style="font-weight:600;font-size:13px">What time can we come in?</div>
           <div class="field-sub">Earliest time on that day we're clear to start.</div>
-          <div class="rel-wrap">
-            <button type="button" class="picker-trigger-btn" id="entryTimeTrigger-${safe}" onclick="toggleClockPicker('${safe}')">${o.EntryTime ? esc(fmtTimeDisplay(o.EntryTime)) : 'Pick a time'}</button>
-            <div class="picker-popover" id="clockPop-${safe}">
-              <div class="picker-title">Pick a time</div>
-              <div class="clock-face-row">
-                <div class="clock-face" id="clockFace-${safe}">
-                  <div class="clock-center"></div>
-                </div>
-              </div>
-              <div class="clock-bottom-row">
-                <div class="ampm-col">
-                  <button type="button" class="${st.ampm !== 'PM' ? 'active' : ''}" onclick="setClockAmpm('${safe}','AM',this)">AM</button>
-                  <button type="button" class="${st.ampm === 'PM' ? 'active' : ''}" onclick="setClockAmpm('${safe}','PM',this)">PM</button>
-                </div>
-                <div class="clock-readout">
-                  <span class="part active" id="readoutHour-${safe}" onclick="goToClockStep('${safe}','hour')">${st.hour}</span><span class="part" id="readoutMin-${safe}" onclick="goToClockStep('${safe}','minute')">:${String(st.minute).padStart(2,'0')}</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          ${GSDateTimePicker.timeHtml('entryTime-' + safe, o.EntryTime || null)}
         </div>
 
         <div class="ready-field">
@@ -1554,196 +1454,31 @@ if (client) {
     </div>`;
   }
 
-  /* ============================================================
-     RELOJ Y CALENDARIO OFICIALES -- estado independiente por orden
-     (puede haber varias en pantalla), guardado en pickerState[safe].
-     Los dos se excluyen entre si: abrir uno cierra el otro de esa
-     misma orden.
-  ============================================================ */
-  const pickerState = {};
-  const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const orderIdBySafe = {};
+  const pendingActivation = {};
 
-  function pickerStateFor(safe) {
-    if (!pickerState[safe]) {
-      pickerState[safe] = {
-        calViewYear: null, calViewMonth: null, calSelYear: null, calSelMonth: null, calSelDay: null,
-        hour: 8, minute: 0, ampm: 'AM', clockStep: 'hour'
-      };
-    }
-    return pickerState[safe];
-  }
+  document.addEventListener('gs-date-picked', (e) => {
+    if (e.detail.fieldId.indexOf('readyDate-') !== 0) return;
+    const safe = e.detail.fieldId.slice('readyDate-'.length);
+    const orderId = orderIdBySafe[safe];
+    if (orderId) saveExpectedReadyDate(orderId, e.detail.value);
+  });
 
-  function toggleCalPicker(safe) {
-    const pop = document.getElementById('calPop-' + safe);
-    if (!pop) return;
-    document.getElementById('clockPop-' + safe)?.classList.remove('open');
-    const st = pickerStateFor(safe);
-    if (st.calViewYear == null) {
-      const now = new Date();
-      st.calViewYear = st.calSelYear != null ? st.calSelYear : now.getFullYear();
-      st.calViewMonth = st.calSelMonth != null ? st.calSelMonth : now.getMonth();
-    }
-    pop.classList.toggle('open');
-    if (pop.classList.contains('open')) renderCalGrid(safe);
-  }
-
-  function renderCalGrid(safe) {
-    const st = pickerStateFor(safe);
-    const monthLabel = document.getElementById('calMonthLabel-' + safe);
-    const yearLabel = document.getElementById('calYearLabel-' + safe);
-    if (monthLabel) monthLabel.textContent = MONTH_NAMES[st.calViewMonth];
-    if (yearLabel) yearLabel.textContent = st.calViewYear;
-    const grid = document.getElementById('calGrid-' + safe);
-    if (!grid) return;
-    grid.innerHTML = '';
-    ['S','M','T','W','T','F','S'].forEach(d => {
-      const el = document.createElement('div');
-      el.className = 'cal-dow';
-      el.textContent = d;
-      grid.appendChild(el);
-    });
-    const firstDay = new Date(st.calViewYear, st.calViewMonth, 1).getDay();
-    const daysInMonth = new Date(st.calViewYear, st.calViewMonth + 1, 0).getDate();
-    for (let i = 0; i < firstDay; i++) {
-      const el = document.createElement('div');
-      el.className = 'cal-day muted';
-      grid.appendChild(el);
-    }
-    for (let d = 1; d <= daysInMonth; d++) {
-      const el = document.createElement('div');
-      const isSel = st.calSelDay === d && st.calSelMonth === st.calViewMonth && st.calSelYear === st.calViewYear;
-      el.className = 'cal-day' + (isSel ? ' selected' : '');
-      el.textContent = d;
-      el.onclick = function() { onCalDayPicked(safe, st.calViewYear, st.calViewMonth, d); };
-      grid.appendChild(el);
-    }
-  }
-
-  function calPrevMonth(safe) { const st = pickerStateFor(safe); st.calViewMonth--; if (st.calViewMonth < 0) { st.calViewMonth = 11; st.calViewYear--; } renderCalGrid(safe); }
-  function calNextMonth(safe) { const st = pickerStateFor(safe); st.calViewMonth++; if (st.calViewMonth > 11) { st.calViewMonth = 0; st.calViewYear++; } renderCalGrid(safe); }
-  function calPrevYear(safe) { const st = pickerStateFor(safe); st.calViewYear--; renderCalGrid(safe); }
-  function calNextYear(safe) { const st = pickerStateFor(safe); st.calViewYear++; renderCalGrid(safe); }
-
-  function toggleClockPicker(safe) {
-    const pop = document.getElementById('clockPop-' + safe);
-    if (!pop) return;
-    document.getElementById('calPop-' + safe)?.classList.remove('open');
-    pop.classList.toggle('open');
-    if (pop.classList.contains('open')) {
-      const st = pickerStateFor(safe);
-      st.clockStep = 'hour';
-      updateClockStepUI(safe);
-      renderClockHourFace(safe);
-    }
-  }
-
-  function clockPolarPos(idx, count, r) {
-    const angle = (idx / count) * 2 * Math.PI - Math.PI / 2;
-    return { x: 95 + r * Math.cos(angle) - 15, y: 95 + r * Math.sin(angle) - 15 };
-  }
-
-  function renderClockHourFace(safe) {
-    const st = pickerStateFor(safe);
-    const face = document.getElementById('clockFace-' + safe);
-    if (!face) return;
-    face.querySelectorAll('.clock-num').forEach(n => n.remove());
-    for (let h = 1; h <= 12; h++) {
-      const pos = clockPolarPos(h % 12, 12, 74);
-      const el = document.createElement('div');
-      el.className = 'clock-num' + (h === st.hour ? ' selected' : '');
-      el.style.left = pos.x + 'px'; el.style.top = pos.y + 'px';
-      el.textContent = h;
-      el.onclick = function() {
-        st.hour = h;
-        document.getElementById('readoutHour-' + safe).textContent = h;
-        st.clockStep = 'minute';
-        updateClockStepUI(safe);
-        renderClockMinuteFace(safe);
-      };
-      face.appendChild(el);
-    }
-  }
-
-  function renderClockMinuteFace(safe) {
-    const st = pickerStateFor(safe);
-    const face = document.getElementById('clockFace-' + safe);
-    if (!face) return;
-    face.querySelectorAll('.clock-num').forEach(n => n.remove());
-    [0,5,10,15,20,25,30,35,40,45,50,55].forEach((m, i) => {
-      const pos = clockPolarPos(i, 12, 74);
-      const el = document.createElement('div');
-      el.className = 'clock-num minute-tick' + (m === st.minute ? ' selected' : '');
-      el.style.left = pos.x + 'px'; el.style.top = pos.y + 'px';
-      el.textContent = String(m).padStart(2, '0');
-      el.onclick = function() { onClockMinutePicked(safe, m); };
-      face.appendChild(el);
-    });
-  }
-
-  function updateClockStepUI(safe) {
-    const st = pickerStateFor(safe);
-    document.getElementById('readoutHour-' + safe)?.classList.toggle('active', st.clockStep === 'hour');
-    document.getElementById('readoutMin-' + safe)?.classList.toggle('active', st.clockStep === 'minute');
-  }
-
-  function goToClockStep(safe, which) {
-    const st = pickerStateFor(safe);
-    st.clockStep = which;
-    updateClockStepUI(safe);
-    if (which === 'hour') renderClockHourFace(safe); else renderClockMinuteFace(safe);
-  }
-
-  function setClockAmpm(safe, v, btn) {
-    pickerStateFor(safe).ampm = v;
-    btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-  }
-
-  function fmtTime12(h24, m) {
-    const isPM = h24 >= 12;
-    let h12 = h24 % 12; if (h12 === 0) h12 = 12;
-    return h12 + ':' + String(m).padStart(2, '0') + ' ' + (isPM ? 'PM' : 'AM');
-  }
-
-  /* Guarda la fecha elegida usando la funcion que ya existe --
-     saveExpectedReadyDate no cambia de nombre por dentro, solo la
-     etiqueta visible es "Ready Date & Time" ahora (puramente
-     estetico, tal como se confirmo). */
-  function onCalDayPicked(safe, year, month, day) {
-    const st = pickerStateFor(safe);
-    st.calSelYear = year; st.calSelMonth = month; st.calSelDay = day;
-    const dateStr = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
-    const trigger = $('readyDateTrigger-' + safe);
-    if (trigger) trigger.textContent = MONTH_NAMES[month].slice(0, 3) + ' ' + day + ', ' + year;
-    renderCalGrid(safe);
-    $('calPop-' + safe)?.classList.remove('open');
-    if (st.orderId) saveExpectedReadyDate(st.orderId, dateStr);
-  }
-
-  /* Guarda la hora elegida. Si veniamos de "pendingActivation" (el
-     switch se prendio y estaba esperando la hora obligatoria), aqui
-     mismo se confirma el switch en pantalla -- la llamada real a
-     setMaterialsReady(true, hora) ya deja todo prendido y guardado en
-     un solo paso, sin la ventana de riesgo que causaba el duplicado
-     viejo (prender sin hora, luego mandar la hora por separado). */
-  async function onClockMinutePicked(safe, m) {
-    const st = pickerStateFor(safe);
-    st.minute = m;
-    $('clockPop-' + safe)?.classList.remove('open');
-    let h24 = st.hour % 12; if (st.ampm === 'PM') h24 += 12;
-    const value = String(h24).padStart(2, '0') + ':' + String(m).padStart(2, '0');
-    const trigger = $('entryTimeTrigger-' + safe);
-    if (trigger) trigger.textContent = fmtTime12(h24, m);
-    if (!st.orderId) return;
+  document.addEventListener('gs-time-picked', async (e) => {
+    if (e.detail.fieldId.indexOf('entryTime-') !== 0) return;
+    const safe = e.detail.fieldId.slice('entryTime-'.length);
+    const orderId = orderIdBySafe[safe];
+    if (!orderId) return;
     try {
-      await saveEntryTime(st.orderId, value);
-      if (st.pendingActivation) {
-        st.pendingActivation = false;
+      await saveEntryTime(orderId, e.detail.value);
+      if (pendingActivation[safe]) {
+        pendingActivation[safe] = false;
         const cb = $('readyToggle-' + safe);
         if (cb) cb.checked = true;
       }
-    } catch (e) { /* ya se mostro el toast de error */ }
-  }
+    } catch (err) { /* ya se mostro el toast de error */ }
+  });
+
 
   async function onUnitOccupiedToggle(orderId, checkboxEl) {
     const safe = String(orderId).replace(/[^a-z0-9]/gi, '_');
@@ -1778,7 +1513,7 @@ if (client) {
     if (checkboxEl.checked) {
       /* Ya no se prende directo sin hora -- se revierte visualmente y
          se abre el reloj de una vez, obligatorio. Solo al elegir la
-         hora (onClockMinutePicked) se prende de verdad.
+         hora (evento 'gs-time-picked' del reloj compartido) se prende de verdad.
          BUG REAL: el contenedor del reloj (entryTimeBlock-safe) usa
          la clase .ready-reveal, que es display:none hasta que
          "ready" ya es true -- pero "ready" nunca llega a true sin
@@ -1791,8 +1526,8 @@ if (client) {
       const block = $('entryTimeBlock-' + safe);
       if (block) block.classList.add('show');
       checkboxEl.checked = false;
-      pickerStateFor(safe).pendingActivation = true;
-      toggleClockPicker(safe);
+      pendingActivation[safe] = true;
+      GSDateTimePicker.toggleClock('entryTime-' + safe);
     } else {
       /* Apagar pide nota obligatoria -- se revierte el checkbox visualmente
          hasta que confirme, para no mentir sobre el estado real */
@@ -1854,19 +1589,6 @@ if (client) {
       await setMaterialsReady(orderId, true, value, '');
     } catch (e) { /* ya se mostro el toast de error */ }
   }
-
-  /* ===== Utilidad compartida con el reloj oficial nuevo ===== */
-  function fmtTimeDisplay(hhmm) {
-    if (!hhmm) return 'Select a time';
-    const parts = String(hhmm).split(':');
-    const hh = parseInt(parts[0], 10), mm = parseInt(parts[1], 10);
-    if (isNaN(hh) || isNaN(mm)) return 'Select a time';
-    const ap = hh >= 12 ? 'PM' : 'AM';
-    let h12 = hh % 12; if (h12 === 0) h12 = 12;
-    return h12 + ':' + String(mm).padStart(2, '0') + ' ' + ap;
-  }
-
-
 
   /* ===== Botones por estatus (regla aprobada) =====
      - Con solicitud pendiente (Change/Cancellation Requested) → SOLO Undo Request
