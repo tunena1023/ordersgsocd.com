@@ -331,44 +331,9 @@
 
   .flash-empty { font-size: 12px; color: var(--gray); font-style: italic; padding: 20px 0; }
 
-  /* ===== Picker del catalogo nuevo (ServicesCatalog) -- mismo formato
-     oficial que ya se uso en admin.html: toggle Residential/Commercial
-     redondito, buscador + Select all, chips en grid de 3 columnas
-     (Renovations/Exteriors) o filas + L1/L2/L3 (Janitorial). ===== */
-  .res-toggle-wrap { display: flex; align-items: center; gap: 8px; margin: 16px 0; }
-  .res-toggle-label { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--gray); }
-  .svc-toggle { position: relative; display: inline-block; width: 40px; height: 22px; vertical-align: middle; cursor: pointer; }
-  .svc-toggle input { opacity: 0; width: 0; height: 0; }
-  .svc-toggle-track { position: absolute; inset: 0; background: var(--border); border-radius: 22px; transition: background .2s; }
-  .svc-toggle-track::before { content: ""; position: absolute; height: 18px; width: 18px; left: 2px; top: 2px; background: var(--white); border-radius: 50%; transition: transform .2s; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
-  .svc-toggle input:checked + .svc-toggle-track { background: var(--gold); }
-  .svc-toggle input:checked + .svc-toggle-track::before { transform: translateX(18px); }
+  /* ===== Selector de servicios: gsocd-shared/service-picker ===== */
 
-  .svc-toolbar-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
-  .svc-search { flex: 1; min-width: 140px; max-width: none; padding: 9px 12px; border: 1px solid var(--border); border-radius: 3px; font-size: 13px; font-family: 'Inter', sans-serif; }
-  .svc-toolbar-selall { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-  .selall-label { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--gray); }
-  .lvl-toggle3 { position: relative; display: flex; width: 180px; height: 34px; background: var(--border); border-radius: 17px; padding: 3px; flex-shrink: 0; }
-  .lvl-toggle3-thumb { position: absolute; top: 3px; left: 3px; width: calc(33.333% - 2px); height: calc(100% - 6px); background: var(--gold); border-radius: 14px; transition: transform .25s cubic-bezier(.4,0,.2,1), opacity .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2); opacity: 0; }
-  .lvl-toggle3-opt { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--gray); cursor: pointer; z-index: 1; transition: color .25s; }
-  .lvl-toggle3-opt.active { color: var(--black); }
 
-  .svc-chip-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-  .svc-chip-btn { border: 1px solid var(--border); background: var(--white); padding: 10px 12px; font-size: 12px; text-align: left; cursor: pointer; border-radius: 2px; font-family: 'Inter', sans-serif; color: var(--black); }
-  .svc-chip-btn.active { background: var(--gold); border-color: var(--gold); font-weight: 700; }
-
-  .jan-row-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-  .jan-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 10px; border: 1px solid var(--border); border-radius: 3px; background: var(--white); transition: border-color .15s, background .15s; }
-  .jan-row.selected { border-color: var(--gold); background: #FEFBF3; }
-  .jan-row-name { font-size: 12px; }
-  .lvl-group { display: flex; border: 1px solid var(--border); border-radius: 20px; overflow: hidden; flex-shrink: 0; }
-  .lvl-btn { width: 34px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; cursor: pointer; background: var(--white); color: var(--gray); border-right: 1px solid var(--border); }
-  .lvl-btn:last-child { border-right: none; }
-  .lvl-btn.active { background: var(--gold); color: var(--black); }
-  .lvl-btn:hover:not(.active) { background: var(--off); }
-
-  @media (max-width: 900px) { .svc-chip-grid, .jan-row-grid { grid-template-columns: 1fr 1fr; } }
-  @media (max-width: 640px) { .svc-chip-grid, .jan-row-grid { grid-template-columns: 1fr; } }
 
 
   .flash-desc {
@@ -683,6 +648,7 @@ style="object-fit:contain">
 
 <script src="shared.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.1.4/date-time-picker/date-time-picker.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.2.0/service-picker/service-picker.js"></script>
 <script>
 const client = GS.requireSession();
 if (client) {
@@ -719,7 +685,6 @@ if (client) {
   let propertyType = 'Commercial';
   let selected = {};
   let svcLevel = {};
-  let selAllActive = null;
   let editOrderId = null;
   /* Direccion original de la orden que se esta editando -- distinta de
      client.address (la del perfil ACTUAL del cliente) si el perfil
@@ -828,7 +793,7 @@ if (client) {
       showToast('Draft ' + orphan + ' deleted — you switched to another division.');
     }
     currentDiv = div;
-    selected = {}; svcLevel = {}; propertyType = 'Commercial'; selAllActive = null;
+    selected = {}; svcLevel = {}; propertyType = 'Commercial';
     draftOrderId = null; draftPendingData = null;
     /* BUG FIX: multiUnitsOn se quedaba prendido de una division a otra
        -- si activabas Multiple Units en una y luego cambiabas de
@@ -880,9 +845,8 @@ if (client) {
       '</table></div>';
   }
 
-  /* ===== Picker del catalogo nuevo -- toggle Residential/Commercial +
-     buscador (+ Select all solo en Janitorial) + chips en grid de 3
-     columnas (Renovations/Exteriors) o filas + L1/L2/L3 (Janitorial) ===== */
+  let servicePicker = null;
+
   function renderServices(div) {
     const container = $('services-container');
     container.innerHTML = '';
@@ -893,122 +857,22 @@ if (client) {
     }
     const isJan = div === 'Janitorial';
 
-    const wrap = document.createElement('div');
-    wrap.innerHTML = `
-      <div class="res-toggle-wrap" id="res-toggle">
-        <span class="res-toggle-label">Commercial</span>
-        <label class="svc-toggle">
-          <input type="checkbox" ${propertyType === 'Residential' ? 'checked' : ''} onchange="setPropertyType(this.checked ? 'Residential' : 'Commercial')">
-          <span class="svc-toggle-track"></span>
-        </label>
-        <span class="res-toggle-label">Residential</span>
-      </div>
-      <div class="svc-toolbar-row">
-        <input type="text" class="svc-search" id="svc-search" placeholder="Search services…" oninput="renderServiceGrid()">
-        <div class="svc-toolbar-selall" id="selall-group" style="display:${isJan ? '' : 'none'}">
-          <span class="selall-label">Select all</span>
-          <div class="lvl-toggle3" id="selAllToggle">
-            <div class="lvl-toggle3-thumb" id="selAllThumb"></div>
-            <div class="lvl-toggle3-opt" onclick="selectAllLevel('Level 1',0)">L1</div>
-            <div class="lvl-toggle3-opt" onclick="selectAllLevel('Level 2',1)">L2</div>
-            <div class="lvl-toggle3-opt" onclick="selectAllLevel('Level 3',2)">L3</div>
-          </div>
-        </div>
-      </div>
-      <div id="svc-grid"></div>`;
-    container.appendChild(wrap);
-    renderServiceGrid();
-  }
-
-  function renderServiceGrid() {
-    const grid = $('svc-grid');
-    const isJan = currentDiv === 'Janitorial';
-    const q = ($('svc-search').value || '').trim().toLowerCase();
-    let list = catalogCache.filter(s => s.division.toLowerCase() === currentDiv.toLowerCase() && s.propertyType === propertyType);
-    if (q) list = list.filter(s => s.serviceName.toLowerCase().includes(q));
-    list.sort((a, b) => a.serviceName.localeCompare(b.serviceName));
-
-    if (!list.length) { grid.className = ''; grid.innerHTML = '<p class="flash-empty">No services match.</p>'; return; }
-
-    if (isJan) {
-      grid.className = 'jan-row-grid';
-      const levels = ['Level 1', 'Level 2', 'Level 3'];
-      grid.innerHTML = list.map(s => {
-        const sel = String((selected[propertyType] || {})[s.serviceName]) === String(s.sku);
-        const lvl = sel ? svcLevel[svcKey(propertyType, s.serviceName)] : null;
-        return '<div class="jan-row' + (lvl ? ' selected' : '') + '">' +
-          '<span class="jan-row-name">' + esc(s.serviceName) + '</span>' +
-          '<div class="lvl-group">' +
-            levels.map((l, i) => '<div class="lvl-btn' + (lvl === l ? ' active' : '') + '" onclick="pickLevel(\'' + s.sku.replace(/'/g, "\\'") + '\',\'' + l + '\')">L' + (i + 1) + '</div>').join('') +
-          '</div></div>';
-      }).join('');
-    } else {
-      grid.className = 'svc-chip-grid';
-      grid.innerHTML = list.map(s =>
-        '<button type="button" class="svc-chip-btn' + (String((selected[propertyType] || {})[s.serviceName]) === String(s.sku) ? ' active' : '') + '" onclick="toggleChip(\'' + s.sku.replace(/'/g, "\\'") + '\')">' + esc(s.serviceName) + '</button>'
-      ).join('');
-    }
-  }
-
-  function setPropertyType(type) {
-    propertyType = type;
-    renderServiceGrid();
-  }
-
-  function toggleChip(sku) {
-    const svc = catalogCache.find(s => String(s.sku) === String(sku));
-    if (!svc) return;
-    if (!selected[propertyType]) selected[propertyType] = {};
-    if (String(selected[propertyType][svc.serviceName]) === String(sku)) {
-      delete selected[propertyType][svc.serviceName];
-      if (!Object.keys(selected[propertyType]).length) delete selected[propertyType];
-    } else {
-      selected[propertyType][svc.serviceName] = sku;
-    }
-    renderServiceGrid();
-    updateSummary();
-    scheduleDraftSave();
-  }
-
-  function pickLevel(sku, level) {
-    const svc = catalogCache.find(s => String(s.sku) === String(sku));
-    if (!svc) return;
-    const k = svcKey(propertyType, svc.serviceName);
-    if (!selected[propertyType]) selected[propertyType] = {};
-    const already = String(selected[propertyType][svc.serviceName]) === String(sku) && svcLevel[k] === level;
-    if (already) {
-      delete selected[propertyType][svc.serviceName];
-      if (!Object.keys(selected[propertyType]).length) delete selected[propertyType];
-      delete svcLevel[k];
-    } else {
-      selected[propertyType][svc.serviceName] = sku;
-      svcLevel[k] = level;
-    }
-    renderServiceGrid();
-    updateSummary();
-    scheduleDraftSave();
-  }
-
-  function selectAllLevel(level, idx) {
-    const q = ($('svc-search').value || '').trim().toLowerCase();
-    const visible = catalogCache.filter(s => s.division.toLowerCase() === currentDiv.toLowerCase() && s.propertyType === propertyType && (!q || s.serviceName.toLowerCase().includes(q)));
-    const thumb = $('selAllThumb');
-    if (!selected[propertyType]) selected[propertyType] = {};
-
-    if (selAllActive === idx) {
-      visible.forEach(s => { delete selected[propertyType][s.serviceName]; delete svcLevel[svcKey(propertyType, s.serviceName)]; });
-      selAllActive = null;
-      thumb.style.opacity = '0';
-    } else {
-      visible.forEach(s => { selected[propertyType][s.serviceName] = s.sku; svcLevel[svcKey(propertyType, s.serviceName)] = level; });
-      selAllActive = idx;
-      thumb.style.opacity = '1';
-      thumb.style.transform = 'translateX(' + (idx * 100) + '%)';
-    }
-    document.querySelectorAll('#selAllToggle .lvl-toggle3-opt').forEach((el, i) => el.classList.toggle('active', i === selAllActive));
-    renderServiceGrid();
-    updateSummary();
-    scheduleDraftSave();
+    servicePicker = GSServicePicker.mount('customer-order', container, {
+      catalog: catalogCache,
+      division: div,
+      mode: isJan ? 'levels' : 'toggle',
+      showSelectAll: isJan,
+      propertyType: propertyType,
+      initialSelected: selected,
+      initialLevels: svcLevel,
+      onChange: function (sel, lvl, propType) {
+        selected = sel;
+        svcLevel = lvl;
+        propertyType = propType;
+        updateSummary();
+        scheduleDraftSave();
+      }
+    });
   }
 
 
@@ -1044,7 +908,7 @@ if (client) {
       if (!Object.keys(selected[propType]).length) delete selected[propType];
     }
     updateSummary();
-    renderServiceGrid();
+    if (servicePicker) servicePicker.setSelected(selected, svcLevel);
     scheduleDraftSave();
   });
 
@@ -1317,7 +1181,7 @@ if (client) {
       if (o.DueDate) $('delivery-date').value = new Date(o.DueDate).toISOString().slice(0, 10);
       restoreOfficeNeed(o);
       checkDueWarning();
-      renderServiceGrid();
+      if (servicePicker) { servicePicker.setSelected(selected, svcLevel); servicePicker.setPropertyType(propertyType); }
       updateSummary();
       if (o.UnitsData) {
         try { await restoreUnitsIntoForm(JSON.parse(o.UnitsData)); } catch (e) { /* draft viejo sin esto, se ignora */ }
@@ -1335,12 +1199,12 @@ if (client) {
       try { await GS.api('/delete-draft', { method: 'POST', body: { orderId: draftPendingData.OrderID } }); refreshOrdersCount(); } catch (e) {}
     }
     draftPendingData = null; draftOrderId = null;
-    selected = {}; svcLevel = {}; selAllActive = null;
+    selected = {}; svcLevel = {};
     ['building-number','unit-number','bedrooms','bathrooms','entry-date','delivery-date'].forEach(id => $(id).value = '');
     $('entry-time').value = '08:00';
     resetOfficeNeed();
     checkDueWarning();
-    renderServiceGrid();
+    if (servicePicker) servicePicker.setSelected(selected, svcLevel);
     updateSummary();
   }
 
