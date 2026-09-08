@@ -88,8 +88,48 @@ exports.handler = async (event) => {
       if (oldValue !== next) changes.push({ label, old: oldValue ? 'Yes' : 'No', next: next ? 'Yes' : 'No' });
     }
 
+    /* Horarios de oficina de la direccion principal -- mismas columnas
+       ya usadas para edificios secundarios (ClientAddresses) y en
+       Developer. Default Sin marcar (false) si nunca se configuro,
+       NO "Si" como las preferencias de notificacion de arriba. */
+    const dayBoolMap = [
+      ['MonOpen', b.monOpen, 'Office Hours: Mon'],
+      ['TueOpen', b.tueOpen, 'Office Hours: Tue'],
+      ['WedOpen', b.wedOpen, 'Office Hours: Wed'],
+      ['ThuOpen', b.thuOpen, 'Office Hours: Thu'],
+      ['FriOpen', b.friOpen, 'Office Hours: Fri'],
+      ['SatOpen', b.satOpen, 'Office Hours: Sat'],
+      ['SunOpen', b.sunOpen, 'Office Hours: Sun']
+    ];
+    for (const [col, incoming, label] of dayBoolMap) {
+      if (incoming === undefined) continue;
+      const oldValue = truthy(f[col]);
+      const next = truthy(incoming);
+      patch[col] = next;
+      if (oldValue !== next) changes.push({ label, old: oldValue ? 'Yes' : 'No', next: next ? 'Yes' : 'No' });
+    }
+    if (b.officeHours !== undefined) {
+      const oldValue = f.OfficeHours || '';
+      const next = b.officeHours || '';
+      patch.OfficeHours = next;
+      if (!sameValue(oldValue, next)) changes.push({ label: 'Office Hours: Shared', old: oldValue, next });
+    }
+
+    /* Las 8 columnas de horarios son NUEVAS en Clients -- si todavia no
+       existen, Graph rechaza el PATCH COMPLETO. Reintenta sin esos
+       campos para que el resto de la edicion nunca se bloquee. */
+    const HOURS_COLUMNS = ['MonOpen','TueOpen','WedOpen','ThuOpen','FriOpen','SatOpen','SunOpen','OfficeHours'];
     if (Object.keys(patch).length) {
-      await updateListItemByItemId(CLIENTS_LIST, item.id, patch);
+      try {
+        await updateListItemByItemId(CLIENTS_LIST, item.id, patch);
+      } catch (patchErr) {
+        const fallbackPatch = Object.assign({}, patch);
+        let hadHoursField = false;
+        HOURS_COLUMNS.forEach(col => { if (col in fallbackPatch) { delete fallbackPatch[col]; hadHoursField = true; } });
+        if (!hadHoursField) throw patchErr;
+        if (Object.keys(fallbackPatch).length) await updateListItemByItemId(CLIENTS_LIST, item.id, fallbackPatch);
+        changes.splice(0, changes.length, ...changes.filter(c => !String(c.label).startsWith('Office Hours')));
+      }
     }
 
     let logged = 0, logError = null;
@@ -124,6 +164,14 @@ exports.handler = async (event) => {
       notifyConfirmations:  patch.NotifyConfirmations  !== undefined ? patch.NotifyConfirmations  : (f.NotifyConfirmations  == null ? true : truthy(f.NotifyConfirmations)),
       notifyChanges:        patch.NotifyChanges        !== undefined ? patch.NotifyChanges        : (f.NotifyChanges        == null ? true : truthy(f.NotifyChanges)),
       notifyUpdates:        patch.NotifyUpdates        !== undefined ? patch.NotifyUpdates        : (f.NotifyUpdates        == null ? true : truthy(f.NotifyUpdates)),
+      monOpen:     patch.MonOpen     !== undefined ? patch.MonOpen     : truthy(f.MonOpen),
+      tueOpen:     patch.TueOpen     !== undefined ? patch.TueOpen     : truthy(f.TueOpen),
+      wedOpen:     patch.WedOpen     !== undefined ? patch.WedOpen     : truthy(f.WedOpen),
+      thuOpen:     patch.ThuOpen     !== undefined ? patch.ThuOpen     : truthy(f.ThuOpen),
+      friOpen:     patch.FriOpen     !== undefined ? patch.FriOpen     : truthy(f.FriOpen),
+      satOpen:     patch.SatOpen     !== undefined ? patch.SatOpen     : truthy(f.SatOpen),
+      sunOpen:     patch.SunOpen     !== undefined ? patch.SunOpen     : truthy(f.SunOpen),
+      officeHours: patch.OfficeHours !== undefined ? patch.OfficeHours : (f.OfficeHours || ''),
       changesLogged: logged,
       historyError:  logError
     });

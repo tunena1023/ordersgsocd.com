@@ -408,6 +408,9 @@ if (client) {
           field('city', 'City', profileFields.city) +
           field('zip', 'Zip', profileFields.zip) +
         '</div>' +
+        '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:20px 0 10px;padding-top:16px;border-top:1px solid var(--border)">Office hours at this address</div>' +
+        '<p style="font-size:11px;color:var(--gray);margin-bottom:10px">So our crew knows when someone will be there to let them in.</p>' +
+        officeHoursFieldsHtml(profileFields) +
         '<button class="btn-gold" style="width:100%;margin-top:6px" onclick="savePrimaryEdit()">Save</button>' +
         '<p class="dialog-error" id="ctl-error"></p>' +
         '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:20px 0 8px;padding-top:16px;border-top:1px solid var(--border)">Contacts</div>' +
@@ -561,8 +564,10 @@ if (client) {
       address:       $f('address').value.trim(),
       suite:         $f('suite').value.trim(),
       city:          $f('city').value.trim(),
-      zip:           $f('zip').value.trim()
+      zip:           $f('zip').value.trim(),
+      officeHours:   $f('officeHours') ? $f('officeHours').value.trim() : ''
     };
+    DAY_FIELDS.forEach(f => { if ($f(f)) body[f] = $f(f).checked; });
     /* Solo se agregan contactos nuevos aqui (sin marcar receptor -- eso
        vive en Notifications). Los existentes no se tocan. */
     const newContacts = [];
