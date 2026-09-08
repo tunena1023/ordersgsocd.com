@@ -69,6 +69,7 @@
   .tpl-name { font-family: 'Cormorant Garamond', serif; font-size: 19px; font-weight: 600; }
   .tpl-meta { font-size: 12px; color: var(--gray); margin-top: 3px; }
   .tpl-badge { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gold-dk); background: #FDF3E0; padding: 2px 9px; border-radius: 12px; margin-right: 8px; }
+  .tpl-badge-shared { color: var(--gray); background: var(--off); }
   .tpl-actions { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
   .tpl-detail { display: none; border-top: 1px solid var(--border); background: var(--off); padding: 16px 22px; }
   .tpl-detail.open { display: block; }
@@ -278,16 +279,16 @@ if (client) {
         <div class="tpl-card" onclick="toggleTplDetail('${t.id}')">
           <div>
             <div class="tpl-name">${esc(t.name)}</div>
-            <div class="tpl-meta"><span class="tpl-badge">${esc(t.division)}</span>${t.services.length} service${t.services.length === 1 ? '' : 's'}</div>
+            <div class="tpl-meta"><span class="tpl-badge">${esc(t.division)}</span>${t.mine ? '' : '<span class="tpl-badge tpl-badge-shared">Shared</span>'}${t.services.length} service${t.services.length === 1 ? '' : 's'}</div>
           </div>
           <div class="tpl-actions">
-            <button class="btn-text-danger" onclick="event.stopPropagation(); deleteTemplate('${t.id}')">Delete</button>
+            ${t.mine ? '<button class="btn-text-danger" onclick="event.stopPropagation(); deleteTemplate(\'' + t.id + '\')">Delete</button>' : ''}
             <button class="btn-gold" onclick="event.stopPropagation(); useTemplate('${t.id}')">Use This Template</button>
           </div>
         </div>
         <div class="tpl-detail" id="tpl-detail-${t.id}">
           ${tplServiceListHtml(t.services)}
-          <button type="button" class="btn-outline" onclick="editTemplate('${t.id}')">Edit</button>
+          ${t.mine ? '<button type="button" class="btn-outline" onclick="editTemplate(\'' + t.id + '\')">Edit</button>' : ''}
         </div>
       </div>`).join('');
   }

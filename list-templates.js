@@ -3,6 +3,11 @@
    cliente (lista ServiceTemplates). Camino A de las plantillas: son
    nomas un combo de servicios+niveles guardado con nombre, para
    volver a cargarlo despues -- no crean nada de Recurring real.
+
+   Ademas de las propias del cliente, regresa las marcadas IsPublic
+   (de cualquier otro cliente, o de la oficina) -- el cliente NUNCA ve
+   de quien es una publica, solo su nombre y servicios. 'mine' le dice
+   al frontend si puede editarla/borrarla (solo las propias).
 ============================================================ */
 
 const {
@@ -32,19 +37,23 @@ exports.handler = async (event) => {
     if (!clientId) return jsonResponse(400, { error: 'clientId is required' });
 
     const wanted = String(clientId).trim().toLowerCase();
-    const rows = (await fetchAll(SERVICE_TEMPLATES_LIST))
-      .filter(it => it.fields && String(it.fields.ClientID || '').trim().toLowerCase() === wanted);
+    const rows = (await fetchAll(SERVICE_TEMPLATES_LIST)).filter(it => {
+      if (!it.fields) return false;
+      const owner = String(it.fields.ClientID || '').trim().toLowerCase();
+      return owner === wanted || !!it.fields.IsPublic;
+    });
 
     const templates = rows
-      .filter(it => it.fields)
       .map(it => {
         let services = [];
         try { services = JSON.parse(it.fields.ServicesJSON || '[]'); } catch (e) { services = []; }
+        const owner = String(it.fields.ClientID || '').trim().toLowerCase();
         return {
           id:       it.id,
           name:     it.fields.Title || '',
           division: it.fields.Division || '',
-          services: services
+          services: services,
+          mine:     owner === wanted
         };
       })
       .sort((a, b) => a.name.localeCompare(b.name));

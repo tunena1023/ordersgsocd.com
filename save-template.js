@@ -3,13 +3,17 @@
    cliente tiene armado ahorita como una plantilla, con nombre.
 
    Si viene templateId, ACTUALIZA esa plantilla existente en vez de
-   crear una nueva (editar un template ya guardado). Sin templateId,
-   siempre crea un renglon nuevo -- mismo comportamiento de antes.
+   crear una nueva (editar un template ya guardado) -- pero solo si es
+   SUYA. Un template publico de otro cliente/oficina se puede usar,
+   nunca editar desde aqui (eso solo lo hace Admin desde Developer).
+   Sin templateId, siempre crea un renglon nuevo -- mismo
+   comportamiento de antes.
 ============================================================ */
 
 const {
   SERVICE_TEMPLATES_LIST,
   createListItem, updateListItemByItemId,
+  graphFetch, siteListPath,
   jsonResponse
 } = require('./lib/graph');
 
@@ -39,6 +43,12 @@ exports.handler = async (event) => {
     };
 
     if (templateId) {
+      const url = siteListPath(SERVICE_TEMPLATES_LIST) + '/' + templateId + '?$expand=fields';
+      const existing = await graphFetch(url).catch(() => null);
+      const owner = existing && existing.fields ? String(existing.fields.ClientID || '').trim() : '';
+      if (!existing || owner.toLowerCase() !== String(clientId).trim().toLowerCase()) {
+        return jsonResponse(403, { error: 'You can only edit your own templates.' });
+      }
       await updateListItemByItemId(SERVICE_TEMPLATES_LIST, templateId, fields);
       return jsonResponse(200, { success: true, id: templateId });
     }
