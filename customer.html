@@ -543,7 +543,7 @@ style="object-fit:contain">
         </div>
 
         <div class="due-warning" id="due-warning">
-          Heads-up: this order is due less than 24 hours after entry. The office will need to confirm availability.
+          Heads-up: this order is due the same day or the day after entry. A rush fee may apply, and the office will need to confirm availability.
         </div>
 
         <div class="submit-row">
@@ -1052,12 +1052,19 @@ if (client) {
 
   function checkDueWarning() {
     syncPickerTriggers();
-    const ed = $('entry-date').value, et = $('entry-time').value || '08:00', dd = $('delivery-date').value;
+    const ed = $('entry-date').value, dd = $('delivery-date').value;
     const w = $('due-warning');
     if (!ed || !dd) { w.style.display = 'none'; return; }
-    const entry = new Date(ed + 'T' + et);
-    const due = new Date(dd + 'T23:59:59');
-    w.style.display = (due.getTime() - entry.getTime() < 24 * 3600 * 1000) ? 'block' : 'none';
+    /* Por DIA DE CALENDARIO, no por hora exacta -- mismo dia o al dia
+       siguiente ya cuenta como apurado, sin importar a que hora se
+       eligio la entrada ni que hora tenga limite el due (antes
+       comparaba desde la hora de entrada real hasta las 11:59pm del
+       due, lo que dejaba pasar 9/10->9/11 sin avisar por dar casi 40
+       horas de margen aunque a simple vista fueran dias consecutivos). */
+    const entryDay = new Date(ed + 'T00:00:00');
+    const dueDay = new Date(dd + 'T00:00:00');
+    const dayDiff = Math.round((dueDay.getTime() - entryDay.getTime()) / (24 * 3600 * 1000));
+    w.style.display = (dayDiff <= 1) ? 'block' : 'none';
   }
   ['entry-date', 'entry-time', 'delivery-date'].forEach(id => $(id).addEventListener('change', () => { checkDueWarning(); scheduleDraftSave(); }));
 
