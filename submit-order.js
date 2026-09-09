@@ -10,24 +10,12 @@
 const {
   ORDERS_LIST, ORDER_SERVICES_LIST, ORDER_HISTORY_LIST, DRAFTS_LIST, CLIENT_ADDRESSES_LIST,
   createListItem, updateListItemByItemId, deleteListItem,
-  graphFetch, siteListPath,
+  graphFetch, siteListPath, geocodeAddress,
   jsonResponse
 } = require('./lib/graph');
 
 async function fetchAll(listName) {
   let url = siteListPath(listName) + '?$expand=fields&$top=200';
-  const out = [];
-  while (url) {
-    const data = await graphFetch(url);
-    out.push(...(data.value || []));
-    url = data['@odata.nextLink'] || null;
-  }
-  return out;
-}
-
-async function fetchByField(listName, fieldName, value) {
-  const filter = encodeURIComponent(`fields/${fieldName} eq '${value}'`);
-  let url = siteListPath(listName) + `?$expand=fields&$top=200&$filter=${filter}`;
   const out = [];
   while (url) {
     const data = await graphFetch(url);
@@ -82,10 +70,8 @@ function nextGlobalSuffix(allOrderRows) {
 }
 
 /* PO compartido entre las unidades de un pedido multi-unidad. Mismo
-   criterio que nextGlobalSuffix: global (no por cliente), buscando el
-   maximo "-PONNNN" ya usado en cualquier OrderID. Arranca en 5000 para
-   que nunca se confunda a simple vista con un sufijo de orden normal
-   (que arranca en 1001). */
+   criterio que nextGlobalSuffix: global (no por cliente), arranca en
+   5000 para nunca confundirse a simple vista con un sufijo normal. */
 function nextGlobalPO(allOrderRows) {
   const nums = allOrderRows
     .map(it => {
@@ -94,7 +80,6 @@ function nextGlobalPO(allOrderRows) {
       return m ? parseInt(m[1], 10) : null;
     })
     .filter(n => n !== null);
-
   const next = nums.length > 0 ? Math.max(...nums) + 1 : 5000;
   return 'PO' + next;
 }
@@ -117,13 +102,13 @@ function parseServicesString(str, division) {
   return out;
 }
 
-/* BUG FIX (2026-08-30): mismo problema que en el repo admin — si alguna
-   vez llega un arreglo de objetos { Category, ServiceName, SubOption,
-   Division } en vez del string "Categoria > Servicio – Opcion | ...",
-   String(arreglo) produce "[object Object],..." y parseServicesString no
-   encuentra nada que parsear, guardando la orden sin servicios.
-   resolveServices acepta ambos formatos para que ningun llamador pierda
-   servicios silenciosamente. */
+/* BUG FIX (2026-08-30): admin.html manda Services como arreglo de objetos
+   { Category, ServiceName, SubOption, Division }, no como el string
+   "Categoria > Servicio – Opcion | ..." que parseServicesString espera.
+   Antes, un arreglo se convertia con String() a "[object Object],..." y
+   parseServicesString no encontraba nada que parsear, guardando la orden
+   sin ningun servicio. resolveServices acepta ambos formatos para que
+   ningun llamador (actual o futuro) pierda servicios silenciosamente. */
 function resolveServices(raw, division) {
   if (Array.isArray(raw)) {
     return raw.map(s => ({
@@ -139,6 +124,29 @@ function resolveServices(raw, division) {
 
 function dateField(v) { return v ? v : null; }
 
+/* Coordenadas para Routing: si la orden trae buildingId (viene de un
+   Building ya guardado, que ya se geocodifico solo al crearse -- ver
+   admin-update-client.js), se copian esas mismas coordenadas, sin
+   volver a preguntarle nada a Nominatim. Si no hay buildingId (orden
+   normal, sin building ligado), se geocodifica la direccion de texto
+   directo. Nunca truena la creacion de la orden si esto falla -- se
+   intenta y ya, Routing simplemente no podra ubicar esa orden en el
+   mapa hasta que se resuelva despues. */
+async function resolveOrderCoordinates(buildingId, address, city, zip) {
+  try {
+    if (buildingId) {
+      const bld = await graphFetch(siteListPath(CLIENT_ADDRESSES_LIST) + '/items/' + buildingId + '?$expand=fields');
+      const f = bld && bld.fields;
+      if (f && f.Latitude != null && f.Longitude != null) {
+        return { lat: Number(f.Latitude), lon: Number(f.Longitude) };
+      }
+    }
+    return await geocodeAddress(address, city, zip);
+  } catch (e) {
+    return null;
+  }
+}
+
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
@@ -147,7 +155,114 @@ exports.handler = async (event) => {
 
   try {
     const b = JSON.parse(event.body || '{}');
-    if (!b.ClientID || !b.Division) {
+    if (!b.ClientID) {
+      return jsonResponse(400, { error: 'ClientID is required' });
+    }
+
+    /* ===== FLUJO E: agregar UNA unidad a un PO ya existente =====
+       Se checa ANTES que todo lo demas (igual que aprendimos con el
+       bug del draft desviando el lote nuevo) para que nunca se
+       confunda con una orden normal. Copia Division/Servicios/
+       BusinessName/Requester del resto del lote -- solo pide
+       Building, Unit#, Bed/Bath y fechas de la unidad nueva. */
+    if (b.AddUnitToBatch) {
+      const add = b.AddUnitToBatch;
+      if (!add.batchId)    return jsonResponse(400, { error: 'batchId is required' });
+      if (!add.buildingId) return jsonResponse(400, { error: 'Please choose a building.' });
+      if (!add.unitNumber) return jsonResponse(400, { error: 'Please enter the Unit Number.' });
+      if (!add.bedrooms)   return jsonResponse(400, { error: 'Please enter Bedrooms.' });
+      if (!add.bathrooms)  return jsonResponse(400, { error: 'Please enter Bathrooms.' });
+      if (!add.entryDate)  return jsonResponse(400, { error: 'Please enter the entry date.' });
+      if (!add.dueDate)    return jsonResponse(400, { error: 'Please enter the due date.' });
+
+      const [allOrders, allBuildings] = await Promise.all([
+        fetchAll(ORDERS_LIST),
+        fetchAll(CLIENT_ADDRESSES_LIST)
+      ]);
+
+      const clientOrders = allOrders.filter(it =>
+        it.fields && String(it.fields.ClientID || '').trim().toLowerCase() === String(b.ClientID).trim().toLowerCase()
+      );
+      const siblings = clientOrders.filter(it => it.fields.BatchId === add.batchId);
+      if (!siblings.length) return jsonResponse(404, { error: 'That order was not found.' });
+
+      const building = allBuildings.find(it =>
+        it.id === String(add.buildingId) &&
+        it.fields && String(it.fields.ClientID || '').trim().toLowerCase() === String(b.ClientID).trim().toLowerCase()
+      );
+      if (!building) return jsonResponse(403, { error: 'That building does not belong to this client.' });
+      const bf = building.fields;
+
+      const template = siblings[0].fields;
+      const actor = (b.changedBy && String(b.changedBy).trim()) || 'Admin';
+      const suffix = nextGlobalSuffix(allOrders);
+      const orderId = String(b.ClientID).trim() + '-' + suffix + '-' + add.batchId;
+
+      await createListItem(ORDERS_LIST, {
+        Title:          template.BusinessName || '',
+        OrderID:        orderId,
+        ClientID:       b.ClientID,
+        BusinessName:   template.BusinessName || '',
+        Requester:      template.Requester || '',
+        Division:       template.Division || '',
+        DirtLevel:      template.DirtLevel || '',
+        Status:         'Received',
+        BuildingNumber: bf.BuildingNumber || '',
+        UnitNumber:     add.unitNumber,
+        Bedrooms:       add.bedrooms,
+        Bathrooms:      add.bathrooms,
+        Address:        bf.Address || '',
+        Suite:          bf.Suite   || '',
+        City:           bf.City    || '',
+        Zip:            bf.Zip     || '',
+        Email:          template.Email || '',
+        Notes:          template.Notes || '',
+        EntryDate:      add.entryDate,
+        DueDate:        add.dueDate,
+        DraftData:      '',
+        BatchId:        add.batchId,
+        BuildingId:     String(add.buildingId),
+        /* El Building ya se geocodifico solo (admin-update-client.js) --
+           se copian sus coordenadas, sin volver a preguntarle a Nominatim. */
+        ...(bf.Latitude != null && bf.Longitude != null ? { Latitude: bf.Latitude, Longitude: bf.Longitude } : {})
+      });
+
+      try {
+        const svcRows = await fetchByOrderId(ORDER_SERVICES_LIST, template.OrderID);
+        await Promise.all(svcRows.map(row => {
+          const f = row.fields;
+          return createListItem(ORDER_SERVICES_LIST, {
+            Title:       f.ServiceName || '',
+            OrderID:     orderId,
+            Category:    f.Category    || '',
+            ServiceName: f.ServiceName || '',
+            SubOption:   f.SubOption   || '',
+            Division:    f.Division    || template.Division
+          });
+        }));
+
+        const unitServices = svcRows.map(row => ({
+          Category: row.fields.Category || '', ServiceName: row.fields.ServiceName || '',
+          SubOption: row.fields.SubOption || '', Division: row.fields.Division || template.Division
+        }));
+        await createListItem(ORDER_HISTORY_LIST, {
+          Title:      orderId,
+          OrderID:    orderId,
+          ChangeType: 'Created',
+          ChangedBy:  actor,
+          ChangeDate: new Date().toISOString(),
+          Notes:      'Added to existing order ' + template.OrderID + ' by ' + actor + '.',
+          OldValue:   '',
+          NewValue:   'SERVICES:' + JSON.stringify({ services: unitServices, dirtLevel: '', entryDate: add.entryDate || '', dueDate: add.dueDate || '' })
+        });
+      } catch (e) {
+        console.error('AddUnitToBatch post-create write failed:', e.message);
+      }
+
+      return jsonResponse(200, { success: true, orderId });
+    }
+
+    if (!b.Division) {
       return jsonResponse(400, { error: 'ClientID and Division are required' });
     }
 
@@ -173,12 +288,16 @@ exports.handler = async (event) => {
       Notes:          b.Notes || '',
       EntryDate:      dateField(b.EntryDate),
       DueDate:        dateField(b.DueDate),
-      DraftData:      '',
-      /* Exteriors: si necesita algo de la oficina del edificio (llaves,
-         codigo de acceso, etc.) antes de poder entrar. */
       NeedsOfficeAccess: b.NeedsOfficeAccess === true || b.NeedsOfficeAccess === 'true',
-      OfficeNeedNotes:   b.OfficeNeedNotes || ''
+      OfficeNeedNotes:   b.OfficeNeedNotes || '',
+      DraftData:      ''
     };
+
+    /* Coordenadas para Routing -- ordenes normales no traen building
+       ligado, se geocodifica la direccion de texto directo. Se hace
+       una sola vez aqui, compartido entre Flujo A y Flujo C. */
+    const orderGeo = await resolveOrderCoordinates(null, b.Address, b.City, b.Zip);
+    if (orderGeo) { orderFields.Latitude = orderGeo.lat; orderFields.Longitude = orderGeo.lon; }
 
     /* ===== FLUJO A: Draft temporal → Orden real ===== */
     if (isTempDraft) {
@@ -193,19 +312,17 @@ exports.handler = async (event) => {
       const draftServiceRows = myDraftRows.filter(it => it.fields.ServiceName);
 
       /* Red de seguridad: si el draft no trae ninguna fila de servicio
-         guardada (carrera con el autosave, limpieza de borrador huerfano
-         corriendo en paralelo, retraso de replicacion de SharePoint,
-         etc.), no dejar la orden sin servicios. El cliente ya mando su
-         seleccion actual en este mismo envio (b.Services); usarla como
-         respaldo en vez de perderla. Este es el flujo real que usan
-         customer.html y services.html al convertir un draft en orden. */
+         guardada (por ejemplo, una carrera con el autosave, una limpieza
+         de borrador huerfano que corrio en paralelo, o un retraso de
+         replicacion de SharePoint), no dejar la orden sin servicios.
+         El cliente ya mando su seleccion actual en este mismo envio
+         (b.Services); usarla como respaldo en vez de perderla. */
       const svcSource = draftServiceRows.length
         ? draftServiceRows.map(row => ({
             Category:    row.fields.Category    || '',
             ServiceName: row.fields.ServiceName || '',
             SubOption:   row.fields.SubOption   || '',
-            Division:    row.fields.Division    || b.Division,
-            Level:       row.fields.Level       || ''
+            Division:    row.fields.Division    || b.Division
           }))
         : resolveServices(b.Services, b.Division);
 
@@ -216,6 +333,13 @@ exports.handler = async (event) => {
       const result = await createListItem(ORDERS_LIST,
         Object.assign({}, orderFields, { OrderID: orderId, Status: newStatus })
       );
+
+      try {
+        await updateListItemByItemId(DRAFTS_LIST, draftHeader.id, {
+          Status:  'Order',
+          OrderID: orderId
+        });
+      } catch (e) { console.error('Draft header update failed:', e.message); }
 
       try {
         await Promise.all([
@@ -237,21 +361,13 @@ exports.handler = async (event) => {
             ChangeDate: new Date().toISOString(),
             Notes:      'Submitted from draft.',
             OldValue:   'Draft',
-            NewValue:   newStatus
+            NewValue:   'SERVICES:' + JSON.stringify({ services: svcSource, dirtLevel: b.DirtLevel || '', entryDate: orderFields.EntryDate || '', dueDate: orderFields.DueDate || '' })
           })
         ]);
       } catch (e) { console.error('Post-order write failed:', e.message); }
 
-      /* Borrar el borrador COMPLETO (encabezado + servicios), no solo
-         marcarlo como convertido. Si antes el PATCH de Status fallaba
-         (por ejemplo por un eTag ya viejo), el encabezado se quedaba con
-         Status='Draft' para siempre y get-orders.js lo seguia mostrando
-         en "Unfinished Drafts" aunque la orden ya existiera. Borrarlo de
-         raiz no deja ningun estado intermedio en el que se pueda quedar. */
       try {
-        await Promise.all(
-          [draftHeader, ...draftServiceRows].map(row => deleteListItem(DRAFTS_LIST, row.id))
-        );
+        await Promise.all(draftServiceRows.map(row => deleteListItem(DRAFTS_LIST, row.id)));
       } catch (e) { console.error('Draft cleanup failed:', e.message); }
 
       return jsonResponse(200, { success: true, orderId, id: result.id });
@@ -287,37 +403,33 @@ exports.handler = async (event) => {
         Division:  orderItem.fields.Division || ''
       };
 
-      const newStatus = b.Status || 'Received';
+      const newStatus = b.Status || 'Pending';
 
       const snapshot = 'SERVICES:' + JSON.stringify({
         services: stale.map(it => ({
           Category:    it.fields.Category    || '',
           ServiceName: it.fields.ServiceName || '',
           SubOption:   it.fields.SubOption   || '',
-          Division:    it.fields.Division    || existing.Division,
-          Level:       it.fields.Level       || ''
+          Division:    it.fields.Division    || existing.Division
         })),
         dirtLevel: existing.DirtLevel || ''
       });
 
-      await updateListItemByItemId(ORDERS_LIST, existing.itemId,
-        Object.assign({}, orderFields, { Status: newStatus })
-      );
-
-      if (stale.length) {
-        await Promise.all(stale.map(row => deleteListItem(ORDER_SERVICES_LIST, row.id)));
-      }
-
-      for (const s of resolveServices(b.Services, b.Division)) {
-        await createListItem(ORDER_SERVICES_LIST, {
-          Title:       s.ServiceName || '',
-          OrderID:     existing.OrderID,
-          Category:    s.Category,
-          ServiceName: s.ServiceName,
-          SubOption:   s.SubOption,
-          Division:    s.Division,
-          Level:       s.Level || ''
-        });
+      /* TechMarkedComplete se apaga -- ya no es cierto que "esto es lo
+         que el tecnico dijo que termino" una vez que algo cambia.
+         Respaldo si la columna todavia no existe en SharePoint. */
+      /* CAMBIO DE DISENO (confirmado con el usuario): un cambio pedido
+         por el cliente ya NO se aplica a la orden real hasta que se
+         apruebe -- antes se sobreescribian todos los campos (via
+         orderFields completo) y los servicios de una vez. Ahora solo
+         se cambia el Status -- lo propuesto vive unicamente en el
+         snapshot del renglon de historial de abajo, hasta que
+         Reassign/Reschedule lo aplique de verdad. */
+      const requestPatch = { Status: newStatus, TechMarkedComplete: false };
+      try {
+        await updateListItemByItemId(ORDERS_LIST, existing.itemId, requestPatch);
+      } catch (patchErr) {
+        await updateListItemByItemId(ORDERS_LIST, existing.itemId, { Status: newStatus });
       }
 
       const revCount = histRows.filter(it =>
@@ -328,7 +440,7 @@ exports.handler = async (event) => {
 
       /* Servicios nuevos que el cliente seleccionó */
       const newServices = resolveServices(b.Services, b.Division).map(s => ({
-        Category: s.Category, ServiceName: s.ServiceName, SubOption: s.SubOption, Division: s.Division, Level: s.Level || ''
+        Category: s.Category, ServiceName: s.ServiceName, SubOption: s.SubOption, Division: s.Division
       }));
 
       await createListItem(ORDER_HISTORY_LIST, {
@@ -338,20 +450,26 @@ exports.handler = async (event) => {
         ChangedBy:  b.ClientID,
         ChangeDate: new Date().toISOString(),
         Notes:      '',
-        OldValue:   JSON.stringify(stale.map(it => ({
-          Category:    it.fields.Category    || '',
-          ServiceName: it.fields.ServiceName || '',
-          SubOption:   it.fields.SubOption   || '',
-          Division:    it.fields.Division    || existing.Division,
-          Level:       it.fields.Level       || ''
-        }))),
+        OldValue:   JSON.stringify({
+          services: stale.map(it => ({
+            Category:    it.fields.Category    || '',
+            ServiceName: it.fields.ServiceName || '',
+            SubOption:   it.fields.SubOption   || '',
+            Division:    it.fields.Division    || existing.Division
+          })),
+          status: existing.Status
+        }),
         NewValue:   JSON.stringify(newServices)
       });
 
       return jsonResponse(200, { success: true, orderId: existing.OrderID });
     }
 
-    /* ===== FLUJO D: Pedido multi-unidad → N ordenes reales con un PO compartido ===== */
+    /* ===== FLUJO D: Pedido multi-unidad → N ordenes reales con un PO compartido =====
+       Calcado del Flujo D del repo orders, adaptado al estilo de este
+       archivo (fetchAll + filtro en JS, no fetchByField) y con
+       atribucion de quien lo creo (changedBy) en vez de asumir que
+       fue el propio cliente. */
     if (Array.isArray(b.Units) && b.Units.length >= 2) {
       if (!b.Services) return jsonResponse(400, { error: 'Services are required' });
 
@@ -360,57 +478,37 @@ exports.handler = async (event) => {
         return jsonResponse(400, { error: 'Every unit needs a building selected.' });
       }
 
-      let allOrderRows, buildingRows;
-      try {
-        console.error('[D-diag] step1: fetching allOrderRows + buildingRows for ClientID=', b.ClientID, 'buildingIds=', buildingIds);
-        [allOrderRows, buildingRows] = await Promise.all([
-          fetchAllOrderIds(),
-          fetchByField(CLIENT_ADDRESSES_LIST, 'ClientID', b.ClientID)
-        ]);
-        console.error('[D-diag] step1 OK: allOrderRows=' + allOrderRows.length + ' buildingRows=' + buildingRows.length);
-      } catch (e) {
-        console.error('[D-diag] step1 FAILED:', e.message);
-        throw new Error('[step1 fetch] ' + e.message);
-      }
+      const [allOrderRows, allBuildingRows] = await Promise.all([
+        fetchAll(ORDERS_LIST),
+        fetchAll(CLIENT_ADDRESSES_LIST)
+      ]);
+      const buildingRows = allBuildingRows.filter(it =>
+        it.fields && String(it.fields.ClientID || '').trim().toLowerCase() === String(b.ClientID).trim().toLowerCase()
+      );
 
-      /* Cada building tiene que ser de verdad de este cliente -- que
-         nadie pueda mandar el id de un building ajeno. 'CLIENT_ADDRESS'
-         es un id especial (no es un renglon real de
+      const buildingsById = {};
+      buildingRows.forEach(it => { if (it.fields) buildingsById[it.id] = it.fields; });
+      /* 'CLIENT_ADDRESS' es un id especial (no es un renglon real de
          CLIENT_ADDRESSES_LIST) -- significa "esta unidad no tiene
          building guardado, usa la direccion del cliente". Se salta la
          validacion de pertenencia para ese caso unicamente. */
-      const buildingsById = {};
-      buildingRows.forEach(it => { if (it.fields) buildingsById[it.id] = it.fields; });
-      console.error('[D-diag] step2: buildingsById keys=', Object.keys(buildingsById));
       for (const id of buildingIds) {
-        if (id !== 'CLIENT_ADDRESS' && !buildingsById[id]) return jsonResponse(403, { error: 'One of the selected buildings does not belong to this account.' });
+        if (id !== 'CLIENT_ADDRESS' && !buildingsById[id]) return jsonResponse(403, { error: 'One of the selected buildings does not belong to this client.' });
       }
 
-      let poTag, nextSuffixNum, parsedServices;
-      try {
-        poTag = nextGlobalPO(allOrderRows);
-        nextSuffixNum = parseInt(nextGlobalSuffix(allOrderRows), 10);
-        parsedServices = resolveServices(b.Services, b.Division);
-        console.error('[D-diag] step3 OK: poTag=' + poTag + ' nextSuffixNum=' + nextSuffixNum + ' parsedServices.length=' + parsedServices.length, JSON.stringify(parsedServices));
-      } catch (e) {
-        console.error('[D-diag] step3 FAILED:', e.message);
-        throw new Error('[step3 resolve] ' + e.message);
-      }
+      const actor = (b.changedBy && String(b.changedBy).trim()) || 'Admin';
+      const poTag = nextGlobalPO(allOrderRows);
+      let nextSuffixNum = parseInt(nextGlobalSuffix(allOrderRows), 10);
+      const parsedServices = resolveServices(b.Services, b.Division);
 
       const createdOrderIds = [];
       for (const unit of b.Units) {
         const bId = String(unit.buildingId).trim();
-        /* Sin building guardado -- usar la direccion del cliente que
-           mando el front en b.ClientAddress, en vez de un renglon real
-           de CLIENT_ADDRESSES_LIST. */
+        /* Sin building guardado -- usar la direccion del cliente
+           (ya geocodificada arriba, en orderFields) en vez de un
+           renglon real de CLIENT_ADDRESSES_LIST. */
         const bf = bId === 'CLIENT_ADDRESS'
-          ? {
-              BuildingNumber: '',
-              Address: (b.ClientAddress && b.ClientAddress.address) || '',
-              Suite:   (b.ClientAddress && b.ClientAddress.suite)   || '',
-              City:    (b.ClientAddress && b.ClientAddress.city)    || '',
-              Zip:     (b.ClientAddress && b.ClientAddress.zip)     || ''
-            }
+          ? { BuildingNumber: '', Address: orderFields.Address, Suite: orderFields.Suite, City: orderFields.City, Zip: orderFields.Zip, Latitude: orderFields.Latitude, Longitude: orderFields.Longitude }
           : buildingsById[bId];
         const suffix = String(nextSuffixNum++).padStart(4, '0');
         const orderId = String(b.ClientID).trim() + '-' + suffix + '-' + poTag;
@@ -427,15 +525,18 @@ exports.handler = async (event) => {
           City:           bf.City    || '',
           Zip:            bf.Zip     || '',
           BatchId:        poTag,
-          BuildingId:     bId
+          BuildingId:     bId,
+          /* Cada unidad tiene su PROPIO building, distinto a la
+             direccion de facturacion que ya se geocodifico en
+             orderFields -- se sobreescribe con las coordenadas
+             correctas de este building especifico. */
+          Latitude:  bf.Latitude  != null ? bf.Latitude  : null,
+          Longitude: bf.Longitude != null ? bf.Longitude : null
         });
 
-        console.error('[D-diag] step4: creating order ' + orderId, JSON.stringify(unitFields));
         try {
           await createListItem(ORDERS_LIST, unitFields);
-          console.error('[D-diag] step4 OK: ' + orderId);
         } catch (e) {
-          console.error('[D-diag] step4 FAILED for ' + orderId + ':', e.message, 'fields=', JSON.stringify(unitFields));
           throw new Error('Could not create unit ' + orderId + ': ' + e.message);
         }
 
@@ -456,34 +557,29 @@ exports.handler = async (event) => {
             Title:      orderId,
             OrderID:    orderId,
             ChangeType: 'Created',
-            ChangedBy:  b.ClientID,
+            ChangedBy:  actor,
             ChangeDate: new Date().toISOString(),
             Notes:      '',
             OldValue:   '',
-            NewValue:   b.Status || 'Received'
+            NewValue:   'SERVICES:' + JSON.stringify({ services: parsedServices, dirtLevel: unit.dirtLevel || b.DirtLevel || '', entryDate: unitFields.EntryDate || '', dueDate: unitFields.DueDate || '' })
           });
         } catch (e) {
-          /* Mismo criterio que el Flujo C (orden normal): un problema
-             al escribir servicios/historial NO debe tumbar la orden
-             completa (la orden ya existe en ORDERS_LIST en este punto).
-             Se loguea para diagnostico, no se avienta al cliente. */
+          /* Mismo criterio que el Flujo C: un problema al escribir
+             servicios/historial no debe tumbar la orden completa. */
           console.error('Batch unit post-order write failed for ' + orderId + ':', e.message);
         }
 
         createdOrderIds.push(orderId);
       }
 
-      /* Fila resumen del lote, pegada a la ULTIMA unidad creada -- trae
-         la lista completa de OrderIDs hermanos en NewValue, para que
-         el flow de Power Automate arme el correo agrupado de una sola
-         vez en vez de uno por unidad. */
+      /* Fila resumen del lote, pegada a la ULTIMA unidad creada. */
       const lastOrderId = createdOrderIds[createdOrderIds.length - 1];
       try {
         await createListItem(ORDER_HISTORY_LIST, {
           Title:      lastOrderId + '-batch',
           OrderID:    lastOrderId,
           ChangeType: 'Batch Created',
-          ChangedBy:  b.ClientID,
+          ChangedBy:  actor,
           ChangeDate: new Date().toISOString(),
           Notes:      '',
           OldValue:   poTag,
@@ -505,6 +601,18 @@ exports.handler = async (event) => {
       Object.assign({}, orderFields, { OrderID: orderId, Status: b.Status || 'Received' })
     );
 
+    /* BUG FIX: historyWarning se declaraba con let ADENTRO del try de
+       aqui abajo, pero el return final que la usa esta AFUERA de ese
+       bloque -- una vez que el try cierra, esa variable deja de
+       existir (alcance de bloque real con let). Referenciarla en el
+       return tronaba SIEMPRE con "historyWarning is not defined",
+       sin importar si el historial se escribio bien o no. Afectaba
+       tanto al Create Order de Admin como a cualquier orden nueva
+       normal del cliente (customer.html nunca manda OrderID en una
+       orden nueva, asi que siempre cae aqui, en Flujo C). La orden
+       SI se alcanzaba a crear bien antes de este error -- el bug
+       era solo en la respuesta final, no en el guardado real. */
+    let historyWarning = null;
     try {
     const parsedServices = resolveServices(b.Services, b.Division);
     await Promise.all(parsedServices.map(s =>
@@ -519,39 +627,53 @@ exports.handler = async (event) => {
       })
     ));
 
-    await createListItem(ORDER_HISTORY_LIST, {
+    const createdHistoryFields = {
       Title:      orderId,
       OrderID:    orderId,
       ChangeType: 'Created',
-      ChangedBy:  b.ClientID,
+      /* Si la orden se creo desde admin (Create Order), el "quien lo hizo"
+         debe ser la persona de oficina que la creo, no el numero de
+         cliente -- para eso admin.html manda b.ChangedBy con el nombre
+         del staff logueado. Si la mando el cliente (flujo normal desde
+         customer.html), b.ChangedBy nunca llega y se sigue usando su
+         ClientID como siempre. */
+      ChangedBy:  (b.OfficeCreated && b.ChangedBy) ? b.ChangedBy : b.ClientID,
       ChangeDate: new Date().toISOString(),
       Notes:      '',
+      FieldChanged: b.OfficeCreated ? 'Office Order' : '',
       OldValue:   '',
-      NewValue:   b.Status || 'Received'
-    });
-} catch (e) { console.error('Post-order write failed:', e.message); }
+      /* BUG REAL arreglado: antes solo se guardaba la palabra del
+         estatus ('Received') -- el pedido original (que servicios se
+         pidieron, para que fecha) nunca quedaba registrado en ningun
+         lado. Con el tiempo, no habia forma de ver "que se pidio
+         exactamente" sin adivinar comparando ediciones posteriores. */
+      NewValue:   'SERVICES:' + JSON.stringify({
+        services: parsedServices, dirtLevel: b.DirtLevel || '',
+        entryDate: orderFields.EntryDate || '', dueDate: orderFields.DueDate || ''
+      })
+    };
 
-    /* Limpiar el borrador automatico que se pudo haber guardado solo
-       mientras el cliente llenaba el formulario, si nunca se convirtio
-       formalmente (Flujo A). Sin esto, ese borrador se queda huerfano
-       y sigue apareciendo en "View Drafts" aunque la orden ya se mando. */
+    /* Antes, si esta escritura fallaba por lo que fuera, el error se
+       tragaba en silencio (solo console.error, nadie lo veia) y la
+       orden se creaba de todos modos SIN ningun renglon de historial
+       -- "No history." para siempre en Approvals, sin aviso. Ahora se
+       reintenta una vez con una pausa corta, y si de plano vuelve a
+       fallar, se manda un aviso real en la respuesta (historyWarning)
+       para que admin.html se lo pueda mostrar al usuario en vez de
+       que desaparezca sin que nadie se entere. */
     try {
-      const clientDraftRows = await fetchByField(DRAFTS_LIST, 'ClientID', b.ClientID);
-      const staleHeader = clientDraftRows.find(it =>
-        it.fields && !it.fields.ServiceName &&
-        it.fields.Status === 'Draft' &&
-        String(it.fields.Division || '').toLowerCase() === String(b.Division).toLowerCase()
-      );
-      if (staleHeader) {
-        const staleId = String(staleHeader.fields.OrderID || '');
-        const staleServiceRows = clientDraftRows.filter(it =>
-          it.fields && it.fields.ServiceName && String(it.fields.OrderID || '') === staleId
-        );
-        await Promise.all([staleHeader, ...staleServiceRows].map(row => deleteListItem(DRAFTS_LIST, row.id)));
+      await createListItem(ORDER_HISTORY_LIST, createdHistoryFields);
+    } catch (e1) {
+      await new Promise(r => setTimeout(r, 800));
+      try {
+        await createListItem(ORDER_HISTORY_LIST, createdHistoryFields);
+      } catch (e2) {
+        console.error('Post-order history write failed twice:', e2.message);
+        historyWarning = 'The order was created, but its first history entry could not be saved: ' + e2.message;
       }
-    } catch (e) { console.error('Stale draft cleanup failed:', e.message); }
-
-    return jsonResponse(200, { success: true, orderId, id: result.id });
+    }
+} catch (e) { console.error('Post-order write failed:', e.message); }
+    return jsonResponse(200, { success: true, orderId, id: result.id, historyWarning });
 
   } catch (err) {
     return jsonResponse(500, { error: err.message });
