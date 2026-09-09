@@ -449,7 +449,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="shared.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.1.8/date-time-picker/date-time-picker.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.1.10/date-time-picker/date-time-picker.js"></script>
 <script>
 const client = GS.requireSession();
 if (client) {
@@ -1464,19 +1464,17 @@ if (client) {
     if (orderId) saveExpectedReadyDate(orderId, e.detail.value);
   });
 
-  document.addEventListener('gs-time-picked', async (e) => {
+  document.addEventListener('gs-time-picked', (e) => {
     if (e.detail.fieldId.indexOf('entryTime-') !== 0) return;
     const safe = e.detail.fieldId.slice('entryTime-'.length);
     const orderId = orderIdBySafe[safe];
     if (!orderId) return;
-    try {
-      await saveEntryTime(orderId, e.detail.value);
-      if (pendingActivation[safe]) {
-        pendingActivation[safe] = false;
-        const cb = $('readyToggle-' + safe);
-        if (cb) cb.checked = true;
-      }
-    } catch (err) { /* ya se mostro el toast de error */ }
+    if (pendingActivation[safe]) {
+      pendingActivation[safe] = false;
+      const cb = $('readyToggle-' + safe);
+      if (cb) cb.checked = true;
+    }
+    saveEntryTime(orderId, e.detail.value).catch(() => { /* ya se mostro el toast de error */ });
   });
 
 
@@ -1511,26 +1509,29 @@ if (client) {
   function onMaterialsReadyToggle(orderId, checkboxEl) {
     const safe = String(orderId).replace(/[^a-z0-9]/gi, '_');
     if (checkboxEl.checked) {
-      /* Ya no se prende directo sin hora -- se revierte visualmente y
-         se abre el reloj de una vez, obligatorio. Solo al elegir la
-         hora (evento 'gs-time-picked' del reloj compartido) se prende de verdad.
-         BUG REAL: el contenedor del reloj (entryTimeBlock-safe) usa
-         la clase .ready-reveal, que es display:none hasta que
-         "ready" ya es true -- pero "ready" nunca llega a true sin
-         antes pasar por AQUI, eligiendo la hora en ESE MISMO reloj.
-         Sin esta linea, el usuario le daba clic al switch, se
-         revertia solo, y el reloj "se abria" en el sentido de que
-         el JS le ponia la clase .open al popover -- pero el propio
-         padre seguia en display:none, asi que nunca se veia nada.
-         Por eso el switch "no hacia nada" en apariencia. */
+      /* Se prende y se ve prendido de inmediato -- no se revierte.
+         Se abre el reloj para pedir la hora. Si el usuario nunca
+         elige nada y cierra el reloj (clic afuera, o apagando el
+         switch el mismo), el listener de gs-popover-closed de abajo
+         lo revierte -- pero mientras tanto, se ve prendido. */
       const block = $('entryTimeBlock-' + safe);
       if (block) block.classList.add('show');
-      checkboxEl.checked = false;
       pendingActivation[safe] = true;
       GSDateTimePicker.toggleClock('entryTime-' + safe);
+    } else if (pendingActivation[safe]) {
+      /* Estaba prendido nomas en pantalla, esperando la hora --
+         nunca se guardo nada de verdad en el backend. El usuario se
+         arrepintio y lo apago el mismo antes de elegir hora: cancelar
+         sin pedir nota (no hay nada real que revertir todavia). */
+      pendingActivation[safe] = false;
+      const block = $('entryTimeBlock-' + safe);
+      if (block) block.classList.remove('show');
+      GSDateTimePicker.closeAllPopovers();
     } else {
-      /* Apagar pide nota obligatoria -- se revierte el checkbox visualmente
-         hasta que confirme, para no mentir sobre el estado real */
+      /* Ya estaba prendido de verdad (guardado en el backend) --
+         apagar pide nota obligatoria, se revierte el checkbox
+         visualmente hasta que confirme, para no mentir sobre el
+         estado real */
       checkboxEl.checked = true;
       notReadyOrderId = orderId;
       notReadyCheckbox = checkboxEl;
@@ -1539,6 +1540,23 @@ if (client) {
       $('notready-dialog').classList.add('open');
     }
   }
+
+  /* Si el reloj se cierra (clic afuera, o cualquier otra forma) SIN
+     que el usuario haya elegido nada -- ni siquiera la hora sola --
+     pendingActivation sigue en true, y hay que revertir el switch y
+     ocultar el campo de hora otra vez. Si SI se eligio algo,
+     gs-time-picked ya puso pendingActivation en false antes de que
+     este evento llegue, asi que aqui no se hace nada. */
+  document.addEventListener('gs-popover-closed', (e) => {
+    if (e.detail.fieldId.indexOf('entryTime-') !== 0) return;
+    const safe = e.detail.fieldId.slice('entryTime-'.length);
+    if (!pendingActivation[safe]) return;
+    pendingActivation[safe] = false;
+    const cb = $('readyToggle-' + safe);
+    if (cb) cb.checked = false;
+    const block = $('entryTimeBlock-' + safe);
+    if (block) block.classList.remove('show');
+  });
 
   function closeNotReadyDialog(reverted) {
     $('notready-dialog').classList.remove('open');
