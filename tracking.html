@@ -109,13 +109,7 @@
   .field-caption { font-size: 10px; color: var(--gray); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 3px; }
   .field-value { font-size: 13px; color: var(--black); }
 
-  .hist-item { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
-  .hist-item:last-child { border-bottom: none; }
-  .hist-date { color: var(--gray); white-space: nowrap; min-width: 110px; }
-  .hist-type { font-weight: 600; color: var(--black); }
-  .hist-notes { color: var(--gray); }
-  .hist-rev { font-weight: 700; color: var(--gold-dk); letter-spacing: .04em; }
-  .hist-by { color: var(--gray); font-weight: 400; }
+  /* El CSS del historial ahora lo trae GSOrderHistory (gsocd-shared) */
 
   /* ===== Formato unificado de renglones de cambio en el historial ===== */
   .change-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
@@ -450,6 +444,7 @@
 
 <script src="shared.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.1.10/date-time-picker/date-time-picker.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.5.0/order-history/order-history.js"></script>
 <script>
 const client = GS.requireSession();
 if (client) {
@@ -646,49 +641,10 @@ if (client) {
     return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
   }
 
-  function parseSvcPayload(value) {
-    const raw = String(value == null ? '' : value).trim();
-    if (!raw) return null;
-    const body = raw.indexOf('SERVICES:') === 0 ? raw.slice('SERVICES:'.length) : raw;
-    if (body.charAt(0) !== '[' && body.charAt(0) !== '{') return null;
-    try {
-      const obj = JSON.parse(body);
-      if (Array.isArray(obj)) return { services: obj, dirtLevel: '' };
-      if (obj && Array.isArray(obj.services)) return { services: obj.services, dirtLevel: obj.dirtLevel || '' };
-      return null;
-    } catch (e) { return null; }
-  }
-
-  function parseDatesPayload(value) {
-    const raw = String(value == null ? '' : value).trim();
-    if (raw.charAt(0) !== '{') return null;
-    try {
-      const o = JSON.parse(raw);
-      if (o && (o.entryDate || o.dueDate || o.serviceWindow)) return o;
-      return null;
-    } catch (e) { return null; }
-  }
-
-  /* ===== Formato unificado de renglones de cambio (aprobado con mini) =====
-     Un solo diseño para TODO tipo de cambio: icono + etiqueta + viejo
-     tachado + flecha + nuevo en dorado. Si no cambió, se ve en negro
-     plano sin tachar. */
-  function changeRowHtml(icon, label, oldVal, newVal) {
-    const oldStr = oldVal || '', newStr = newVal || '';
-    if (oldStr === newStr) {
-      return '<div class="change-row"><span class="change-icon">' + icon + '</span><span class="change-label">' + esc(label) + '</span><span class="change-values"><span class="plain-val">' + esc(newStr || '—') + '</span></span></div>';
-    }
-    return '<div class="change-row"><span class="change-icon">' + icon + '</span><span class="change-label">' + esc(label) + '</span><span class="change-values"><span class="old-val">' + esc(oldStr || '(none)') + '</span><span class="arrow">→</span><span class="new-val">' + esc(newStr || '(none)') + '</span></span></div>';
-  }
-  function addedRowHtml(icon, label, extra) {
-    return '<div class="change-row"><span class="change-icon">' + icon + '</span><span class="change-label">' + esc(label) + '</span><span class="change-values"><span class="added-val">Added' + (extra ? ' — ' + esc(extra) : '') + '</span></span></div>';
-  }
-  function removedRowHtml(icon, label, extra) {
-    return '<div class="change-row"><span class="change-icon">' + icon + '</span><span class="change-label">' + esc(label) + '</span><span class="change-values"><span class="removed-val">Removed' + (extra ? ' — ' + esc(extra) : '') + '</span></span></div>';
-  }
-  function subLineHtml(text) {
-    return '<div class="change-sub">' + esc(text) + '</div>';
-  }
+  /* parseSvcPayload/parseDatesPayload/changeRowHtml/addedRowHtml/
+     removedRowHtml/subLineHtml -- ya vienen dentro de GSOrderHistory
+     (gsocd-shared). Se quitaron de aqui por quedar huerfanas una vez
+     que se conecto el historial principal a la pieza compartida. */
 
   /* Un estatus con solicitud abierta: el cliente solo puede deshacerla */
   function hasOpenRequest(status) {
@@ -944,213 +900,11 @@ if (client) {
 
       const readyBlockHtml = materialsReadyBlockHtml(o);
 
-      /* 'Change Requested' seguido de inmediato por 'Reschedule Requested'
-         (mismo actor, mismo momento) es UNA sola accion del cliente --
-         se fusionan para verse como un solo renglon con la nota Y el
-         detalle de fechas juntos, en vez de 2 renglones seguidos. */
-      const GROUP_WINDOW_MS_HIST = 60000;
-      const DECISION_TYPES_HIST = ['Change Approved', 'Change Rejected', 'Cancellation Approved', 'Cancellation Rejected', 'Change Reassigned', 'Sent to Scheduling'];
-      const mergedHistory = [];
-      let pendingDatesConfirmed = [];
-      (history || []).filter(h => !isHiddenFromClient(h)).forEach(h => {
-        const last = mergedHistory[mergedHistory.length - 1];
-        const isReschedule = String(h.ChangeType || '') === 'Reschedule Requested';
-        const lastIsChangeRequested = last && String(last.ChangeType || '') === 'Change Requested';
-        const sameActor = last && String(last.ChangedBy || '') === String(h.ChangedBy || '');
-        const closeInTime = last &&
-          Math.abs(new Date(h.ChangeDate) - new Date(last.ChangeDate)) < GROUP_WINDOW_MS_HIST;
-        if (isReschedule && lastIsChangeRequested && sameActor && closeInTime) {
-          /* El renglon fusionado se muestra como 'Reschedule Requested'
-             (mas especifico), pero conserva la nota original del
-             'Change Requested' para que no se pierda. */
-          mergedHistory[mergedHistory.length - 1] = Object.assign({}, h, {
-            MergedNotes: last.Notes || ''
-          });
-          return;
-        }
-        /* 'Dates Confirmed' (uno por cada campo que se confirmo al
-           aprobar: Entry/Due/Service Window) se junta con el evento de
-           decision (Change Approved/etc.) que le sigue de inmediato --
-           mismo cambio real, para no verse como 2 renglones seguidos
-           donde el segundo no dice nada nuevo (mismo criterio ya
-           aplicado en admin.html). Si por lo que sea no llega un
-           evento de decision cercano despues, se muestran tal cual
-           (fallback, no se pierden). */
-        const isDatesConfirmed = String(h.ChangeType || '') === 'Dates Confirmed';
-        if (isDatesConfirmed) {
-          pendingDatesConfirmed.push(h);
-          return;
-        }
-        const isDecision = DECISION_TYPES_HIST.indexOf(String(h.ChangeType || '')) !== -1;
-        if (isDecision && pendingDatesConfirmed.length) {
-          const lastConfirmed = pendingDatesConfirmed[pendingDatesConfirmed.length - 1];
-          const closeToConfirm = Math.abs(new Date(h.ChangeDate) - new Date(lastConfirmed.ChangeDate)) < GROUP_WINDOW_MS_HIST;
-          if (closeToConfirm) {
-            mergedHistory.push(Object.assign({}, h, { MergedDateRows: pendingDatesConfirmed }));
-            pendingDatesConfirmed = [];
-            return;
-          }
-        }
-        pendingDatesConfirmed.forEach(p => mergedHistory.push(p));
-        pendingDatesConfirmed = [];
-        mergedHistory.push(h);
-      });
-      pendingDatesConfirmed.forEach(p => mergedHistory.push(p));
-
-      /* NUEVO: las solicitudes numeradas muestran su código de revisión
-         (GS-6060-1001-1 para cambios, -1C para cancelaciones) */
-      const histHtml = mergedHistory.map((h, idx) => {
-        const detailId = 'hd-' + o.OrderID.replace(/[^a-z0-9]/gi,'_') + '-' + idx;
-        let detail = '';
-
-        /* OldValue / NewValue pueden venir como array de servicios (formato
-           viejo), como 'SERVICES:{services,dirtLevel}' (formato actual) o
-           como fechas propuestas. parseSvcPayload normaliza los dos
-           primeros; datesOf, el tercero. */
-        const oldPay = parseSvcPayload(h.OldValue);
-        const newPay = parseSvcPayload(h.NewValue);
-        const oldSvcs = oldPay ? oldPay.services : null;
-        const newSvcs = newPay ? newPay.services : null;
-        const oldDates = parseDatesPayload(h.OldValue);
-        const newDates = parseDatesPayload(h.NewValue);
-
-        if (h.ChangeType === 'Created') {
-          /* La orden recien creada: mostrar los servicios que se pidieron,
-             nunca el marcador interno (Office Order/empty) que solo sirve
-             para que el admin sepa el origen, no para que lo lea nadie. */
-          const svcLines = (services || []).map(s =>
-            '<div style="font-size:12px;margin:3px 0">' + esc(s.Category || '') + ': ' +
-            esc(s.ServiceName || '') + (svcSubLabel(s) ? ' — ' + esc(svcSubLabel(s)) : '') + '</div>'
-          ).join('');
-          detail = '<div id="' + detailId + '" style="display:none;margin-top:8px;padding:10px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
-            (svcLines || '<div style="font-size:12px">No services recorded.</div>') +
-            '</div>';
-        } else if (h.ChangeType === 'Order Assigned') {
-          /* Primera vez que se asigna -- mismo formato de renglon que el
-             resto del historial (icono + etiqueta + valor), pero sin
-             flecha de cambio: no hay un "antes", es la primera vez que
-             existe este dato. changeRowHtml ya muestra un solo valor en
-             negro cuando old===new, se reusa igual aqui. Reasignaciones
-             despues (cambiar de supervisor) nunca generan un segundo
-             evento de este tipo -- eso se queda interno, el cliente
-             nunca lo ve (ver admin-update-order.js). */
-          let assigned = null;
-          try { assigned = JSON.parse(h.NewValue || '{}'); } catch (e) {}
-          const rowsA = [];
-          if (assigned) {
-            if (assigned.supervisor) rowsA.push(changeRowHtml('👤', 'Supervisor', assigned.supervisor, assigned.supervisor));
-            if (assigned.dispatchDate) rowsA.push(changeRowHtml('📅', 'Date', fmtDate(assigned.dispatchDate), fmtDate(assigned.dispatchDate)));
-            if (assigned.serviceWindow) rowsA.push(changeRowHtml('🕐', 'Window', assigned.serviceWindow, assigned.serviceWindow));
-          }
-          if (rowsA.length) {
-            detail = '<div id="' + detailId + '" style="display:none;margin-top:8px;padding:4px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
-              rowsA.join('') +
-              '</div>';
-          }
-        } else if (h.MergedDateRows) {
-          /* Decision (Change Approved/etc.) fusionada con sus renglones
-             de 'Dates Confirmed' -- mismo campo que el cliente ya vio
-             pedido en 'New dates requested' justo arriba, pero aqui es
-             la confirmacion real de que se aplico. No se compara contra
-             ese renglon anterior para evitar repetir el mismo texto dos
-             veces -- se usa el mismo truco de changeRowHtml(icon,label,
-             valor,valor) para verse en negro plano (confirmado), no como
-             un cambio otra vez. */
-          const rowsD = h.MergedDateRows.map(r =>
-            changeRowHtml(r.FieldChanged === 'Service Window' ? '🕐' : '📅', r.FieldChanged || 'Changed', r.NewValue || '', r.NewValue || '')
-          );
-          if (rowsD.length) {
-            detail = '<div id="' + detailId + '" style="display:none;margin-top:8px;padding:4px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
-              rowsD.join('') +
-              '</div>';
-          }
-        } else if (oldDates || newDates) {
-          const old = oldDates || {}, neu = newDates || {};
-          const rows2 = [];
-          rows2.push(changeRowHtml('📅', 'Entry', old.entryDate ? fmtDate(old.entryDate) : '', neu.entryDate ? fmtDate(neu.entryDate) : ''));
-          rows2.push(changeRowHtml('📅', 'Due', old.dueDate ? fmtDate(old.dueDate) : '', neu.dueDate ? fmtDate(neu.dueDate) : ''));
-          rows2.push(changeRowHtml('🕐', 'Window', old.serviceWindow || '', neu.serviceWindow || ''));
-          /* MergedNotes trae la nota del 'Change Requested' original
-             cuando este renglon viene fusionado con el (ver mas arriba,
-             mergedHistory) -- se muestra junto con el detalle de fecha,
-             no en un renglon aparte. */
-          const nt = clientNoteText(h.MergedNotes || h.Notes);
-          detail = '<div id="' + detailId + '" style="display:none;margin-top:8px;padding:4px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
-            rows2.join('') +
-            (nt ? '<div style="font-size:12px;margin:6px 0 4px;padding-top:6px;border-top:1px solid var(--border)">' + esc(nt) + '</div>' : '') +
-            '</div>';
-        } else if (Array.isArray(oldSvcs) && Array.isArray(newSvcs)) {
-          /* Comparar servicios: agregados, quitados, modificados */
-          const isNC = s => s.NotCompleted === true || String(s.NotCompleted) === 'true';
-          const oldMap = {};
-          oldSvcs.forEach(s => { oldMap[s.Category + '|' + s.ServiceName] = s; });
-          const newMap = {};
-          newSvcs.forEach(s => { newMap[s.Category + '|' + s.ServiceName] = s; });
-
-          const rows3 = [];
-          /* Agregados y modificados */
-          newSvcs.forEach(s => {
-            const key = s.Category + '|' + s.ServiceName;
-            const prev = oldMap[key];
-            const label = svcSubLabel(s);
-            if (!prev) { rows3.push(addedRowHtml('➕', s.ServiceName, label)); return; }
-            const prevLabel = svcSubLabel(prev);
-            if (prevLabel !== label)
-              rows3.push(changeRowHtml('🔄', s.ServiceName, prevLabel || '(none)', label || '(none)'));
-            if (isNC(prev) !== isNC(s)) {
-              rows3.push(changeRowHtml(isNC(s) ? '⚠️' : '✅', s.ServiceName,
-                isNC(s) ? 'Completed' : 'Not completed', isNC(s) ? 'Not completed' : 'Completed'));
-              if (isNC(s) && s.NotCompletedReason) rows3.push(subLineHtml('Reason: ' + s.NotCompletedReason));
-            }
-          });
-          /* Quitados */
-          oldSvcs.forEach(s => {
-            const key = s.Category + '|' + s.ServiceName;
-            if (!newMap[key]) rows3.push(removedRowHtml('➖', s.ServiceName, svcSubLabel(s)));
-          });
-          const dOld = (oldPay && oldPay.dirtLevel) || '', dNew = (newPay && newPay.dirtLevel) || '';
-          if (dOld !== dNew && (dOld || dNew))
-            rows3.push(changeRowHtml('🧹', 'Condition', dOld, dNew));
-
-          if (rows3.length) {
-            detail = '<div id="' + detailId + '" style="display:none;margin-top:8px;padding:4px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
-              rows3.join('') +
-              '</div>';
-          }
-        } else if (h.FieldChanged === 'Status') {
-          /* "Status: OldValue -> NewValue" nunca se muestra: el encabezado
-             del evento (Change Approved, Cancellation Requested, etc.) ya
-             dice lo mismo. Solo se conserva la nota si no es el mensaje
-             generico de Approved/Rejected by. */
-          const nt = clientNoteText(h.Notes);
-          if (nt) {
-            detail = '<div id="' + detailId + '" style="display:none;margin-top:8px;padding:10px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
-              '<div style="font-size:12px">' + esc(nt) + '</div></div>';
-          }
-        } else if (h.FieldChanged && (h.OldValue || h.NewValue)) {
-          /* Cambios de un solo campo (Dispatch Date, Service Window,
-             Supervisor, Due Date...): antes no se veia nada aqui. */
-          const nt = clientNoteText(h.Notes);
-          detail = '<div id="' + detailId + '" style="display:none;margin-top:8px;padding:4px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
-            changeRowHtml('🔄', h.FieldChanged, h.OldValue || '(empty)', h.NewValue || '(empty)') +
-            (nt ? '<div style="font-size:12px;margin:3px 0">' + esc(nt) + '</div>' : '') +
-            '</div>';
-        } else if (clientNoteText(h.Notes) && h.Notes.indexOf('SERVICES:') !== 0) {
-          const nt = clientNoteText(h.Notes);
-          detail = '<div id="' + detailId + '" style="display:none;margin-top:8px;padding:10px 12px;background:var(--off);border-radius:4px;border-left:3px solid var(--gold-dk)">' +
-            '<div style="font-size:12px">' + esc(nt) + '</div></div>';
-        }
-
-        const hasDetail = detail.length > 0;
-        return '<div class="hist-item" style="flex-direction:column;align-items:flex-start;cursor:' + (hasDetail?'pointer':'default') + '"' +
-          (hasDetail ? ' onclick="var d=document.getElementById(\'' + detailId + '\');d.style.display=d.style.display===\'none\'?\'block\':\'none\'"' : '') + '>' +
-          '<div><span class="hist-date">' + fmtDateTime(h.ChangeDate) + '</span>' +
-          '<span class="hist-rev">' + esc(orderId) + '</span> — ' +
-          '<span class="hist-type">' + esc(shortLabel(h)) + '</span>' +
-          (h.ChangedBy ? ' <span class="hist-by">by ' + esc(h.ChangedBy) + '</span>' : '') +
-          (hasDetail ? ' <span style="font-size:10px;color:var(--gold-dk)">▼ details</span>' : '') +
-          '</div>' + detail + '</div>';
-      }).join('') || '<p class="empty-note">No events recorded.</p>';
+      /* El historial ahora viene de GSOrderHistory (gsocd-shared) -- una
+         sola pieza compartida entre Admin/Tech/Orders, en modo 'client'
+         (filtrado a lo que le corresponde ver al cliente), en vez de esta
+         implementacion propia. */
+      const histHtml = GSOrderHistory.html(orderId, history, { mode: 'client' });
 
       body.innerHTML = `
         <div class="order-2col" id="ord2col-${escAttr(orderId)}">
@@ -1211,20 +965,8 @@ if (client) {
      Se ocultan los eventos puramente internos (Supervisor, Inspection
      Date, PDFs, Archived) para que el cliente solo vea lo que a el le
      importa. */
-  /* Mensaje automatico generico de aprobar/rechazar: el nombre ya esta en
-     el encabezado del evento, asi que repetirlo aqui no aporta nada. Si el
-     admin escribio una nota personalizada en su lugar, esa SI se conserva
-     (no calzara con este patron). Igual filtra el payload SERVICES: y el
-     mensaje generico "Submitted from draft." */
-  function clientNoteText(notes) {
-    if (!notes) return '';
-    if (String(notes).indexOf('SERVICES:') === 0) return '';
-    if (notes === 'Submitted from draft.') return '';
-    if (/^Approved by .+\.$/.test(notes)) return '';
-    if (/^Rejected by .+?\.( Previous services were restored\.)?$/.test(notes)) return '';
-    return notes;
-  }
-
+  /* clientNoteText -- ya viene dentro de GSOrderHistory (gsocd-shared).
+     Se quito de aqui por quedar huerfana. */
   function isHiddenFromClient(h) {
     const fc = String(h.FieldChanged || '');
     const ct = String(h.ChangeType || '');
