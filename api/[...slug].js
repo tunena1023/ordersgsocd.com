@@ -13,6 +13,8 @@ const handlers = {
   'get-order-document': require('../get-order-document').handler,
   'get-orders':         require('../get-orders').handler,
   'get-services':       require('../get-services').handler,
+  'get-holidays':       require('../get-holidays').handler,
+  'save-client-holiday': require('../save-client-holiday').handler,
   'recover-client-id':  require('../recover-client-id').handler,
   'register-client':    require('../register-client').handler,
   'request-change':     require('../request-change').handler,

@@ -415,6 +415,7 @@ if (client) {
         '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:20px 0 10px;padding-top:16px;border-top:1px solid var(--border)">Office hours at this address</div>' +
         '<p style="font-size:11px;color:var(--gray);margin-bottom:10px">So our crew knows when someone will be there to let them in.</p>' +
         officeHoursFieldsHtml(profileFields) +
+        holidaysSectionHtml('') +
         '<button class="btn-gold" style="width:100%;margin-top:6px" onclick="savePrimaryEdit()">Save</button>' +
         '<p class="dialog-error" id="ctl-error"></p>' +
         '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:20px 0 8px;padding-top:16px;border-top:1px solid var(--border)">Contacts</div>' +
@@ -423,6 +424,7 @@ if (client) {
         '<a onclick="addContactRow(false)" style="font-size:11px;color:var(--gray);text-decoration:underline;cursor:pointer;display:block;margin:4px 0 6px">+ Add another contact</a>' +
         (archivedCount ? '<a onclick="toggleShowArchivedContacts(); openEdit()" style="font-size:11px;color:var(--gray);text-decoration:underline;cursor:pointer;display:block">' + (showArchivedContacts ? 'Hide' : 'Show') + ' archived contacts (' + archivedCount + ')</a>' : '') +
         (showArchivedContacts ? archivedContactsHtml() : '');
+      loadHolidaysInto(client.clientId, '');
     } else {
       const b = addresses.find(x => x.id === selected) || {};
       control.innerHTML = '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin-bottom:12px">Edit ' + esc(b.label || 'building') + '</div>' +
@@ -437,8 +439,10 @@ if (client) {
         '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:20px 0 10px;padding-top:16px;border-top:1px solid var(--border)">Office hours at this building</div>' +
         '<p style="font-size:11px;color:var(--gray);margin-bottom:10px">So our crew knows when someone will be there to let them in.</p>' +
         officeHoursFieldsHtml(b) +
+        holidaysSectionHtml(b.id) +
         '<button class="btn-gold" style="width:100%;margin-top:6px" onclick="saveBuildingEdit(\'' + esc(b.id) + '\')">Save</button>' +
         '<p class="dialog-error" id="ctl-error"></p>';
+      loadHolidaysInto(client.clientId, b.id);
     }
   }
 
@@ -509,6 +513,148 @@ if (client) {
         '<div class="field-small" style="max-width:150px"><label>Closes at</label>' + GSDateTimePicker.timeHtml('ctl-officeClose', closeHHMM) + '</div>' +
       '</div>';
   }
+
+  /* ===== Holidays -- confirmado con el usuario, con minis de por
+     medio: cada eleccion (Open/Closed, y el horario si abre) se
+     guarda de inmediato al elegirla, no espera al boton "Save" de
+     arriba (que es de la direccion/horario normal, otra lista
+     distinta por dentro). Un festivo sin elegir todavia no aparece
+     en la lista principal -- vive detras de "+ Add a day", para no
+     abrumar con los 11 de una vez si el cliente solo le importan 2. */
+  let holidaysCache = {}; // safe(buildingId) -> [{...}] tal cual vino del backend
+  const holSafe = (buildingId) => String(buildingId || 'primary').replace(/[^a-z0-9]/gi, '_');
+
+  function holidaysSectionHtml(buildingId) {
+    const safe = holSafe(buildingId);
+    return '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:20px 0 8px;padding-top:16px;border-top:1px solid var(--border)">Holidays</div>' +
+      '<p style="font-size:11px;color:var(--gray);margin-bottom:10px">Choose which ones apply here, and whether you\'ll be open or closed.</p>' +
+      '<div id="hol-list-' + safe + '"><p class="empty-note" style="padding:8px 0">Loading…</p></div>' +
+      '<div id="hol-add-' + safe + '" style="margin-top:8px"></div>';
+  }
+
+  async function loadHolidaysInto(clientId, buildingId) {
+    const safe = holSafe(buildingId);
+    try {
+      const res = await GS.api('/get-holidays', { method: 'POST', body: { clientId, buildingId: buildingId || '' } });
+      holidaysCache[safe] = res.holidays || [];
+      renderHolidaysList(buildingId);
+    } catch (e) {
+      const el = $('hol-list-' + safe);
+      if (el) el.innerHTML = '<p class="empty-note">Could not load holidays.</p>';
+    }
+  }
+
+  function renderHolidaysList(buildingId) {
+    const safe = holSafe(buildingId);
+    const all = holidaysCache[safe] || [];
+    const chosen = all.filter(h => h.isOpen !== null);
+    const remaining = all.filter(h => h.isOpen === null);
+
+    const listEl = $('hol-list-' + safe);
+    if (listEl) {
+      listEl.innerHTML = chosen.length ? chosen.map(h => holidayRowHtml(h, safe)).join('') :
+        '<p class="empty-note" style="padding:8px 0">No holidays chosen yet.</p>';
+    }
+
+    const addEl = $('hol-add-' + safe);
+    if (addEl) {
+      if (!remaining.length) { addEl.innerHTML = ''; return; }
+      addEl.innerHTML = '<div id="hol-add-picker-' + safe + '" style="display:none;margin-bottom:8px">' +
+          remaining.map(h => '<button type="button" class="btn-ghost" style="font-size:11px;margin:0 6px 6px 0;padding:6px 12px" ' +
+            'onclick="addHolidayChoice(\'' + esc(safe) + '\',\'' + esc(h.name) + '\')">+ ' + esc(h.name) + '</button>').join('') +
+        '</div>' +
+        '<a onclick="toggleHolidayAddPicker(\'' + esc(safe) + '\')" style="font-size:11px;color:var(--gray);text-decoration:underline;cursor:pointer">+ Add a day</a>';
+    }
+  }
+
+  function toggleHolidayAddPicker(safe) {
+    const el = $('hol-add-picker-' + safe);
+    if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  }
+
+  /* Elegir un festivo de la lista de "+ Add a day" arranca en Closed
+     por default -- lo mas comun (la mayoria de negocios cierran en
+     festivo), sin guardar nada todavia hasta que el cliente confirme
+     con un clic en Open o Closed. */
+  function addHolidayChoice(safe, holidayName) {
+    const all = holidaysCache[safe] || [];
+    const h = all.find(x => x.name === holidayName);
+    if (!h) return;
+    h.isOpen = false;
+    renderHolidaysList(currentBuildingIdFor(safe));
+    saveHolidayChoice(safe, holidayName);
+  }
+
+  function currentBuildingIdFor(safe) {
+    return safe === 'primary' ? '' : safe;
+  }
+
+  function holidayRowHtml(h, safe) {
+    const rowId = 'hol-row-' + safe + '-' + h.id;
+    const openFieldId = 'hol-open-' + safe + '-' + h.id;
+    const closeFieldId = 'hol-close-' + safe + '-' + h.id;
+    return '<div id="' + rowId + '" style="padding:10px 0;border-bottom:1px solid var(--border)">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center">' +
+        '<div><div style="font-weight:600;font-size:12px">' + esc(h.name) + '</div>' +
+        '<div style="font-size:11px;color:var(--gray)">' + esc(h.date) + '</div></div>' +
+        '<div style="display:flex;gap:5px">' +
+          '<button type="button" onclick="setHolidayOpenState(\'' + esc(safe) + '\',\'' + esc(h.name) + '\',true)" ' +
+            'style="font-family:inherit;font-size:11px;font-weight:600;padding:5px 11px;border-radius:20px;cursor:pointer;' +
+            (h.isOpen === true ? 'background:#E4F3E8;border:1px solid #1F7A3F;color:#1F7A3F' : 'background:var(--white);border:1px solid var(--border);color:var(--gray)') + '">Open</button>' +
+          '<button type="button" onclick="setHolidayOpenState(\'' + esc(safe) + '\',\'' + esc(h.name) + '\',false)" ' +
+            'style="font-family:inherit;font-size:11px;font-weight:600;padding:5px 11px;border-radius:20px;cursor:pointer;' +
+            (h.isOpen === false ? 'background:#FBEAEA;border:1px solid #A6362D;color:#A6362D' : 'background:var(--white);border:1px solid var(--border);color:var(--gray)') + '">Closed</button>' +
+        '</div>' +
+      '</div>' +
+      (h.isOpen === true ? '<div style="margin-top:8px;padding:8px 10px;background:var(--off);border-radius:4px;font-size:11px;color:var(--gray);display:flex;align-items:center;gap:8px">' +
+        'Hours: ' + GSDateTimePicker.timeHtml(openFieldId, h.openTime || '09:00') + ' &ndash; ' + GSDateTimePicker.timeHtml(closeFieldId, h.closeTime || '17:00') +
+      '</div>' : '') +
+      '</div>';
+  }
+
+  function setHolidayOpenState(safe, holidayName, isOpen) {
+    const all = holidaysCache[safe] || [];
+    const h = all.find(x => x.name === holidayName);
+    if (!h) return;
+    h.isOpen = isOpen;
+    if (isOpen && !h.openTime) h.openTime = '09:00';
+    if (isOpen && !h.closeTime) h.closeTime = '17:00';
+    renderHolidaysList(currentBuildingIdFor(safe));
+    saveHolidayChoice(safe, holidayName);
+  }
+
+  async function saveHolidayChoice(safe, holidayName) {
+    const all = holidaysCache[safe] || [];
+    const h = all.find(x => x.name === holidayName);
+    if (!h) return;
+    try {
+      const res = await GS.api('/save-client-holiday', { method: 'POST', body: {
+        clientId: client.clientId,
+        buildingId: currentBuildingIdFor(safe),
+        choiceId: h.choiceId || null,
+        holidayName: h.name,
+        isOpen: h.isOpen,
+        openTime: h.openTime || '',
+        closeTime: h.closeTime || ''
+      }});
+      h.choiceId = res.id;
+    } catch (e) {
+      showToast('Could not save that holiday: ' + e.message);
+    }
+  }
+
+  document.addEventListener('gs-time-picked', (e) => {
+    const fid = e.detail.fieldId;
+    let m = fid.match(/^hol-open-(.+?)-(.+)$/) || fid.match(/^hol-close-(.+?)-(.+)$/);
+    if (!m) return;
+    const isOpenField = fid.indexOf('hol-open-') === 0;
+    const safe = m[1], holId = m[2];
+    const all = holidaysCache[safe] || [];
+    const h = all.find(x => x.id === holId);
+    if (!h) return;
+    if (isOpenField) h.openTime = e.detail.value; else h.closeTime = e.detail.value;
+    saveHolidayChoice(safe, h.name);
+  });
 
   function openNotifications() {
     const control = $('control-panel');
