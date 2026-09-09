@@ -949,7 +949,7 @@ if (client) {
          se fusionan para verse como un solo renglon con la nota Y el
          detalle de fechas juntos, en vez de 2 renglones seguidos. */
       const GROUP_WINDOW_MS_HIST = 60000;
-      const DECISION_TYPES_HIST = ['Change Approved', 'Change Rejected', 'Cancellation Approved', 'Cancellation Rejected'];
+      const DECISION_TYPES_HIST = ['Change Approved', 'Change Rejected', 'Cancellation Approved', 'Cancellation Rejected', 'Change Reassigned', 'Sent to Scheduling'];
       const mergedHistory = [];
       let pendingDatesConfirmed = [];
       (history || []).filter(h => !isHiddenFromClient(h)).forEach(h => {
@@ -1253,6 +1253,8 @@ if (client) {
       'Cancellation Requested':      'Cancellation requested',
       'Change Approved':             'Change approved',
       'Change Rejected':             'Change not approved',
+      'Change Reassigned':           'Change approved',
+      'Sent to Scheduling':          'Rescheduling in progress',
       'Cancellation Approved':       'Cancellation approved',
       'Cancellation Rejected':       'Cancellation not approved',
       'Cancellation Reversed':       'Order active again',
@@ -1326,7 +1328,7 @@ if (client) {
        accion -- dos pasos para una sola decision. Se fusionan, usando
        la decision como paso visible (mas claro que 'Schedule
        confirmed' seguido de otro paso sin nada nuevo que decir). */
-    const DECISION_TYPES = ['Change Approved', 'Change Rejected', 'Cancellation Approved', 'Cancellation Rejected'];
+    const DECISION_TYPES = ['Change Approved', 'Change Rejected', 'Cancellation Approved', 'Cancellation Rejected', 'Change Reassigned', 'Sent to Scheduling'];
     const events3 = [];
     events2b.forEach(h => {
       const last = events3[events3.length - 1];
