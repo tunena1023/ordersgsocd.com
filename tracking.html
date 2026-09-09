@@ -161,10 +161,9 @@
 
   /* Nuevo: unidad ocupada (Renovations + Janitorial) */
   .occupied-note { font-size: 11px; color: var(--gray); margin-top: 6px; line-height: 1.5; }
-  .occupied-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; background: #E8F0FA; color: #2D5F8A; padding: 3px 9px; border-radius: 20px; margin-left: 8px; }
-  .occupied-dot { width: 6px; height: 6px; border-radius: 50%; background: #2D5F8A; }
-  .office-need-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; background: #F0E8FA; color: #6B3FA0; padding: 3px 9px; border-radius: 20px; margin-left: 8px; }
-  .office-need-dot { width: 6px; height: 6px; border-radius: 50%; background: #6B3FA0; }
+  /* El CSS de los badges ahora lo trae GSOrderBadges (gsocd-shared) --
+     solo el margen queda aqui, especifico de esta posicion. */
+  .order-num .gs-occupied-badge, .order-num .gs-office-need-badge { margin-left: 8px; }
   /* El boton del PDF lleva su aviso debajo cuando todavia no hay documento */
   .print-wrap { display: inline-flex; flex-direction: column; }
   .btn-action {
@@ -445,6 +444,7 @@
 <script src="shared.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.1.10/date-time-picker/date-time-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.6.0/order-history/order-history.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.7.0/order-badges/order-badges.js"></script>
 <script>
 const client = GS.requireSession();
 if (client) {
@@ -747,20 +747,9 @@ if (client) {
      Admin/Cliente/Tech, sin adaptar. Solo lectura para el cliente
      tambien (aqui refleja lo que el mismo ya marco en Materials &
      Access, no se puede tocar desde aqui arriba). */
-  function unitOccupiedBadgeHtml(o) {
-    const div = String(o.Division || '').toLowerCase();
-    if (div !== 'renovations' && div !== 'janitorial') return '';
-    if (!o.UnitOccupied) return '';
-    return '<span class="occupied-badge"><span class="occupied-dot"></span>Occupied unit</span>';
-  }
-
-  /* Badge morado de "necesita algo de la oficina" -- aplica a las 3
-     divisiones (Janitorial, Renovations, Exteriors). Le confirma al
-     cliente que su pedido quedo anotado. */
-  function officeNeedBadgeHtml(o) {
-    if (!o.NeedsOfficeAccess) return '';
-    return '<span class="office-need-badge"><span class="office-need-dot"></span>Office access needed</span>';
-  }
+  /* Los badges de unidad ocupada y "se necesita algo de la oficina"
+     ahora vienen de GSOrderBadges (gsocd-shared) -- una sola pieza
+     compartida entre Admin/Tech/Orders. */
 
   function renderActiveCard(o) {
     const status = o.Status || 'Received';
@@ -768,7 +757,7 @@ if (client) {
       <div class="order-card" data-order="${escAttr(o.OrderID)}">
         <div class="order-card-header" onclick="expandOrder(this, '${escAttr(o.OrderID)}')" ondblclick="pinOrder(this,'${escAttr(o.OrderID)}','processing')">
           <div>
-            <div class="order-num">Order #${esc(o.OrderID || '')}${unitOccupiedBadgeHtml(o)}${officeNeedBadgeHtml(o)}<span class="order-pin"></span></div>
+            <div class="order-num">Order #${esc(o.OrderID || '')}${GSOrderBadges.occupied(o)}${GSOrderBadges.officeNeed(o)}<span class="order-pin"></span></div>
             <div class="order-date">${orderSummaryLine(o)}</div>
           </div>
           <div style="display:flex;align-items:center;gap:16px">
@@ -786,7 +775,7 @@ if (client) {
       <div class="order-card" data-order="${escAttr(o.OrderID)}">
         <div class="order-card-header" onclick="expandOrder(this, '${escAttr(o.OrderID)}')" ondblclick="pinOrder(this,'${escAttr(o.OrderID)}','history')">
           <div>
-            <div class="order-num">Order #${esc(o.OrderID || '')}${unitOccupiedBadgeHtml(o)}${officeNeedBadgeHtml(o)}<span class="order-pin"></span></div>
+            <div class="order-num">Order #${esc(o.OrderID || '')}${GSOrderBadges.occupied(o)}${GSOrderBadges.officeNeed(o)}<span class="order-pin"></span></div>
             <div class="order-date">${orderSummaryLine(o)}</div>
           </div>
           <div style="display:flex;align-items:center;gap:16px">
@@ -894,9 +883,7 @@ if (client) {
       const noticeHtml = delayNoticeHtml(o);
 
       const dirtLine = o.DirtLevel ? `<p class="meta-line">Overall condition: <strong style="color:var(--black)">${esc(o.DirtLevel)}</strong></p>` : '';
-      const officeNeedLine = (o.NeedsOfficeAccess && o.OfficeNeedNotes)
-        ? `<p class="meta-line" style="padding:10px 12px;background:#F0E8FA;border-radius:4px;border-left:3px solid #6B3FA0"><b style="color:#6B3FA0">What you told us you need from the office:</b> ${esc(o.OfficeNeedNotes)}</p>`
-        : '';
+      const officeNeedLine = GSOrderBadges.officeNeedNote(o, 'What you told us you need from the office');
 
       const readyBlockHtml = materialsReadyBlockHtml(o);
 
