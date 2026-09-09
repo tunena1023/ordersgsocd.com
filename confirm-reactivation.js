@@ -68,13 +68,13 @@ exports.handler = async (event) => {
        usan confirm-change.js/tracking.html/admin.html. Se guarda la
        fila completa (no solo un booleano) porque de ahi se lee
        directo el estatus al que hay que regresar. */
-    const REQUEST_OPENING_TYPES = ['Change Requested', 'Cancellation Requested', 'Reschedule Requested', 'Change Requested by Client'];
+    const REQUEST_OPENING_TYPES = ['Change Requested', 'Cancellation Requested', 'Reschedule Requested', 'Change Requested by Client', 'Reactivation Requested'];
     let reactivationRow = null;
     for (let i = history.length - 1; i >= 0; i--) {
       const h = history[i].fields;
       const type = String(h.ChangeType || '');
       if (REQUEST_OPENING_TYPES.indexOf(type) !== -1) {
-        if (type === 'Change Requested' && String(h.FieldChanged || '') === 'Reactivation Pending') {
+        if (type === 'Reactivation Requested') {
           reactivationRow = h;
         }
         break;
