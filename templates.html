@@ -191,7 +191,7 @@
 <div class="toast" id="toast" style="position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--black);color:var(--white);padding:12px 22px;border-radius:4px;font-size:13px;opacity:0;pointer-events:none;transition:all .3s;z-index:500"></div>
 
 <script src="shared.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.2.0/service-picker/service-picker.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.10.0/service-picker/service-picker.js"></script>
 <script>
 const client = GS.requireSession();
 if (client) {
@@ -363,6 +363,7 @@ if (client) {
       mode: isJan ? 'levels' : 'toggle',
       filterMode: 'selected-plus-search',
       showSelectAll: isJan,
+      groupByCategory: true,
       propertyType: propertyType,
       initialSelected: selected,
       initialLevels: svcLevel,
