@@ -460,6 +460,7 @@
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.1.10/date-time-picker/date-time-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.6.0/order-history/order-history.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.8.0/order-badges/order-badges.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.0.0/lightbox/lightbox.js"></script>
 <script>
 const client = GS.requireSession();
 if (client) {
@@ -966,17 +967,30 @@ if (client) {
      Van a la MISMA carpeta que ya usa Tech, para que el staff las vea
      en la galeria de siempre sin que Admin necesite ningun cambio. */
   let clientPhotoTargetOrderId = null;
+  /* Fotos cargadas por orden, para poder pasarle el arreglo completo
+     a GSLightbox.open() (necesita el conjunto, no solo la que se
+     toco, para poder navegar con flechas prev/next). */
+  const clientPhotosByOrder = {};
 
   async function loadClientPhotosInto(orderId) {
     const wrap = document.getElementById('client-photo-thumbs-' + orderId);
     if (!wrap) return; // desktop -- la seccion ni existe en el DOM visible, pero el nodo si esta
     try {
       const res = await GS.api('/get-client-order-photos', { method: 'POST', body: { orderId } });
-      wrap.innerHTML = (res.photos || []).map(p =>
-        '<img class="client-photo-thumb" src="' + escAttr(p.downloadUrl) + '" onclick="window.open(\'' + escAttr(p.downloadUrl) + '\', \'_blank\')">').join('');
+      const photos = res.photos || [];
+      clientPhotosByOrder[orderId] = photos;
+      wrap.innerHTML = photos.map((p, pi) =>
+        '<img class="client-photo-thumb" src="' + escAttr(p.downloadUrl) + '" onclick="openClientLightbox(\'' + escAttr(orderId) + '\', ' + pi + ')">').join('');
     } catch (e) {
       // silencioso -- si falla, el cliente simplemente ve la seccion vacia, no es critico
     }
+  }
+
+  /* Mismo componente compartido que ya usa tech.gsocd.com (Employee/
+     Supervisor) para su galeria -- overlay en la misma pagina, nunca
+     abre pestana ni navega directo a la downloadUrl de Graph. */
+  function openClientLightbox(orderId, photoIdx) {
+    GSLightbox.open(clientPhotosByOrder[orderId] || [], photoIdx);
   }
 
   function startClientPhoto(orderId) {
