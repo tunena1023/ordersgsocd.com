@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GS Solutions – Recurring Service</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black:   #111111;
+    --gold:    #C9A84C;
+    --gold-lt: #E2C97E;
+    --gold-dk: #8C6F2A;
+    --white:   #FFFFFF;
+    --off:     #F7F6F3;
+    --gray:    #6B6B6B;
+    --border:  #E0D9CC;
+    --green:   #2E7D4F;
+  }
+
+  body { font-family: 'Inter', sans-serif; background: var(--white); color: var(--black); min-height: 100vh; }
+
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 48px; min-height: 72px;
+    border-bottom: 1px solid var(--border);
+    background: var(--white); position: sticky; top: 0; z-index: 100;
+    background-image: url('/api/site-image?name=NavBackground.jpg');
+    background-size: cover; background-position: center;
+  }
+  .logo-wrap { display: flex; align-items: center; gap: 12px; }
+  .logo-diamond { width: 80px; height: 80px; }
+  .nav-right { display: flex; align-items: center; gap: 24px; }
+  .nav-link { font-size: 13px; color: var(--gray); text-decoration: none; letter-spacing: .04em; transition: color .2s; }
+  .nav-link:hover { color: var(--gold); }
+
+  .portal-header {
+    background: var(--off); border-bottom: 1px solid var(--border);
+    padding: 16px 48px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .portal-header p { font-size: 12px; color: var(--gray); }
+  .portal-header strong { color: var(--black); }
+  .btn-signout { font-size: 11px; color: var(--gray); background: none; border: none; cursor: pointer; letter-spacing: .06em; text-decoration: underline; }
+
+  .tabs { display: flex; border-bottom: 1px solid var(--border); padding: 0 48px; background: var(--white); overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .tab { padding: 16px 20px; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--gray); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color .2s, border-color .2s; text-decoration: none; display: inline-block; flex-shrink: 0; white-space: nowrap; }
+  .tab.active { color: var(--black); border-bottom-color: var(--gold); }
+
+  .wrap { padding: 32px 48px 60px; max-width: 920px; margin: 0 auto; }
+  .wrap h1 { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 600; margin-bottom: 6px; }
+  .wrap .list-sub { font-size: 12px; color: var(--gray); margin-bottom: 24px; line-height: 1.6; }
+  .empty-note { color: var(--gray); font-size: 14px; padding: 40px 0; text-align: center; }
+
+  .order-card { border: 1px solid var(--border); margin-bottom: 14px; background: var(--white); }
+  .order-card-header { padding: 16px 20px; display: flex; align-items: flex-start; justify-content: space-between; border-bottom: 1px solid var(--border); cursor: pointer; transition: background .15s; }
+  .order-card-header:hover { background: var(--off); }
+  .order-num { font-size: 14px; font-weight: 700; font-family: 'Cormorant Garamond', serif; }
+  .order-date { font-size: 11px; color: var(--gray); margin-top: 3px; }
+  .status-pill { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; padding: 5px 12px; font-weight: 600; border-radius: 3px; background: #E6F4FB; color: #1F6E96; white-space: nowrap; flex-shrink: 0; }
+  .order-card-body { padding: 20px; display: none; }
+  .order-card-body.open { display: block; }
+
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin: 4px 0 0; }
+  @media (max-width: 700px) { .detail-grid { grid-template-columns: 1fr; } }
+  .detail-label { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--gray); margin-bottom: 10px; }
+  .field-caption { font-size: 11px; color: var(--gray); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 3px; }
+  .field-value { font-size: 14px; color: var(--black); }
+
+  .hist-head { display: flex; align-items: baseline; gap: 8px; cursor: pointer; }
+  .hist-head-main { flex: 1; min-width: 0; line-height: 1.6; }
+  .hist-toggle { font-size: 10px; color: var(--gold); white-space: nowrap; flex-shrink: 0; }
+  .hist-detail { display: none; margin-top: 10px; padding: 12px 14px; background: var(--off); border-radius: 4px; border-left: 3px solid var(--gold); }
+  .hist-detail.open { display: block; }
+  .hist-box { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; padding: 10px 14px; margin-bottom: 20px; }
+  .hist-box .hist-detail { margin: 10px -14px -10px; border-radius: 0; border-left: none; }
+
+  .svc-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .svc-table td { padding: 9px 0; border-bottom: 1px solid var(--border); }
+  .svc-table tr:last-child td { border-bottom: none; }
+  .svc-table td.lvl { color: var(--gold-dk); font-weight: 600; text-align: right; }
+
+  .btn { padding: 10px 18px; border-radius: 3px; font-family: inherit; font-size: 12px; font-weight: 600; letter-spacing: .03em; cursor: pointer; border: none; }
+  .btn-gold { background: var(--gold); color: var(--white); }
+  .btn-outline { background: none; border: 1px solid var(--border); color: var(--black); }
+  .btn-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+
+  .client-photo-thumbs { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+  .client-photo-thumb { width: 52px; height: 52px; border-radius: 3px; object-fit: cover; border: 1px solid var(--border); cursor: pointer; background: var(--off); }
+  .gallery-link { font-size: 12px; color: var(--gold-dk); text-decoration: underline; cursor: pointer; display: inline-block; margin-top: 10px; }
+
+  .change-box { background: var(--off); border: 1px solid var(--border); padding: 14px; margin-top: 12px; border-radius: 4px; }
+  .change-box textarea { width: 100%; padding: 10px; border: 1px solid var(--border); font-size: 13px; font-family: inherit; resize: vertical; min-height: 60px; margin-bottom: 10px; }
+  .change-sent { font-size: 12px; color: var(--green); margin-top: 10px; display: none; }
+
+  .gallery-view { display: none; padding: 32px 48px 60px; max-width: 920px; margin: 0 auto; }
+  .gallery-view.active { display: block; }
+  .gallery-back { font-size: 12px; color: var(--gold-dk); cursor: pointer; margin-bottom: 14px; display: inline-block; }
+  .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
+  .gallery-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; }
+  .main-view.hidden { display: none; }
+
+  .toast {
+    position: fixed; bottom: 32px; right: 32px; z-index: 300;
+    background: var(--black); color: var(--white); padding: 18px 24px;
+    border-left: 3px solid var(--gold); max-width: 380px;
+    font-size: 13px; line-height: 1.6; box-shadow: 0 10px 30px rgba(0,0,0,.3);
+    display: none; animation: toastIn .35s cubic-bezier(.22,.9,.28,1) both;
+  }
+  .toast.show { display: block; }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+
+  @media (max-width: 768px) {
+    nav { padding: 12px 20px; }
+    .portal-header { padding: 14px 20px; }
+    .tabs { padding: 0 20px; }
+    .wrap, .gallery-view { padding: 24px 20px 60px; }
+  }
+</style>
+</head>
+<body>
+
+<input type="file" id="client-camera-input" accept="image/*" capture="environment" style="display:none">
+
+<nav>
+  <div class="logo-wrap">
+    <img src="" alt="GS Solutions Inc." class="logo-diamond" style="object-fit:contain">
+  </div>
+  <div class="nav-right">
+    <a href="https://gsocd.com" class="nav-link">Home</a>
+    <a href="services.html" class="nav-link">Services</a>
+  </div>
+</nav>
+
+<div class="portal-header">
+  <p>Welcome back, <strong id="client-name">Client</strong></p>
+  <button class="btn-signout" onclick="doSignout()">Sign out</button>
+</div>
+
+<div class="tabs">
+  <a class="tab" href="customer.html">New Order</a>
+  <a class="tab" href="templates.html">Templates</a>
+  <a class="tab" href="tracking.html#processing">Processing</a>
+  <a class="tab" href="tracking.html#history">History</a>
+  <a class="tab active" href="recurring.html">Recurring</a>
+  <a class="tab" href="profile.html">Profile</a>
+</div>
+
+<div class="main-view" id="main-view">
+  <div class="wrap">
+    <h1>Recurring Service</h1>
+    <p class="list-sub">Your standing cleaning contract(s) and visit history.</p>
+    <div id="contracts-list"><p class="empty-note">Loading…</p></div>
+  </div>
+</div>
+
+<div class="gallery-view" id="gallery-view">
+  <span class="gallery-back" onclick="closeGallery()">&larr; Back</span>
+  <p class="detail-label">Gallery — all visits</p>
+  <div class="gallery-grid" id="gallery-grid"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="shared.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.0.0/lightbox/lightbox.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.6.0/order-history/order-history.js"></script>
+
+<script>
+const client = GS.requireSession();
+if (client) {
+
+  GS.applyLogo();
+  document.getElementById('client-name').textContent = client.businessName || client.clientId || 'Client';
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+  function $(id) { return document.getElementById(id); }
+
+  /* Mismas 2 funciones exactas que ya usa tracking.html -- no existe
+     GS.signOut ni GS.showToast, cada pagina las define localmente. */
+  function doSignout() {
+    GS.session.clear();
+    location.href = 'index.html';
+  }
+  function showToast(msg) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 6000);
+  }
+
+  let contracts = [];
+  let openId = null;
+  let clientPhotoTarget = null; // recurringServiceId de la tarjeta donde se esta agregando foto
+
+  async function loadRecurring() {
+    const box = document.getElementById('contracts-list');
+    try {
+      const data = await GS.api('/get-my-recurring', { body: { clientId: client.clientId } });
+      contracts = data.contracts || [];
+      renderContracts();
+    } catch (e) {
+      box.innerHTML = '<p class="empty-note">Could not load: ' + esc(e.message) + '</p>';
+    }
+  }
+
+  function toggleCard(id) {
+    openId = (openId === id) ? null : id;
+    renderContracts();
+  }
+
+  function renderContracts() {
+    const box = document.getElementById('contracts-list');
+    if (!contracts.length) { box.innerHTML = '<p class="empty-note">No recurring service on file right now.</p>'; return; }
+
+    box.innerHTML = contracts.map(c => {
+      const isOpen = openId === c.id;
+      const svcRows = (c.Services || []).map(s =>
+        '<tr><td>' + esc(s.ServiceName) + '</td><td class="lvl">' + (s.Level ? esc(s.Level) : '—') + '</td></tr>').join('');
+      const historyHtml = GSOrderHistory.html('RC-' + c.id, c.history || [], { mode: 'client' });
+      const clientPhotosHtml = (c.clientPhotos || []).map(p =>
+        '<img class="client-photo-thumb" src="' + esc(p.downloadUrl) + '" onclick="window.open(\'' + esc(p.downloadUrl) + '\',\'_blank\')">').join('');
+
+      let bodyHtml = '';
+      if (isOpen) {
+        bodyHtml = '<div class="order-card-body open">' +
+          '<div class="detail-grid">' +
+            '<div>' +
+              '<p class="detail-label">Contract Details</p>' +
+              '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px 16px;margin-bottom:18px">' +
+                '<div><div class="field-caption">Days</div><div class="field-value">' + esc(c.daysOfWeek) + '</div></div>' +
+                '<div><div class="field-caption">Time</div><div class="field-value">' + esc(c.time) + '</div></div>' +
+                '<div><div class="field-caption">Building</div><div class="field-value">' + (c.buildingNumber ? esc(c.buildingNumber) : '—') + '</div></div>' +
+                '<div><div class="field-caption">Active Since</div><div class="field-value">' + esc(c.activeSince) + '</div></div>' +
+              '</div>' +
+              '<div class="hist-box">' +
+                '<div class="hist-head" onclick="toggleSvc(\'' + c.id + '\')">' +
+                  '<div class="hist-head-main"><p class="detail-label" style="margin:0">Services</p></div>' +
+                  '<span class="hist-toggle">▾ ' + (c.Services || []).length + ' services</span>' +
+                '</div>' +
+                '<div class="hist-detail" id="svc-detail-' + c.id + '"><table class="svc-table">' + svcRows + '</table></div>' +
+              '</div>' +
+              '<p class="detail-label">Your Photos</p>' +
+              '<div class="client-photo-thumbs">' + clientPhotosHtml + '</div>' +
+              '<button class="btn btn-outline" onclick="addClientPhoto(\'' + c.id + '\')">+ Add Photo</button><br>' +
+              '<span class="gallery-link" onclick="openGallery(\'' + c.id + '\')">📷 View Gallery (photos from staff)</span>' +
+              '<div class="btn-actions"><button class="btn btn-outline" onclick="toggleChangeBox(\'' + c.id + '\')">Request a Change</button></div>' +
+              '<div class="change-box" id="change-box-' + c.id + '" style="display:none">' +
+                '<p style="font-size:11.5px;color:var(--gray);margin-bottom:8px">Services are part of your contract, not editable here. Let us know and we\'ll follow up directly.</p>' +
+                '<textarea id="change-text-' + c.id + '" placeholder="What do you need changed or have a question about?"></textarea>' +
+                '<button class="btn btn-gold" onclick="sendChangeRequest(\'' + c.id + '\')">Send</button>' +
+              '</div>' +
+              '<p class="change-sent" id="change-sent-' + c.id + '">✓ Sent — our office will follow up with you directly. This goes to the same review the office already uses for anything reported on-site.</p>' +
+            '</div>' +
+            '<div><p class="detail-label">History</p>' + historyHtml + '</div>' +
+          '</div>' +
+        '</div>';
+      }
+
+      return '<div class="order-card">' +
+        '<div class="order-card-header" onclick="toggleCard(\'' + c.id + '\')">' +
+          '<div><div class="order-num">' + esc(c.division || 'Janitorial') + (c.buildingNumber ? ' — Bldg ' + esc(c.buildingNumber) : '') + '</div>' +
+          '<div class="order-date">' + esc(c.daysOfWeek) + ' · ' + esc(c.time) + '</div></div>' +
+          '<span class="status-pill">ACTIVE</span>' +
+        '</div>' +
+        bodyHtml +
+      '</div>';
+    }).join('');
+  }
+
+  function toggleSvc(id) {
+    const el = document.getElementById('svc-detail-' + id);
+    if (el) el.classList.toggle('open');
+  }
+
+  /* ===== Galeria -- navega DENTRO de la pagina (nunca pestana
+     nueva, nunca modal), mismo criterio confirmado con el usuario. ===== */
+  async function openGallery(id) {
+    document.getElementById('main-view').classList.add('hidden');
+    document.getElementById('gallery-view').classList.add('active');
+    const grid = document.getElementById('gallery-grid');
+    grid.innerHTML = '<p class="empty-note">Loading…</p>';
+    try {
+      const data = await GS.api('/get-recurring-gallery', { body: { recurringServiceId: id } });
+      const photos = data.photos || [];
+      grid.innerHTML = photos.length
+        ? photos.map(p => '<img src="' + esc(p.downloadUrl) + '" onclick="window.open(\'' + esc(p.downloadUrl) + '\',\'_blank\')">').join('')
+        : '<p class="empty-note">No photos yet.</p>';
+    } catch (e) {
+      grid.innerHTML = '<p class="empty-note">Could not load: ' + esc(e.message) + '</p>';
+    }
+  }
+  function closeGallery() {
+    document.getElementById('gallery-view').classList.remove('active');
+    document.getElementById('main-view').classList.remove('hidden');
+  }
+
+  /* ===== Fotos del cliente -- mismo <input> nativo que ya usa el
+     resto del portal, sin ubicacion (esto no rastrea a nadie). ===== */
+  function addClientPhoto(id) {
+    clientPhotoTarget = id;
+    document.getElementById('client-camera-input').click();
+  }
+  document.getElementById('client-camera-input').addEventListener('change', async function () {
+    const file = this.files[0];
+    const id = clientPhotoTarget;
+    this.value = '';
+    clientPhotoTarget = null;
+    if (!file || !id) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        await GS.api('/upload-client-recurring-photo', { body: { recurringServiceId: id, imageBase64: reader.result } });
+        showToast('Photo saved.');
+        await loadRecurring();
+        openId = id;
+        renderContracts();
+      } catch (e) {
+        alert('Could not save that: ' + e.message);
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+
+  /* ===== Request a Change -- se manda igual que una sugerencia de
+     supervisor (mismo mecanismo, Pending Review), cae en el mismo
+     Review que ya usa la oficina. ===== */
+  function toggleChangeBox(id) {
+    const box = document.getElementById('change-box-' + id);
+    box.style.display = box.style.display === 'block' ? 'none' : 'block';
+  }
+  async function sendChangeRequest(id) {
+    const input = document.getElementById('change-text-' + id);
+    if (!input.value.trim()) { input.focus(); return; }
+    try {
+      await GS.api('/request-recurring-change', { body: { recurringServiceId: id, clientId: client.clientId, message: input.value.trim() } });
+      document.getElementById('change-box-' + id).style.display = 'none';
+      document.getElementById('change-sent-' + id).style.display = 'block';
+      input.value = '';
+    } catch (e) {
+      alert('Error: ' + e.message);
+    }
+  }
+
+  loadRecurring();
+} else {
+  window.location.href = 'index.html';
+}
+</script>
+</body>
+</html>
