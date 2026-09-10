@@ -1245,12 +1245,6 @@ if (client) {
       <p class="detail-label" style="margin-bottom:12px">Materials &amp; Access</p>
       <div class="ready-row">
         <div class="ready-field">
-          <div style="font-weight:600;font-size:13px">Ready Date &amp; Time</div>
-          <div class="field-sub">${readyDateSub}</div>
-          ${GSDateTimePicker.dateHtml('readyDate-' + safe, dateVal || null)}
-        </div>
-
-        <div class="ready-field">
           <div style="font-weight:600;font-size:13px">${toggleLabel}</div>
           <div class="field-sub">${toggleSub}</div>
           <div class="toggle-row">
@@ -1260,6 +1254,12 @@ if (client) {
             </label>
             <span class="toggle-state ${ready ? 'on' : 'off'}" id="readyState-${safe}">${ready ? 'Ready for us to come in' : 'Not ready yet'}</span>
           </div>
+        </div>
+
+        <div class="ready-field ready-reveal${ready ? ' show' : ''}" id="readyDateBlock-${safe}">
+          <div style="font-weight:600;font-size:13px">Ready Date &amp; Time</div>
+          <div class="field-sub">${readyDateSub}</div>
+          ${GSDateTimePicker.dateHtml('readyDate-' + safe, dateVal || null)}
         </div>
 
         <div class="ready-field ready-reveal${ready ? ' show' : ''}" id="entryTimeBlock-${safe}">
@@ -1345,6 +1345,8 @@ if (client) {
          lo revierte -- pero mientras tanto, se ve prendido. */
       const block = $('entryTimeBlock-' + safe);
       if (block) block.classList.add('show');
+      const dateBlock = $('readyDateBlock-' + safe);
+      if (dateBlock) dateBlock.classList.add('show');
       pendingActivation[safe] = true;
       GSDateTimePicker.toggleClock('entryTime-' + safe);
     } else if (pendingActivation[safe]) {
@@ -1355,6 +1357,8 @@ if (client) {
       pendingActivation[safe] = false;
       const block = $('entryTimeBlock-' + safe);
       if (block) block.classList.remove('show');
+      const dateBlock = $('readyDateBlock-' + safe);
+      if (dateBlock) dateBlock.classList.remove('show');
       GSDateTimePicker.closeAllPopovers();
     } else {
       /* Ya estaba prendido de verdad (guardado en el backend) --
@@ -1385,6 +1389,8 @@ if (client) {
     if (cb) cb.checked = false;
     const block = $('entryTimeBlock-' + safe);
     if (block) block.classList.remove('show');
+    const dateBlock = $('readyDateBlock-' + safe);
+    if (dateBlock) dateBlock.classList.remove('show');
   });
 
   function closeNotReadyDialog(reverted) {
@@ -1419,11 +1425,13 @@ if (client) {
       delete orderDetailCache[orderId];
       const stateEl = $('readyState-' + safe);
       const revealEl = $('entryTimeBlock-' + safe);
+      const dateRevealEl = $('readyDateBlock-' + safe);
       if (stateEl) {
         stateEl.textContent = materialsReady ? 'Ready for us to come in' : 'Not ready yet';
         stateEl.className = 'toggle-state ' + (materialsReady ? 'on' : 'off');
       }
       if (revealEl) revealEl.classList.toggle('show', materialsReady);
+      if (dateRevealEl) dateRevealEl.classList.toggle('show', materialsReady);
       showToast(materialsReady ? 'We\'ve let the office know.' : 'Got it, thanks for the update.');
     } catch (e) {
       showToast('Error: ' + e.message);
