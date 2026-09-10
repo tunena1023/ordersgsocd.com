@@ -546,7 +546,7 @@ style="object-fit:contain">
         <div class="field-wrap" id="office-need-block" style="margin-bottom:20px">
           <label>Do we need anything from the property office?</label>
           <div class="field-sub">Keys, storage access, or anything like that before we start.</div>
-          <div class="toggle-b" id="office-toggle" onclick="setOfficeNeed(!officeNeedYes)">
+          <div class="toggle-b" id="office-toggle" onclick="toggleOfficeNeed()">
             <div class="toggle-b-thumb" id="office-toggle-thumb">No</div>
           </div>
           <div id="office-need-detail" style="display:none;margin-top:12px">
@@ -696,6 +696,14 @@ if (client) {
     $('office-toggle-thumb').textContent = yes ? 'Yes' : 'No';
     $('office-need-detail').style.display = yes ? 'block' : 'none';
     $('entry-time-label').textContent = yes ? 'Office availability time' : 'Entry time';
+  }
+  /* El onclick del HTML no puede leer officeNeedYes directo -- es un
+     let dentro de este bloque if(client), invisible para atributos
+     inline (que corren en scope global). Esta funcion si vive en el
+     mismo scope, asi que el HTML la llama a ella en vez de leer la
+     variable el mismo. */
+  function toggleOfficeNeed() {
+    setOfficeNeed(!officeNeedYes);
   }
   function resetOfficeNeed() {
     officeNeedYes = false;
