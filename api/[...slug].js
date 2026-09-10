@@ -36,7 +36,11 @@ const handlers = {
   'submit-order':       require('../submit-order').handler,
   'undo-request':       require('../undo-request').handler,
   'update-client-profile': require('../update-client-profile').handler,
-  'validate-client':    require('../validate-client').handler
+  'validate-client':    require('../validate-client').handler,
+  'get-my-recurring':   require('../get-my-recurring').handler,
+  'get-recurring-gallery': require('../get-recurring-gallery').handler,
+  'request-recurring-change': require('../request-recurring-change').handler,
+  'upload-client-recurring-photo': require('../upload-client-recurring-photo').handler
 };
 
 module.exports = async (req, res) => {
