@@ -33,6 +33,7 @@ async function fetchCatalog() {
     division: it.fields.Division || '',
     propertyType: it.fields.PropertyType || '',
     price: it.fields.Price != null ? it.fields.Price : null,
+    category: it.fields.Category || '',
     active: it.fields.Active === undefined ? true : (it.fields.Active === true || it.fields.Active === 'true')
   })).filter(s => s.active);
 }

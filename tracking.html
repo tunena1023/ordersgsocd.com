@@ -292,6 +292,19 @@
   .toast.show { display: block; }
   @keyframes toastIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
 
+  /* Solo mobile -- confirmado con el usuario: fotos del cliente NUNCA
+     existen en desktop, ni ocultas, ni deshabilitadas, no existen. */
+  .gs-mobile-only { display: none; }
+  @media (max-width: 860px) { .gs-mobile-only { display: block; } }
+
+  .client-photos-box { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .client-photos-label { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gray); margin-bottom: 4px; }
+  .client-photos-sub { font-size: 11px; color: var(--gray); margin-bottom: 10px; }
+  .client-photo-thumbs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .client-photo-thumb { width: 56px; height: 56px; border-radius: 3px; object-fit: cover; background: var(--off); border: 1px solid var(--border); cursor: pointer; }
+  .btn-add-client-photo { width: 100%; background: none; border: 1.5px solid var(--border); color: var(--black); padding: 11px; font-size: 11px; font-family: 'Inter', sans-serif; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; cursor: pointer; }
+  .btn-add-client-photo:hover { border-color: var(--gold); }
+
   @media (max-width: 860px) {
     nav { padding: 0 20px; }
     .portal-header { padding: 14px 20px; }
@@ -304,6 +317,8 @@
 </style>
 </head>
 <body>
+
+<input type="file" id="client-camera-input" accept="image/*" capture="environment" style="display:none">
 
 <nav>
   <div class="logo-wrap">
@@ -833,6 +848,7 @@ if (client) {
     if (orderDetailCache[orderId]) {
       body.innerHTML = orderDetailCache[orderId].html;
       bindActions(body, orderDetailCache[orderId].order);
+      loadClientPhotosInto(orderId);
       return;
     }
 
@@ -913,6 +929,12 @@ if (client) {
             ${o.Notes ? '<p class="meta-line" style="margin-bottom:14px">Notes: ' + esc(o.Notes) + '</p>' : ''}
             ${noticeHtml}
             ${svcHeaderHtml}
+            <div class="client-photos-box gs-mobile-only">
+              <div class="client-photos-label">Photos</div>
+              <div class="client-photos-sub">Something come up? Add a photo to let us know.</div>
+              <div class="client-photo-thumbs" id="client-photo-thumbs-${escAttr(orderId)}"></div>
+              <button type="button" class="btn-add-client-photo" onclick="startClientPhoto('${escAttr(orderId)}')">📷 Add Photo</button>
+            </div>
           </div>
           <div>
             <p class="detail-label">History</p>
@@ -931,10 +953,72 @@ if (client) {
       bindActions(body, o);
       orderDetailCache[orderId] = { html: body.innerHTML, order: o };
       orderNeedsConfirmationCache[orderId] = isWaitingForClientConfirmation(history);
+      loadClientPhotosInto(orderId);
     } catch (e) {
       body.innerHTML = '<p class="empty-note">Could not load details: ' + esc(e.message) + '</p>';
     }
   }
+
+  /* ===== Fotos del cliente -- confirmado con el usuario: siempre
+     opcionales, nunca bloquean nada, solo mobile (nunca existe esta
+     seccion en desktop, ni siquiera oculta). Sin ubicacion -- no es
+     para rastrear a nadie, solo para que el cliente muestre algo.
+     Van a la MISMA carpeta que ya usa Tech, para que el staff las vea
+     en la galeria de siempre sin que Admin necesite ningun cambio. */
+  let clientPhotoTargetOrderId = null;
+
+  async function loadClientPhotosInto(orderId) {
+    const wrap = document.getElementById('client-photo-thumbs-' + orderId);
+    if (!wrap) return; // desktop -- la seccion ni existe en el DOM visible, pero el nodo si esta
+    try {
+      const res = await GS.api('/get-client-order-photos', { method: 'POST', body: { orderId } });
+      wrap.innerHTML = (res.photos || []).map(p =>
+        '<img class="client-photo-thumb" src="' + escAttr(p.downloadUrl) + '" onclick="window.open(\'' + escAttr(p.downloadUrl) + '\', \'_blank\')">').join('');
+    } catch (e) {
+      // silencioso -- si falla, el cliente simplemente ve la seccion vacia, no es critico
+    }
+  }
+
+  function startClientPhoto(orderId) {
+    clientPhotoTargetOrderId = orderId;
+    document.getElementById('client-camera-input').click();
+  }
+
+  document.getElementById('client-camera-input').addEventListener('change', function () {
+    const file = this.files[0];
+    const orderId = clientPhotoTargetOrderId;
+    this.value = '';
+    clientPhotoTargetOrderId = null;
+    if (!file || !orderId) return;
+
+    const wrap = document.getElementById('client-photo-thumbs-' + orderId);
+    const localUrl = URL.createObjectURL(file);
+    let thumb = null;
+    if (wrap) {
+      thumb = document.createElement('img');
+      thumb.className = 'client-photo-thumb';
+      thumb.src = localUrl;
+      thumb.style.opacity = '.5';
+      wrap.appendChild(thumb);
+    }
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        await GS.api('/upload-client-photo', { method: 'POST', body: { orderId, imageBase64: reader.result } });
+        if (thumb) thumb.style.opacity = '1';
+        showToast('Photo added.');
+      } catch (e) {
+        if (thumb) thumb.remove();
+        showToast('Could not add that photo: ' + e.message);
+      }
+    };
+    reader.onerror = () => {
+      if (thumb) thumb.remove();
+      showToast('Could not read that photo -- please try again.');
+    };
+    reader.readAsDataURL(file);
+  });
 
   /* Catalogo nuevo: SubOption ya es el SKU interno (ej. "222-68"), no
      un texto legible -- nunca se muestra tal cual. Para esos casos el
