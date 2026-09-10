@@ -1339,16 +1339,17 @@ if (client) {
     const safe = String(orderId).replace(/[^a-z0-9]/gi, '_');
     if (checkboxEl.checked) {
       /* Se prende y se ve prendido de inmediato -- no se revierte.
-         Se abre el reloj para pedir la hora. Si el usuario nunca
-         elige nada y cierra el reloj (clic afuera, o apagando el
-         switch el mismo), el listener de gs-popover-closed de abajo
-         lo revierte -- pero mientras tanto, se ve prendido. */
+         Se revelan fecha y hora, pero SIN abrir ningun popover solo:
+         el usuario decide cuando darle click al campo que quiera
+         llenar. Si nunca elige nada y apaga el switch el mismo, o
+         cierra un popover que si abrio manualmente sin elegir, el
+         listener de gs-popover-closed de abajo revierte -- pero
+         mientras tanto, se ve prendido. */
       const block = $('entryTimeBlock-' + safe);
       if (block) block.classList.add('show');
       const dateBlock = $('readyDateBlock-' + safe);
       if (dateBlock) dateBlock.classList.add('show');
       pendingActivation[safe] = true;
-      GSDateTimePicker.toggleClock('entryTime-' + safe);
     } else if (pendingActivation[safe]) {
       /* Estaba prendido nomas en pantalla, esperando la hora --
          nunca se guardo nada de verdad en el backend. El usuario se
