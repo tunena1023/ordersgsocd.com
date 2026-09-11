@@ -247,11 +247,11 @@ if (client) {
               '<span class="gallery-link" onclick="openGallery(\'' + c.id + '\')">📷 View Gallery (photos from staff)</span>' +
               '<div class="btn-actions"><button class="btn btn-outline" onclick="toggleChangeBox(\'' + c.id + '\')">Request a Change</button></div>' +
               '<div class="change-box" id="change-box-' + c.id + '" style="display:none">' +
-                '<p style="font-size:11.5px;color:var(--gray);margin-bottom:8px">Services are part of your contract, not editable here. Let us know and we\'ll follow up directly.</p>' +
+                '<p style="font-size:11.5px;color:var(--gray);margin-bottom:8px">Let us know and we\'ll follow up directly.</p>' +
                 '<textarea id="change-text-' + c.id + '" placeholder="What do you need changed or have a question about?"></textarea>' +
                 '<button class="btn btn-gold" onclick="sendChangeRequest(\'' + c.id + '\')">Send</button>' +
               '</div>' +
-              '<p class="change-sent" id="change-sent-' + c.id + '">✓ Sent — our office will follow up with you directly. This goes to the same review the office already uses for anything reported on-site.</p>' +
+              '<p class="change-sent" id="change-sent-' + c.id + '">✓ Sent — our office will follow up with you directly.</p>' +
             '</div>' +
             '<div><p class="detail-label">History</p>' + historyHtml + '</div>' +
           '</div>' +
