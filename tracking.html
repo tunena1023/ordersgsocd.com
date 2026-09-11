@@ -178,40 +178,6 @@
   .btn-action.primary:hover { background: var(--gold-dk); border-color: var(--gold-dk); color: var(--white); }
   .btn-action:disabled { opacity: .5; cursor: not-allowed; }
 
-  /* Timeline horizontal: fila de pasos con linea que los conecta,
-     se desliza a los lados si no caben en pantalla. Reemplaza la
-     version vertical de antes (aprobado en mini con el usuario). */
-  .h-tracker {
-    display: flex; align-items: flex-start; margin-top: 14px;
-    overflow-x: auto; padding: 4px 4px 10px; -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
-  }
-  .h-tracker::-webkit-scrollbar { height: 5px; }
-  .h-tracker::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-  .h-step { position: relative; flex: 0 0 132px; text-align: center; padding-top: 8px; }
-  .h-step::before {
-    content: ''; position: absolute; top: 13px; left: -50%; width: 100%; height: 2px;
-    background: var(--border); z-index: 0;
-  }
-  .h-step:first-child::before { display: none; }
-  .h-step.done::before { background: var(--gold); }
-  .h-step-dot {
-    position: relative; z-index: 1; width: 12px; height: 12px; border-radius: 50%;
-    background: var(--white); border: 2px solid var(--border); margin: 0 auto 10px;
-    box-sizing: border-box;
-  }
-  .h-step.done .h-step-dot { background: var(--gold); border-color: var(--gold); }
-  .h-step.active .h-step-dot {
-    background: var(--black); border-color: var(--gold);
-    width: 14px; height: 14px; margin-bottom: 9px;
-  }
-  .h-step-name { font-size: 12px; font-weight: 600; color: var(--black); line-height: 1.35; padding: 0 6px; }
-  .h-step.active .h-step-name { color: var(--gold-dk); }
-  .h-step-date { font-size: 10.5px; color: var(--gray); margin-top: 4px; }
-  @media (max-width: 560px) {
-    .h-step { flex-basis: 108px; }
-    .h-step-name { font-size: 11px; }
-  }
   .h-pending-note { font-size: 12px; color: var(--gold-dk); background: var(--off); border-left: 3px solid var(--gold-dk); padding: 8px 12px; border-radius: 4px; margin-bottom: 14px; }
   .h-cancelled-banner { font-size: 13px; color: #B33A3A; background: #FBEAEA; border-left: 3px solid #B33A3A; padding: 10px 14px; border-radius: 4px; margin-bottom: 10px; }
 
@@ -425,11 +391,11 @@
     </div>
     <div class="field">
       <label>Entry available from</label>
-      <input type="date" id="addunit-entry-date">
+      <div id="addunit-entry-date-mount"></div>
     </div>
     <div class="field">
       <label>Service due date</label>
-      <input type="date" id="addunit-due-date">
+      <div id="addunit-due-date-mount"></div>
     </div>
     <div class="dialog-btns">
       <button class="btn-ghost" onclick="closeAddBatchUnit()">Cancel</button>
@@ -461,6 +427,10 @@
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.1.10/date-time-picker/date-time-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.6.0/order-history/order-history.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.8.0/order-badges/order-badges.js"></script>
+<!-- Pendiente: gsocd-shared tagea TODO el repo junto (no por componente), y ya va
+     en v1.11.0 -- el siguiente tag real seria v1.12.0. Este componente todavia
+     solo vive en local, sin subir ni tagear; ajustar el numero cuando se suba. -->
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.12.0/order-tracker/order-tracker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.0.0/lightbox/lightbox.js"></script>
 <script>
 const client = GS.requireSession();
@@ -850,6 +820,7 @@ if (client) {
     if (orderDetailCache[orderId]) {
       body.innerHTML = orderDetailCache[orderId].html;
       bindActions(body, orderDetailCache[orderId].order);
+      mountTracker(orderDetailCache[orderId].order, orderDetailCache[orderId].trackerSteps, 'tracker-mount-' + orderId);
       loadClientPhotosInto(orderId);
       return;
     }
@@ -945,7 +916,8 @@ if (client) {
         </div>
         <div style="margin-top:8px">
           <p class="detail-label">Order Tracker</p>
-          ${trackerStepsFor(o, history)}
+          ${cancelledBannerHtml(o)}
+          <div id="tracker-mount-${escAttr(orderId)}"></div>
         </div>
         <div class="order-actions">${actionButtonsFor(o, history, data.document || null)}</div>
         </div>
@@ -953,7 +925,9 @@ if (client) {
         </div>`;
 
       bindActions(body, o);
-      orderDetailCache[orderId] = { html: body.innerHTML, order: o };
+      const trackerSteps = buildTrackerSteps(o, history);
+      mountTracker(o, trackerSteps, 'tracker-mount-' + orderId);
+      orderDetailCache[orderId] = { html: body.innerHTML, order: o, trackerSteps: trackerSteps };
       orderNeedsConfirmationCache[orderId] = isWaitingForClientConfirmation(history);
       loadClientPhotosInto(orderId);
     } catch (e) {
@@ -1074,37 +1048,57 @@ if (client) {
     return false;
   }
 
-  function shortLabel(h) {
-    const map = {
-      'Created':                     'Order created',
-      'Change Requested':            'Change requested',
-      'Cancellation Requested':      'Cancellation requested',
-      'Change Approved':             'Change approved',
-      'Change Rejected':             'Change not approved',
-      'Change Reassigned':           'Change approved',
-      'Sent to Scheduling':          'Rescheduling in progress',
-      'Cancellation Approved':       'Cancellation approved',
-      'Cancellation Rejected':       'Cancellation not approved',
-      'Cancellation Reversed':       'Order active again',
-      'Order Reactivated':           'Order reactivated',
-      'Dates Confirmed':             'Schedule confirmed',
-      'Request Cancelled by Client': 'Request withdrawn',
-      'Requested Dates Rejected':    'Requested dates not approved',
-      'Requested Dates Withdrawn':   'Requested dates withdrawn',
-      'Reschedule Requested':        'New dates requested',
-      'Order Assigned':              'Order assigned',
-      'Services Updated':            'Services updated',
-      'Completed':                   'Order completed',
-      'Expected Ready Date':         'Ready Date & Time'
+  /* Mapa de cada ChangeType real a como se ve en el tracker nuevo:
+     label = texto corto (debajo del puntito), stage = frase completa
+     (arriba, cuando ese paso esta activo o se revisa), kind = que
+     tipo de puntito dispara -- 'wedge' (gajo del triangulo, el caso
+     normal), 'g' (ya deberia estar el triangulo completo + entra la
+     G -- se usa 'Order Assigned' como disparador de "ya empezo el
+     trabajo", es lo mas cercano que hay hoy en el historial de este
+     portal; si no es el evento correcto, ajustar aqui) o 's' (entra
+     la S -- orden completada). */
+  const STEP_META = {
+    'Created':                     { label: 'Creada',            stage: 'Orden creada' },
+    'Change Requested':            { label: 'Cambio pedido',     stage: 'Cambio solicitado' },
+    'Cancellation Requested':      { label: 'Cancelación pedida',stage: 'Cancelación solicitada' },
+    'Change Approved':             { label: 'Cambio aprobado',   stage: 'Cambio aprobado' },
+    'Change Rejected':             { label: 'No aprobado',       stage: 'Cambio no aprobado' },
+    'Change Reassigned':           { label: 'Cambio aprobado',   stage: 'Cambio aprobado' },
+    'Sent to Scheduling':          { label: 'Reprogramando',     stage: 'Reprogramación en proceso' },
+    'Cancellation Approved':       { label: 'Cancelación OK',    stage: 'Cancelación aprobada' },
+    'Cancellation Rejected':       { label: 'No cancelada',      stage: 'Cancelación no aprobada' },
+    'Cancellation Reversed':       { label: 'Reactivada',        stage: 'Orden activa de nuevo' },
+    'Order Reactivated':           { label: 'Reactivada',        stage: 'Orden reactivada' },
+    'Dates Confirmed':             { label: 'Confirmado',        stage: 'Calendario confirmado' },
+    'Request Cancelled by Client': { label: 'Retirada',          stage: 'Solicitud retirada' },
+    'Requested Dates Rejected':    { label: 'Fechas no OK',      stage: 'Fechas solicitadas no aprobadas' },
+    'Requested Dates Withdrawn':   { label: 'Fechas retiradas',  stage: 'Fechas solicitadas retiradas' },
+    'Reschedule Requested':        { label: 'Nueva fecha',       stage: 'Nuevas fechas solicitadas' },
+    'Order Assigned':              { label: 'Asignada',          stage: 'Orden asignada', kind: 'g' },
+    'Services Updated':            { label: 'Servicios',         stage: 'Servicios actualizados' },
+    'Completed':                   { label: 'Completada',        stage: 'Orden completada', kind: 's' },
+    'Expected Ready Date':         { label: 'Material listo',    stage: 'Fecha y hora lista' }
+  };
+
+  function stepFrom(h) {
+    const meta = STEP_META[h.ChangeType] || { label: h.ChangeType || 'Update', stage: h.ChangeType || 'Update' };
+    const who = h.ChangedBy ? ' — ' + esc(h.ChangedBy) : '';
+    return {
+      label: meta.label,
+      stage: meta.stage,
+      detail: fmtDate(h.ChangeDate) + who,
+      kind: meta.kind || 'wedge'
     };
-    return map[h.ChangeType] || h.ChangeType || 'Update';
   }
 
-  function trackerStepsFor(o, history) {
-    const cancelledBanner = (o.Status || '') === 'Cancelled'
+  /* Aviso aparte, ya no forma parte del tracker mismo. */
+  function cancelledBannerHtml(o) {
+    return (o.Status || '') === 'Cancelled'
       ? '<div class="h-cancelled-banner">This order was cancelled.</div>'
       : '';
+  }
 
+  function buildTrackerSteps(o, history) {
     const events = (history || [])
       .filter(h => !isHiddenFromClient(h))
       .sort((a, b) => String(a.ChangeDate || '').localeCompare(String(b.ChangeDate || '')));
@@ -1172,24 +1166,18 @@ if (client) {
     });
 
     if (!events3.length) {
-      return cancelledBanner + '<div class="h-tracker"><div class="h-step active">' +
-        '<div class="h-step-dot"></div>' +
-        '<div class="h-step-name">Order Received</div>' +
-        '<div class="h-step-date">' + esc(fmtDateTime(o.createdDateTime)) + '</div>' +
-        '</div></div>';
+      return [{ label: 'Recibida', stage: 'Orden recibida', detail: fmtDateTime(o.createdDateTime), kind: 'wedge' }];
     }
 
-    const stepsHtml = events3.map((h, i) => {
-      const cls = (i < events3.length - 1) ? 'done' : 'active';
-      return '<div class="h-step ' + cls + '">' +
-        '<div class="h-step-dot"></div>' +
-        '<div class="h-step-name">' + esc(shortLabel(h)) + '</div>' +
-        '<div class="h-step-date">' + esc(fmtDate(h.ChangeDate)) + '</div>' +
-        '</div>';
-    }).join('');
-
-    return cancelledBanner + '<div class="h-tracker">' + stepsHtml + '</div>';
+    return events3.map(stepFrom);
   }
+
+  /* Uno por orden -- si la pantalla llega a mostrar varias tarjetas
+     de orden a la vez, cada una necesita su propio fieldId. */
+  function mountTracker(o, steps, mountId) {
+    GSOrderTracker.mount(o.OrderID, mountId, { steps: steps, current: steps.length });
+  }
+  
   /* ===== Aviso de retraso =====
      Es un AVISO, nada mas. No cobra, no calcula y no compromete un monto:
      dice lo que paso y le pide al cliente que llame a la oficina.
@@ -1638,11 +1626,11 @@ return html;
       <div class="field-row">
         <div class="field">
           <label>New entry date (optional)</label>
-          <input type="date" id="panel-change-entry" value="${entryVal}" data-original="${entryVal}">
+          ${GSDateTimePicker.dateHtml('panel-change-entry', entryVal)}
         </div>
         <div class="field">
           <label>New due date (optional)</label>
-          <input type="date" id="panel-change-due" value="${dueVal}" data-original="${dueVal}">
+          ${GSDateTimePicker.dateHtml('panel-change-due', dueVal)}
         </div>
       </div>
       <div class="field">
@@ -1655,6 +1643,13 @@ return html;
         <button type="button" class="btn-gold" id="panel-change-submit-btn" onclick="submitChangePanel('${escAttr(orderId)}')">Send Request</button>
       </div>
       <p class="dialog-error" id="panel-change-error"></p>`;
+
+    /* GSDateTimePicker.dateHtml() no acepta atributos custom -- se
+       pone data-original a mano justo despues de insertar, mismo dato
+       que ya traia el input nativo, para que submitChangePanel siga
+       pudiendo comparar "lo toco o no" sin tocar esa logica. */
+    $('panel-change-entry').dataset.original = entryVal;
+    $('panel-change-due').dataset.original = dueVal;
   }
 
   async function submitChangePanel(orderId) {
@@ -1807,8 +1802,8 @@ return html;
     $('addunit-unit-number').value = '';
     $('addunit-bedrooms').value = '';
     $('addunit-bathrooms').value = '';
-    $('addunit-entry-date').value = '';
-    $('addunit-due-date').value = '';
+    $('addunit-entry-date-mount').innerHTML = GSDateTimePicker.dateHtml('addunit-entry-date', '');
+    $('addunit-due-date-mount').innerHTML = GSDateTimePicker.dateHtml('addunit-due-date', '');
 
     if (!addUnitBuildingsCache) {
       try {
