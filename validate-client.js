@@ -52,7 +52,11 @@ exports.handler = async (event) => {
       city: f.City || '',
       zip: f.Zip || '',
       contact: f.Contact || '',           // email
-      phone: f.Phone || ''
+      phone: f.Phone || '',
+      /* Si este cliente puede ver el tiempo estimado en sus ordenes --
+         se decide por cliente desde Developer > All Clients, apagado
+         por default. Se resuelve UNA vez aqui, no en cada endpoint. */
+      showEstimatedTime: f.ShowEstimatedTime === true || f.ShowEstimatedTime === 'true'
     });
 
   } catch (err) {

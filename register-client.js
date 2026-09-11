@@ -98,7 +98,8 @@ exports.handler = async (event) => {
       city,
       zip,
       contact,
-      phone
+      phone,
+      showEstimatedTime: false // recien registrado -- siempre empieza apagado, se activa desde Developer
     });
 
   } catch (err) {

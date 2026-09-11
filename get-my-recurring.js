@@ -27,7 +27,16 @@ async function fetchByField(listName, fieldName, value) {
   let url = siteListPath(listName) + `?$expand=fields&$top=200&$filter=${filter}`;
   const out = [];
   while (url) {
-    const data = await graphFetch(url);
+    /* PARCHE TEMPORAL: RECURRING_SERVICES_LIST y CLIENTS_LIST nunca
+       indexaron la columna ClientID en SharePoint (a diferencia de
+       ORDERS_LIST/DRAFTS_LIST, que si la tienen indexada -- ver
+       get-orders.js), asi que Graph rechaza el filtro sin este header.
+       Esto es un parche, no el arreglo real -- Microsoft avisa que en
+       listas grandes puede fallar de vez en cuando. El arreglo de
+       fondo es indexar ClientID en esas 2 listas desde SharePoint
+       (Configuracion de lista > Columnas indizadas), fuera de este
+       codigo. Quitar este header en cuanto eso se haga. */
+    const data = await graphFetch(url, { headers: { Prefer: 'HonorNonIndexedQueriesWarningMayFailRandomly' } });
     out.push(...(data.value || []));
     url = data['@odata.nextLink'] || null;
   }

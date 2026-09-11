@@ -431,6 +431,9 @@
      en v1.11.0 -- el siguiente tag real seria v1.12.0. Este componente todavia
      solo vive en local, sin subir ni tagear; ajustar el numero cuando se suba. -->
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.15.0/order-tracker/order-tracker.js"></script>
+<!-- Pendiente: gsocd-shared va en v1.15.0, el siguiente tag real seria v1.16.0
+     (componente nuevo, todavia solo vive en local). Ajustar cuando se suba. -->
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.16.0/estimated-time/estimated-time.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.0.0/lightbox/lightbox.js"></script>
 <script>
 const client = GS.requireSession();
@@ -438,6 +441,15 @@ if (client) {
 
   const $ = id => document.getElementById(id);
   let ordersCache = [];
+  /* Tiempos por servicio -- solo se pide si el cliente tiene el
+     permiso activado, para no jalar datos de mas cuando no hace
+     falta. Se guarda la promesa (no solo el resultado) para poder
+     esperarla en expandOrder() sin condicion de carrera si se abre
+     una orden antes de que termine de cargar. */
+  let serviceTimesCache = {};
+  const serviceTimesPromise = client.showEstimatedTime
+    ? GS.api('/get-services', { method: 'GET' }).then(data => { serviceTimesCache = data.serviceTimes || {}; }).catch(() => {})
+    : Promise.resolve();
   /* Cache del detalle ya cargado de cada orden, para que reabrirla sea
      instantaneo sin volver a pedirselo a la API. Se invalida entero
      cada vez que se recarga la lista (loadOrders). */
@@ -831,6 +843,7 @@ if (client) {
       const services = data.services || [];
       const history = data.history || [];
       const contactsForSummary = await ensureContactsCache();
+      await serviceTimesPromise; // no-op si showEstimatedTime esta apagado
 
       const byCat = {};
       (services || []).forEach(s => {
@@ -847,16 +860,21 @@ if (client) {
                 (s.NotCompletedReason ? ': ' + esc(s.NotCompletedReason) : '') + '</b>' : '';
           const label = svcSubLabel(s);
           const subText = (label ? esc(label) : '') + ncText;
-          svcRows.push({ cat: i === 0 ? cat : '', name: esc(s.ServiceName || ''), sub: (label || nc) ? subText : '' });
+          svcRows.push({ cat: i === 0 ? cat : '', name: esc(s.ServiceName || ''), sub: (label || nc) ? subText : '', sku: s.SubOption, lvl: s.Level });
         });
       });
+      const showTime = !!client.showEstimatedTime;
       const svcTableHtml = svcRows.length
         ? '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
-          svcRows.map((r, i) => '<tr' + (i < svcRows.length - 1 ? ' style="border-bottom:1px solid var(--border)"' : '') + '>' +
+          svcRows.map((r, i) => {
+            const mins = showTime ? GSEstimatedTime.svcMinutes(r.sku, r.lvl, serviceTimesCache) : null;
+            return '<tr' + (i < svcRows.length - 1 ? ' style="border-bottom:1px solid var(--border)"' : '') + '>' +
             '<td style="padding:8px 12px 8px 0;color:var(--gold-dk);font-weight:600;width:36%">' + r.cat + '</td>' +
             '<td style="padding:8px 8px 8px 0;width:32%">' + r.name + '</td>' +
             '<td style="padding:8px 0;color:' + (r.sub ? 'var(--black)' : 'var(--gray)') + '">' + (r.sub || '—') + '</td>' +
-            '</tr>').join('') +
+            (showTime ? '<td style="padding:8px 0 8px 8px;color:#8C6F2A;font-weight:600;white-space:nowrap;text-align:right">' + (mins != null ? esc(GSEstimatedTime.fmtDuration(mins)) : '') + '</td>' : '') +
+            '</tr>';
+          }).join('') +
           '</table>'
         : '<div style="font-size:12px;padding:10px 0">No services recorded.</div>';
       const svcHeaderHtml =
@@ -866,7 +884,7 @@ if (client) {
         '<p class="detail-label" style="margin:0">Services Requested</p>' +
         '<span style="font-size:10px;color:var(--gold-dk);white-space:nowrap">&#9660; ' + svcRows.length + ' service' + (svcRows.length === 1 ? '' : 's') + '</span>' +
         '</div>' +
-        '<div id="' + svcDetailId + '" style="display:none;padding:0 12px">' + svcTableHtml + '</div>' +
+        '<div id="' + svcDetailId + '" style="display:none;padding:0 12px">' + svcTableHtml + (showTime ? GSEstimatedTime.boxHtml(services, serviceTimesCache) : '') + '</div>' +
         '</div>';
 
       const noticeHtml = delayNoticeHtml(o);

@@ -673,12 +673,20 @@ style="object-fit:contain">
 <script src="shared.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.1.10/date-time-picker/date-time-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.11.0/service-picker/service-picker.js"></script>
+<!-- Pendiente: gsocd-shared va en v1.15.0, el siguiente tag real seria v1.16.0
+     (componente nuevo, todavia solo vive en local). Ajustar cuando se suba. -->
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.16.0/estimated-time/estimated-time.js"></script>
 <script>
 const client = GS.requireSession();
 if (client) {
 
   let serviceData = null;
   let catalogCache = [];
+  /* Tiempos por servicio -- solo tiene sentido llenarlo si
+     client.showEstimatedTime esta prendido, pero se guarda igual
+     (no es dato sensible); quien decide mostrarlo es el gating en la
+     UI, no el fetch. */
+  let serviceTimesCache = {};
   let currentDiv = 'Janitorial';
   let officeNeedYes = false;
   /* Fotos del cliente durante la creacion -- se quedan en memoria
@@ -806,6 +814,7 @@ if (client) {
   GS.api('/get-services', { method: 'GET' }).then(data => {
     serviceData = data;
     catalogCache = data.catalog || [];
+    serviceTimesCache = data.serviceTimes || {};
     if (editParam) {
       loadForEdit(editParam);
     } else if (continueParam) {
@@ -974,15 +983,23 @@ if (client) {
       });
     });
 
+    const showTime = !!client.showEstimatedTime;
+
     if (!lines.length) {
       box.innerHTML = '<p class="summary-empty">No services selected yet</p>';
     } else {
       box.innerHTML = lines.map((l) => {
+        const mins = showTime ? GSEstimatedTime.svcMinutes(l.sku, l.lvl, serviceTimesCache) : null;
         return '<div class="summary-item" style="align-items:center"><div style="min-width:0">' +
                '<span>' + esc(l.svc) + '</span>' +
-               (l.lvl ? '<br><span style="color:var(--gray)">' + esc(l.lvl) + '</span>' : '') + '</div>' +
+               (l.lvl ? '<br><span style="color:var(--gray)">' + esc(l.lvl) + '</span>' : '') +
+               (mins != null ? '<br><span class="gs-est-time-inline" style="font-size:11px">' + esc(GSEstimatedTime.fmtDuration(mins)) + '</span>' : '') + '</div>' +
                '<button class="summary-remove" data-proptype="' + esc(l.propType) + '" data-svc="' + esc(l.svc) + '" title="Remove service">\u2715</button></div>';
       }).join('');
+      if (showTime) {
+        const svcRows = lines.map(l => ({ SubOption: l.sku, Level: l.lvl || '' }));
+        box.innerHTML += GSEstimatedTime.boxHtml(svcRows, serviceTimesCache);
+      }
     }
   }
 

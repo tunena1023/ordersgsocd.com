@@ -12,7 +12,7 @@
 ============================================================ */
 
 const XLSX = require('xlsx');
-const { graphFetch, jsonResponse, siteListPath, SERVICES_CATALOG_LIST } = require('./lib/graph');
+const { graphFetch, jsonResponse, siteListPath, SERVICES_CATALOG_LIST, SERVICE_TIMES_LIST } = require('./lib/graph');
 
 /* Catalogo nuevo (ServicesCatalog) -- lista real de SharePoint, SKU-
    based, la misma que ya usa el lado admin. Se manda aparte como
@@ -36,6 +36,40 @@ async function fetchCatalog() {
     category: it.fields.Category || '',
     active: it.fields.Active === undefined ? true : (it.fields.Active === true || it.fields.Active === 'true')
   })).filter(s => s.active);
+}
+
+/* Tiempos por servicio en minutos, para poder calcular el tiempo
+   estimado del lado del cliente tambien -- mismo formato que ya usa
+   Admin (SKU -> {division, level1, level2, level3}). No es
+   informacion sensible (nomas duraciones internas), asi que se manda
+   siempre; quien decide si se MUESTRA o no es showEstimatedTime en la
+   sesion del cliente, ya resuelto en validate-client.js.
+
+   La lista ServiceTimes NO trae Division propia -- se cruza con el
+   catalogo (ya se fetchea aparte via fetchCatalog) por SKU, mismo
+   criterio que list-service-times en Admin. */
+async function fetchServiceTimes(catalog) {
+  let url = siteListPath(SERVICE_TIMES_LIST) + '?$expand=fields&$top=200';
+  const rows = [];
+  while (url) {
+    const data = await graphFetch(url);
+    rows.push(...(data.value || []));
+    url = data['@odata.nextLink'] || null;
+  }
+  const divisionBySku = {};
+  catalog.forEach(s => { if (s.sku) divisionBySku[String(s.sku).trim()] = s.division; });
+
+  const out = {};
+  rows.filter(it => it.fields && it.fields.SKU).forEach(it => {
+    const sku = String(it.fields.SKU).trim();
+    out[sku] = {
+      division: divisionBySku[sku] || '',
+      level1: it.fields.Level1Minutes != null ? Number(it.fields.Level1Minutes) : null,
+      level2: it.fields.Level2Minutes != null ? Number(it.fields.Level2Minutes) : null,
+      level3: it.fields.Level3Minutes != null ? Number(it.fields.Level3Minutes) : null
+    };
+  });
+  return out;
 }
 
 const EXCEL_SHARE_URL = process.env.SERVICES_EXCEL_URL ||
@@ -122,6 +156,7 @@ exports.handler = async () => {
     ]);
 
     oldCatalogResult.catalog = catalog;
+    oldCatalogResult.serviceTimes = await fetchServiceTimes(catalog);
     return jsonResponse(200, oldCatalogResult);
   } catch (err) {
     return jsonResponse(500, { error: err.message });
