@@ -430,7 +430,7 @@
 <!-- Pendiente: gsocd-shared tagea TODO el repo junto (no por componente), y ya va
      en v1.11.0 -- el siguiente tag real seria v1.12.0. Este componente todavia
      solo vive en local, sin subir ni tagear; ajustar el numero cuando se suba. -->
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.14.0/order-tracker/order-tracker.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.15.0/order-tracker/order-tracker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.0.0/lightbox/lightbox.js"></script>
 <script>
 const client = GS.requireSession();
@@ -1053,37 +1053,37 @@ if (client) {
      reconstruido de memoria. label = texto corto (debajo del puntito),
      stage = frase completa (arriba, cuando ese paso esta activo). */
   const STEP_META = {
-    'Created':                     { label: 'Creada',             stage: 'Orden creada' },
-    'Order Assigned':              { label: 'Asignada',           stage: 'Orden asignada' },
-    'Change Reassigned':           { label: 'Reasignada',         stage: 'Orden reasignada' },
-    'Dates Confirmed':             { label: 'Confirmado',         stage: 'Calendario confirmado' },
-    'Order Approved':              { label: 'Aprobada',           stage: 'Orden aprobada' },
-    'Sent to Scheduling':          { label: 'Reprogramando',      stage: 'Reprogramación en proceso' },
-    'Materials Ready':             { label: 'Material listo',     stage: 'Material listo' },
-    'Materials Ready Cancelled':   { label: 'Material no listo',  stage: 'Se canceló que el material estaba listo' },
-    'Materials Ready Seen':        { label: 'Aviso visto',        stage: 'Aviso de material listo, visto' },
-    'Completed':                   { label: 'Completada',         stage: 'Orden completada' },
-    'Tech Marked Complete':        { label: 'Completada',         stage: 'Orden marcada completa por el técnico' },
-    'Change Requested':            { label: 'Cambio pedido',      stage: 'Cambio solicitado' },
-    'Change Rejected':             { label: 'No aprobado',        stage: 'Cambio no aprobado' },
-    'Change Request Cancelled':    { label: 'Retirado',           stage: 'Cambio solicitado, retirado' },
-    'Cancellation Requested':      { label: 'Cancelación pedida', stage: 'Cancelación solicitada' },
-    'Cancellation Approved':       { label: 'Cancelación OK',     stage: 'Cancelación aprobada' },
-    'Cancellation Rejected':       { label: 'No cancelada',       stage: 'Cancelación no aprobada' },
-    'Cancellation Reversed':       { label: 'Reactivada',         stage: 'Orden activa de nuevo' },
-    'Order Reactivated':           { label: 'Reactivada',         stage: 'Orden reactivada' },
-    'Reactivation Requested':      { label: 'Reactivación pedida',stage: 'Reactivación solicitada' },
-    'Request Cancelled by Client': { label: 'Retirada',           stage: 'Solicitud retirada' },
-    'Requested Dates Rejected':    { label: 'Fechas no OK',       stage: 'Fechas solicitadas no aprobadas' },
-    'Requested Dates Withdrawn':   { label: 'Fechas retiradas',   stage: 'Fechas solicitadas retiradas' },
-    'Reschedule Requested':        { label: 'Nueva fecha',        stage: 'Nuevas fechas solicitadas' },
-    'Expected Ready Date':         { label: 'Fecha estimada',     stage: 'Fecha de material lista, estimada' },
-    'Occupied Unit Reported':      { label: 'Unidad ocupada',     stage: 'Cliente reportó la unidad ocupada' },
-    'Services Updated':            { label: 'Servicios',          stage: 'Servicios actualizados' },
-    'Client Data Updated':         { label: 'Datos del cliente',  stage: 'Datos del cliente actualizados' },
-    'Scheduling':                  { label: 'Programando',        stage: 'En Scheduling' },
-    'Change Approved':             { label: 'Cambio aprobado',    stage: 'Cambio aprobado' },  // PENDIENTE: ¿avanza a que etapa?
-    'Batch Created':               { label: 'Lote creado',        stage: 'Orden creada en lote' } // PENDIENTE: ¿es lo mismo que 'Created'?
+    'Created':                     { label: 'Created',            stage: 'Order created' },
+    'Order Assigned':              { label: 'Assigned',           stage: 'Order assigned' },
+    'Change Reassigned':           { label: 'Reassigned',         stage: 'Order reassigned' },
+    'Dates Confirmed':             { label: 'Confirmed',          stage: 'Schedule confirmed' },
+    'Order Approved':              { label: 'Approved',           stage: 'Order approved' },
+    'Sent to Scheduling':          { label: 'Rescheduling',       stage: 'Rescheduling in progress' },
+    'Materials Ready':             { label: 'Materials ready',    stage: 'Materials ready' },
+    'Materials Ready Cancelled':   { label: 'Materials not ready',stage: 'Materials ready was cancelled' },
+    'Materials Ready Seen':        { label: 'Notice seen',        stage: 'Materials ready notice, seen' },
+    'Completed':                   { label: 'Completed',          stage: 'Order completed' },
+    'Tech Marked Complete':        { label: 'Completed',          stage: 'Order marked complete by the technician' },
+    'Change Requested':            { label: 'Change requested',   stage: 'Change requested' },
+    'Change Rejected':             { label: 'Not approved',       stage: 'Change not approved' },
+    'Change Request Cancelled':    { label: 'Withdrawn',          stage: 'Change requested, withdrawn' },
+    'Cancellation Requested':      { label: 'Cancellation asked', stage: 'Cancellation requested' },
+    'Cancellation Approved':       { label: 'Cancellation OK',    stage: 'Cancellation approved' },
+    'Cancellation Rejected':       { label: 'Not cancelled',      stage: 'Cancellation not approved' },
+    'Cancellation Reversed':       { label: 'Reactivated',        stage: 'Order active again' },
+    'Order Reactivated':           { label: 'Reactivated',        stage: 'Order reactivated' },
+    'Reactivation Requested':      { label: 'Reactivation asked', stage: 'Reactivation requested' },
+    'Request Cancelled by Client': { label: 'Withdrawn',          stage: 'Request withdrawn' },
+    'Requested Dates Rejected':    { label: 'Dates not OK',       stage: 'Requested dates not approved' },
+    'Requested Dates Withdrawn':   { label: 'Dates withdrawn',    stage: 'Requested dates withdrawn' },
+    'Reschedule Requested':        { label: 'New date',           stage: 'New dates requested' },
+    'Expected Ready Date':         { label: 'Estimated date',     stage: 'Estimated materials ready date' },
+    'Occupied Unit Reported':      { label: 'Unit occupied',      stage: 'Client reported the unit occupied' },
+    'Services Updated':            { label: 'Services',           stage: 'Services updated' },
+    'Client Data Updated':         { label: 'Client info',        stage: 'Client info updated' },
+    'Scheduling':                  { label: 'Scheduling',         stage: 'In Scheduling' },
+    'Change Approved':             { label: 'Change approved',    stage: 'Change approved' },  // PENDING: does this advance a stage?
+    'Batch Created':               { label: 'Batch created',      stage: 'Order created in a batch' } // PENDING: same as 'Created'?
   };
 
   /* Etapas del ícono (confirmado con el usuario): el ícono avanza
@@ -1212,7 +1212,7 @@ if (client) {
     });
 
     if (!events3.length) {
-      return [{ label: 'Recibida', stage: 'Orden recibida', detail: fmtDateTime(o.createdDateTime), resultStage: 1, isRegression: false }];
+      return [{ label: 'Received', stage: 'Order received', detail: fmtDateTime(o.createdDateTime), resultStage: 1, isRegression: false }];
     }
 
     /* Camina el historial en orden aplicando avanza/retrocede/neutral
