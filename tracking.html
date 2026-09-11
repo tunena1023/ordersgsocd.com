@@ -425,12 +425,12 @@
 
 <script src="shared.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.1.10/date-time-picker/date-time-picker.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.6.0/order-history/order-history.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.14.0/order-history/order-history.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.8.0/order-badges/order-badges.js"></script>
 <!-- Pendiente: gsocd-shared tagea TODO el repo junto (no por componente), y ya va
      en v1.11.0 -- el siguiente tag real seria v1.12.0. Este componente todavia
      solo vive en local, sin subir ni tagear; ajustar el numero cuando se suba. -->
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.12.0/order-tracker/order-tracker.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.14.0/order-tracker/order-tracker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.0.0/lightbox/lightbox.js"></script>
 <script>
 const client = GS.requireSession();
@@ -880,7 +880,7 @@ if (client) {
          sola pieza compartida entre Admin/Tech/Orders, en modo 'client'
          (filtrado a lo que le corresponde ver al cliente), en vez de esta
          implementacion propia. */
-      const histHtml = GSOrderHistory.html(orderId, history, { mode: 'client' });
+      const histHtml = GSOrderHistory.html(orderId, history, { mode: 'client', regressionTypes: Object.keys(STAGE_REGRESS) });
 
       body.innerHTML = `
         <div class="order-2col" id="ord2col-${escAttr(orderId)}">
@@ -1048,37 +1048,83 @@ if (client) {
     return false;
   }
 
-  /* Mapa de cada ChangeType real a como se ve en el tracker nuevo:
-     label = texto corto (debajo del puntito), stage = frase completa
-     (arriba, cuando ese paso esta activo o se revisa), kind = que
-     tipo de puntito dispara -- 'wedge' (gajo del triangulo, el caso
-     normal), 'g' (ya deberia estar el triangulo completo + entra la
-     G -- se usa 'Order Assigned' como disparador de "ya empezo el
-     trabajo", es lo mas cercano que hay hoy en el historial de este
-     portal; si no es el evento correcto, ajustar aqui) o 's' (entra
-     la S -- orden completada). */
+  /* Catalogo COMPLETO de ChangeType reales -- sacado directo de donde
+     se escriben (grep sobre los 3 repos: admin, orders, tech), no
+     reconstruido de memoria. label = texto corto (debajo del puntito),
+     stage = frase completa (arriba, cuando ese paso esta activo). */
   const STEP_META = {
-    'Created':                     { label: 'Creada',            stage: 'Orden creada' },
-    'Change Requested':            { label: 'Cambio pedido',     stage: 'Cambio solicitado' },
-    'Cancellation Requested':      { label: 'Cancelación pedida',stage: 'Cancelación solicitada' },
-    'Change Approved':             { label: 'Cambio aprobado',   stage: 'Cambio aprobado' },
-    'Change Rejected':             { label: 'No aprobado',       stage: 'Cambio no aprobado' },
-    'Change Reassigned':           { label: 'Cambio aprobado',   stage: 'Cambio aprobado' },
-    'Sent to Scheduling':          { label: 'Reprogramando',     stage: 'Reprogramación en proceso' },
-    'Cancellation Approved':       { label: 'Cancelación OK',    stage: 'Cancelación aprobada' },
-    'Cancellation Rejected':       { label: 'No cancelada',      stage: 'Cancelación no aprobada' },
-    'Cancellation Reversed':       { label: 'Reactivada',        stage: 'Orden activa de nuevo' },
-    'Order Reactivated':           { label: 'Reactivada',        stage: 'Orden reactivada' },
-    'Dates Confirmed':             { label: 'Confirmado',        stage: 'Calendario confirmado' },
-    'Request Cancelled by Client': { label: 'Retirada',          stage: 'Solicitud retirada' },
-    'Requested Dates Rejected':    { label: 'Fechas no OK',      stage: 'Fechas solicitadas no aprobadas' },
-    'Requested Dates Withdrawn':   { label: 'Fechas retiradas',  stage: 'Fechas solicitadas retiradas' },
-    'Reschedule Requested':        { label: 'Nueva fecha',       stage: 'Nuevas fechas solicitadas' },
-    'Order Assigned':              { label: 'Asignada',          stage: 'Orden asignada', kind: 'g' },
-    'Services Updated':            { label: 'Servicios',         stage: 'Servicios actualizados' },
-    'Completed':                   { label: 'Completada',        stage: 'Orden completada', kind: 's' },
-    'Expected Ready Date':         { label: 'Material listo',    stage: 'Fecha y hora lista' }
+    'Created':                     { label: 'Creada',             stage: 'Orden creada' },
+    'Order Assigned':              { label: 'Asignada',           stage: 'Orden asignada' },
+    'Change Reassigned':           { label: 'Reasignada',         stage: 'Orden reasignada' },
+    'Dates Confirmed':             { label: 'Confirmado',         stage: 'Calendario confirmado' },
+    'Order Approved':              { label: 'Aprobada',           stage: 'Orden aprobada' },
+    'Sent to Scheduling':          { label: 'Reprogramando',      stage: 'Reprogramación en proceso' },
+    'Materials Ready':             { label: 'Material listo',     stage: 'Material listo' },
+    'Materials Ready Cancelled':   { label: 'Material no listo',  stage: 'Se canceló que el material estaba listo' },
+    'Materials Ready Seen':        { label: 'Aviso visto',        stage: 'Aviso de material listo, visto' },
+    'Completed':                   { label: 'Completada',         stage: 'Orden completada' },
+    'Tech Marked Complete':        { label: 'Completada',         stage: 'Orden marcada completa por el técnico' },
+    'Change Requested':            { label: 'Cambio pedido',      stage: 'Cambio solicitado' },
+    'Change Rejected':             { label: 'No aprobado',        stage: 'Cambio no aprobado' },
+    'Change Request Cancelled':    { label: 'Retirado',           stage: 'Cambio solicitado, retirado' },
+    'Cancellation Requested':      { label: 'Cancelación pedida', stage: 'Cancelación solicitada' },
+    'Cancellation Approved':       { label: 'Cancelación OK',     stage: 'Cancelación aprobada' },
+    'Cancellation Rejected':       { label: 'No cancelada',       stage: 'Cancelación no aprobada' },
+    'Cancellation Reversed':       { label: 'Reactivada',         stage: 'Orden activa de nuevo' },
+    'Order Reactivated':           { label: 'Reactivada',         stage: 'Orden reactivada' },
+    'Reactivation Requested':      { label: 'Reactivación pedida',stage: 'Reactivación solicitada' },
+    'Request Cancelled by Client': { label: 'Retirada',           stage: 'Solicitud retirada' },
+    'Requested Dates Rejected':    { label: 'Fechas no OK',       stage: 'Fechas solicitadas no aprobadas' },
+    'Requested Dates Withdrawn':   { label: 'Fechas retiradas',   stage: 'Fechas solicitadas retiradas' },
+    'Reschedule Requested':        { label: 'Nueva fecha',        stage: 'Nuevas fechas solicitadas' },
+    'Expected Ready Date':         { label: 'Fecha estimada',     stage: 'Fecha de material lista, estimada' },
+    'Occupied Unit Reported':      { label: 'Unidad ocupada',     stage: 'Cliente reportó la unidad ocupada' },
+    'Services Updated':            { label: 'Servicios',          stage: 'Servicios actualizados' },
+    'Client Data Updated':         { label: 'Datos del cliente',  stage: 'Datos del cliente actualizados' },
+    'Scheduling':                  { label: 'Programando',        stage: 'En Scheduling' },
+    'Change Approved':             { label: 'Cambio aprobado',    stage: 'Cambio aprobado' },  // PENDIENTE: ¿avanza a que etapa?
+    'Batch Created':               { label: 'Lote creado',        stage: 'Orden creada en lote' } // PENDIENTE: ¿es lo mismo que 'Created'?
   };
+
+  /* Etapas del ícono (confirmado con el usuario): el ícono avanza
+     SOLO cuando la orden de verdad avanza; si un evento no cambia
+     nada de fondo, el ícono se queda igual; si algo deshace un
+     avance, el ícono retrocede tambien -- no es un conteo que solo
+     puede subir.
+
+     1 Creada -> 2 Asignada -> 3 Calendario confirmado -> 4 Material
+     listo -> 5 Completada. */
+  const STAGE_ADVANCE = {
+    'Created': 1,
+    'Order Assigned': 2,
+    'Change Reassigned': 2,        // mismo trato que Order Assigned, confirmado
+    'Dates Confirmed': 3,
+    'Order Approved': 3,
+    'Sent to Scheduling': 3,
+    'Materials Ready': 4,
+    'Completed': 5,
+    'Tech Marked Complete': 5
+  };
+  const STAGE_REGRESS = {
+    'Materials Ready Cancelled': 3   // deshace 'Materials Ready' (etapa 4) -- regresa a 3
+  };
+  /* Todo lo demas (Change Requested, Cancellation Requested,
+     Reschedule Requested, Reactivation Requested, Change Rejected,
+     Cancellation Rejected/Approved/Reversed, Order Reactivated,
+     Requested Dates Rejected/Withdrawn, Occupied Unit Reported,
+     Materials Ready Seen, Client Data Updated, Expected Ready Date,
+     Scheduling, Change Request Cancelled, Request Cancelled by
+     Client, Services Updated) es NEUTRAL -- confirmado con el
+     usuario: son peticiones pendientes o puros avisos, la orden no
+     cambio de verdad todavia, asi que el icono no se mueve. El caso
+     de cancelacion completo (pedida/aprobada/revertida) tambien
+     queda neutral a proposito -- el icono se congela donde estaba
+     mientras la cancelacion esta en juego, y retoma desde ahi mismo
+     si se reactiva, en vez de resetear al principio. */
+
+  const G_STAGE = 2;             // Asignada
+  const S_STAGE = 5;             // Completada
+  const TRIANGLE_MAX_STAGE = 4;  // Material listo -- el triangulo llega al 100% aqui
 
   function stepFrom(h) {
     const meta = STEP_META[h.ChangeType] || { label: h.ChangeType || 'Update', stage: h.ChangeType || 'Update' };
@@ -1087,7 +1133,7 @@ if (client) {
       label: meta.label,
       stage: meta.stage,
       detail: fmtDate(h.ChangeDate) + who,
-      kind: meta.kind || 'wedge'
+      changeType: h.ChangeType || ''
     };
   }
 
@@ -1166,16 +1212,36 @@ if (client) {
     });
 
     if (!events3.length) {
-      return [{ label: 'Recibida', stage: 'Orden recibida', detail: fmtDateTime(o.createdDateTime), kind: 'wedge' }];
+      return [{ label: 'Recibida', stage: 'Orden recibida', detail: fmtDateTime(o.createdDateTime), resultStage: 1, isRegression: false }];
     }
 
-    return events3.map(stepFrom);
+    /* Camina el historial en orden aplicando avanza/retrocede/neutral
+       -- resultStage de cada paso es la etapa en la que quedo la orden
+       DESPUES de ese evento especifico, no un conteo que solo sube. */
+    let stage = 0;
+    return events3.map(h => {
+      const step = stepFrom(h);
+      const advanceTo = STAGE_ADVANCE[step.changeType];
+      const regressTo = STAGE_REGRESS[step.changeType];
+      let isRegression = false;
+      if (advanceTo != null && advanceTo > stage) {
+        stage = advanceTo;
+      } else if (regressTo != null) {
+        stage = regressTo;
+        isRegression = true;
+      }
+      // neutral (ninguno de los dos, o un avance que ya se habia alcanzado antes): stage sin cambio
+      return Object.assign(step, { resultStage: stage, isRegression: isRegression });
+    });
   }
 
   /* Uno por orden -- si la pantalla llega a mostrar varias tarjetas
      de orden a la vez, cada una necesita su propio fieldId. */
   function mountTracker(o, steps, mountId) {
-    GSOrderTracker.mount(o.OrderID, mountId, { steps: steps, current: steps.length });
+    GSOrderTracker.mount(o.OrderID, mountId, {
+      steps: steps, current: steps.length,
+      gStage: G_STAGE, sStage: S_STAGE, triangleMaxStage: TRIANGLE_MAX_STAGE
+    });
   }
   
   /* ===== Aviso de retraso =====
