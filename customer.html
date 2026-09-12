@@ -96,13 +96,6 @@
      boton de agregar unidad SIEMPRE estan aqui, nunca se mueven ni
      desaparecen; solo cambia lo de abajo (campos vs. lista de
      unidades) segun el modo. */
-  .gs-ofp-unit-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-  .gs-ofp-add-unit-link {
-    background: none; border: none; color: var(--gold-dk); cursor: pointer;
-    font-size: 12px; font-weight: 600; font-family: 'Inter', sans-serif; letter-spacing: .02em;
-    padding: 0; transition: color .2s;
-  }
-  .gs-ofp-add-unit-link:hover { color: var(--gold); text-decoration: underline; }
   .toggle-b-thumb { position: absolute; top: 3px; left: 3px; width: 44px; height: 26px; background: var(--white); border-radius: 13px; transition: transform .2s cubic-bezier(.4,0,.2,1); box-shadow: 0 1px 3px rgba(0,0,0,.2); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: var(--gray); }
   .toggle-b.on { background: var(--gold); }
   .toggle-b.on .toggle-b-thumb { transform: translateX(27px); color: var(--black); }
@@ -810,7 +803,7 @@ style="object-fit:contain">
 <!-- Pendiente: gsocd-shared va en v1.15.0, el siguiente tag real seria v1.16.0
      (componente nuevo, todavia solo vive en local). Ajustar cuando se suba. -->
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.16.0/estimated-time/estimated-time.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.17.0/order-form-premium/order-form-premium.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.19.0/order-form-premium/order-form-premium.js"></script>
 <script>
 const client = GS.requireSession();
 if (client) {
