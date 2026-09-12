@@ -19,7 +19,7 @@
 
 const {
   PATHS,
-  listChildren, findByPrefix, findByName, downloadById,
+  listChildren, findByPrefix, findByName, downloadById, driveItemByPath,
   jsonResponse
 } = require('./lib/graph');
 
@@ -75,12 +75,14 @@ async function serveCategory(cat) {
   return binaryResponse(await downloadById(item.id), typeOf(item.name));
 }
 
-/* ?name=Logo.png — raíz del drive */
+/* ?name=Logo.jpg — archivo exacto en la raíz del drive, buscado por
+   ruta directa (driveItemByPath) -- mismo patron ya confirmado
+   funcionando en Admingsocd.com. Antes esto listaba TODOS los
+   archivos de la raiz (cachedChildren('')) y buscaba entre ellos,
+   forma menos confiable que causaba 404 inconsistentes. */
 async function serveRootFile(name) {
-  const kids = await cachedChildren('');
-  const wanted = String(name).toLowerCase();
-  const item = kids.find(k => k.isFile && k.name.toLowerCase() === wanted);
-  if (!item || item.size > MAX_BYTES) return notFound();
+  const item = await driveItemByPath(String(name));
+  if (!item || (item.size || 0) > MAX_BYTES) return notFound();
   return binaryResponse(await downloadById(item.id), typeOf(item.name));
 }
 
