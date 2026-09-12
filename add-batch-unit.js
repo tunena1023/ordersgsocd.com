@@ -2,10 +2,19 @@
    add-batch-unit.js — agregar UNA unidad mas a un pedido multi-unidad
    (PO) que ya existe. Copia Division/Servicios/BusinessName/Requester
    del resto del lote automaticamente (no se preguntan de nuevo) --
-   solo se piden Building, Unit#, Bed/Bath y fechas de la unidad nueva.
+   solo se piden Building #, Unit#, Bed/Bath y fechas de la unidad
+   nueva.
 
-   Contrato: { clientId, batchId, buildingId, unitNumber, bedrooms,
-               bathrooms, entryDate, dueDate }
+   Contrato: { clientId, batchId, buildingNumber, unitNumber, bedrooms,
+               bathrooms, entryDate, dueDate, needsOfficeAccess,
+               officeNeedNotes }
+
+   buildingNumber es TEXTO LIBRE y OPCIONAL (igual que en el modo
+   Single de crear orden) -- ya no se elige entre direcciones guardadas
+   del cliente. La unidad nueva SIEMPRE usa la direccion del cliente
+   (Clients list); si buildingNumber viene vacio, se autorellena con
+   los digitos iniciales de esa direccion (confirmado con el dueño
+   12/09/2026 -- antes esto era un <select> de CLIENT_ADDRESSES_LIST).
 
    La unidad nueva siempre entra como Status='Received' (pendiente de
    aprobar), aunque las demas del PO ya esten aprobadas -- es una
@@ -15,7 +24,7 @@
 ============================================================ */
 
 const {
-  ORDERS_LIST, ORDER_SERVICES_LIST, ORDER_HISTORY_LIST, CLIENT_ADDRESSES_LIST, CLIENTS_LIST,
+  ORDERS_LIST, ORDER_SERVICES_LIST, ORDER_HISTORY_LIST, CLIENTS_LIST,
   createListItem, graphFetch, siteListPath, jsonResponse
 } = require('./lib/graph');
 
@@ -57,17 +66,16 @@ exports.handler = async (event) => {
     const b = JSON.parse(event.body || '{}');
     if (!b.clientId)   return jsonResponse(400, { error: 'clientId is required' });
     if (!b.batchId)    return jsonResponse(400, { error: 'batchId is required' });
-    if (!b.buildingId) return jsonResponse(400, { error: 'Please choose a building.' });
     if (!b.unitNumber) return jsonResponse(400, { error: 'Please enter the Unit Number.' });
     if (!b.bedrooms)   return jsonResponse(400, { error: 'Please enter Bedrooms.' });
     if (!b.bathrooms)  return jsonResponse(400, { error: 'Please enter Bathrooms.' });
     if (!b.entryDate)  return jsonResponse(400, { error: 'Please enter the entry date.' });
     if (!b.dueDate)    return jsonResponse(400, { error: 'Please enter the due date.' });
+    /* buildingNumber es OPCIONAL a proposito -- ver el fallback abajo. */
 
-    const [clientOrders, buildingRows, clientRows] = await Promise.all([
+    const [clientOrders, clientRows] = await Promise.all([
       fetchByField(ORDERS_LIST, 'ClientID', b.clientId),
-      fetchByField(CLIENT_ADDRESSES_LIST, 'ClientID', b.clientId),
-      b.buildingId === 'CLIENT_ADDRESS' ? fetchByField(CLIENTS_LIST, 'ClientID', b.clientId) : Promise.resolve([])
+      fetchByField(CLIENTS_LIST, 'ClientID', b.clientId)
     ]);
 
     /* El PO tiene que ser de verdad de este cliente -- se busca entre
@@ -75,23 +83,29 @@ exports.handler = async (event) => {
     const siblings = clientOrders.filter(it => it.fields && it.fields.BatchId === b.batchId);
     if (!siblings.length) return jsonResponse(404, { error: 'That order was not found.' });
 
-    /* 'CLIENT_ADDRESS' es un id especial (no es un renglon real de
-       CLIENT_ADDRESSES_LIST) -- significa "esta unidad no tiene
-       building guardado, usa la direccion del cliente". */
-    let bf;
-    if (b.buildingId === 'CLIENT_ADDRESS') {
-      const clientItem = clientRows.find(it => it.fields);
-      const cf = clientItem ? clientItem.fields : {};
-      bf = { BuildingNumber: '', Address: cf.Address || '', Suite: cf.Suite || '', City: cf.City || '', Zip: cf.Zip || '' };
-    } else {
-      const building = buildingRows.find(it => it.id === String(b.buildingId));
-      if (!building) return jsonResponse(403, { error: 'That building does not belong to this account.' });
-      bf = building.fields;
+    /* La unidad nueva SIEMPRE usa la direccion del cliente (igual que
+       el modo Single de crear orden) -- ya no se elige entre varias
+       direcciones guardadas. Building # es texto libre y opcional: si
+       se deja vacio, se autorellena con los digitos iniciales de la
+       direccion del cliente (confirmado con el dueño 12/09/2026). */
+    const clientItem = clientRows.find(it => it.fields);
+    const cf = clientItem ? clientItem.fields : {};
+    let buildingNumber = String(b.buildingNumber || '').trim();
+    if (!buildingNumber) {
+      const m = String(cf.Address || '').match(/^\s*(\d+)/);
+      buildingNumber = m ? m[1] : '';
     }
+    const bf = { BuildingNumber: buildingNumber, Address: cf.Address || '', Suite: cf.Suite || '', City: cf.City || '', Zip: cf.Zip || '' };
 
     const template = siblings[0].fields;
     const suffix = nextGlobalSuffix(clientOrders);
     const orderId = String(b.clientId).trim() + '-' + suffix + '-' + b.batchId;
+    /* needsOfficeAccess/officeNeedNotes son de ESTA unidad nueva
+       especificamente (el toggle del formulario de Add Unit), no se
+       heredan del resto del PO -- mismo criterio que se aplico en
+       Admin (submit-order.js). */
+    const needsOfficeAccess = b.needsOfficeAccess === true || b.needsOfficeAccess === 'true';
+    const officeNeedNotes = b.officeNeedNotes || '';
 
     await createListItem(ORDERS_LIST, {
       Title:          template.BusinessName || '',
@@ -112,11 +126,12 @@ exports.handler = async (event) => {
       Zip:            bf.Zip     || '',
       Email:          template.Email || '',
       Notes:          template.Notes || '',
+      NeedsOfficeAccess: needsOfficeAccess,
+      OfficeNeedNotes:   officeNeedNotes,
       EntryDate:      b.entryDate,
       DueDate:        b.dueDate,
       DraftData:      '',
-      BatchId:        b.batchId,
-      BuildingId:     String(b.buildingId)
+      BatchId:        b.batchId
     });
 
     /* Copiar los mismos servicios que ya tiene el resto del lote --

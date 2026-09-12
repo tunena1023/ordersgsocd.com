@@ -186,3 +186,74 @@ version actual del archivo -- puede haber pendientes, decisiones o
 cambios en local sin subir que cambian por completo cual es la forma
 correcta de resolver algo.
 
+
+## En local, sin subir (12/09/2026): "+ Add a Unit" portado desde Admin
+
+Mismo rediseño ya aprobado en `Admingsocd.com/admin.html` (tab Approvals),
+portado aquí. El modal (`#addunit-dialog`, `openAddBatchUnit`/
+`closeAddBatchUnit`/`submitAddBatchUnit` viejos) se QUITÓ por completo —
+ahora "+ Add a Unit" despliega un formulario inline debajo del botón
+(`addUnitFormHtml`/`toggleAddUnitForm`/`submitAddBatchUnit` nuevos), mismos
+6 campos con look premium `gs-ofp-*`, tarjeta "Need anything from the
+office?" delgada con toggle real, y los botones se quedaron con los
+colores NATIVOS de Orders (`.btn-gold`/`.btn-ghost`), no los verdes de
+Admin — decisión tomada sola por ser "solo estético", sin pedirlo, avisado
+en el chat. `add-batch-unit.js` ahora acepta y guarda `NeedsOfficeAccess`/
+`OfficeNeedNotes` (antes no lo hacía, igual que en Admin).
+
+Diferencia real con Admin (no solo estética): aquí los buildings del
+cliente se piden a `/get-client-addresses` la primera vez que se abre el
+formulario (async), no vienen precargados como en Admin (`allClients`) --
+por eso `toggleAddUnitForm` es `async` y muestra "Loading buildings…"
+brevemente. Probado con un arnés de jsdom simulando `GS.api` (15/15).
+
+Vive en el sandbox de esta sesión, no en GitHub.
+
+## En local, sin subir (12/09/2026): Building # pasó de select a texto libre
+
+Mismo cambio que en Admin (ver su NOTES.md): el "+ Add a Unit" portado hoy
+usaba un `<select>` de direcciones guardadas del cliente
+(`/get-client-addresses`) para Building — se quitó por completo. Ahora es
+texto libre y OPCIONAL, igual que "Building #" del modo Single. Si se deja
+vacío, `add-batch-unit.js` autorellena con los dígitos iniciales de la
+dirección del cliente (`Clients` list), regex `/^\s*(\d+)/`. Ya no se
+importa `CLIENT_ADDRESSES_LIST` en ese archivo (quedó sin uso). `BuildingId`
+tampoco se guarda ya en la unidad nueva (no aplica sin building ligado).
+
+Mismo aviso que en Admin: clientes con varias propiedades guardadas
+siempre van a la dirección default del cliente al usar este formulario,
+nunca a una distinta. Instrucción explícita del dueño, no bloqueante.
+
+## En local, sin subir (12/09/2026): Office Access unificado en gsocd-shared
+
+Mismo cambio que en Admin (ver su NOTES.md, y el de `gsocd-shared` para
+el detalle completo de la API nueva). Se reemplazaron las 2 tarjetas
+duplicadas en este repo (flujo de crear orden y formulario de Add Unit)
+por llamadas a `GSOrderFormPremium.officeAccessHtml(dom, opts)`. Se
+quitaron `officeNeedYes`/`setOfficeNeed`/`toggleOfficeNeed`/
+`resetOfficeNeed` (locales de esta página) y `addUnitOfficeNeedState`/
+`setAddUnitOfficeNeed` (del formulario de Add Unit). `<script src>`
+actualizado a `gsocd-shared@v1.25.0`.
+
+Detalle propio de este repo (no aplica en Admin): el toggle del flujo de
+crear orden le cambia el nombre a OTRO campo de la pantalla ("Entry
+time" → "Office availability time") -- por eso se usa
+`GSOrderFormPremium.onOfficeNeedChange('create', fn)` para engancharse
+sin que el componente compartido tenga que saber de esta lógica ajena a
+él. Probado con jsdom que el hook renombra y des-renombra correctamente,
+y que `restoreOfficeNeed(o)` (cargar un borrador/orden existente) prende
+el estado, llena el texto, Y dispara el hook del label los 3 a la vez
+(9/9).
+
+También se descubrió y arregló al hacer esto: el `<div id=
+"access-scheduling-mount">` vive a mitad de página, pero el `<script
+src>` de `order-form-premium` carga hasta el final del `<body>` -- si se
+llama a `GSOrderFormPremium.officeAccessHtml()` directo ahí sin esperar,
+truena porque el componente todavia no existe. Se envolvió en
+`document.addEventListener('DOMContentLoaded', ...)`.
+
+Título/label/placeholder nuevos confirmados con jsdom sobre el código
+real de `customer.html`: 20/20 en Add Unit.
+
+**Pendiente:** mismo aviso que en Admin -- depende de que
+`gsocd-shared@v1.25.0` se suba primero.
