@@ -120,10 +120,29 @@ habían quedado en una versión vieja del componente sin el acordeón.
   una categoría del acordeón esté abierta a la vez (hoy se pueden abrir
   varias al mismo tiempo). Vive en el sandbox de la sesión del 10/09/2026,
   no en GitHub — si no aparece en el repo y no se sabe por qué, es por esto.
+- **RESUELTO (12/09/2026) — 404 de `Logo.jpg` / `NavBackground.jpg` en Orders
+  (`/api/site-image`).** El diagnostico original de esta nota estaba
+  MAL -- no era que los archivos tuvieran otro nombre en SharePoint (SI
+  se llaman exactamente `Logo.jpg` / `NavBackground.jpg`, confirmado
+  viendo la raiz del drive directo). La causa real: `serveRootFile()`
+  en `orders/site-image.js` listaba TODOS los archivos de la raiz del
+  drive (`cachedChildren('')`) y buscaba el nombre pedido entre ellos --
+  forma menos confiable que Admingsocd.com ya habia dejado atras hace
+  tiempo, cambiando a una busqueda DIRECTA con `driveItemByPath()` (una
+  sola llamada a Graph pidiendo esa ruta exacta, sin listar nada). Orders
+  nunca recibio esa misma actualizacion -- `driveItemByPath()` YA EXISTIA
+  en `lib/graph.js` de Orders (identica a la de Admin), solo no estaba
+  conectada en `site-image.js`.
+  **Si vuelve a pasar algo parecido (imagen/banner/logo que da 404 en
+  cualquiera de los 3 repos):** antes que nada comparar el archivo
+  sospechoso (`site-image.js` y/o `lib/graph.js`) contra su equivalente
+  en Admingsocd.com byte por byte (`diff`) -- Admin suele tener la
+  version mas actualizada/confiable de estas funciones. Tambien:
+  `Vercel:get_runtime_logs` (proyecto real, no adivinar la plataforma --
+  es Vercel, NO Netlify, aunque haya un `netlify.toml` suelto sin usar)
+  filtrando por `/api/site-image` muestra el codigo de respuesta real
+  (200/404/500) sin necesidad de pedirle a nadie que abra devtools.
 - Bug sin resolver: banner "File downloaded... sharepoint.com" en Tech
   (portal de empleados, celular) — el fondo o logo se descarga como archivo
   en vez de solo mostrarse. No tocar hasta que el dueño lo pida
   explícitamente.
-- 404 de `Logo.jpg` / `NavBackground.jpg` en Orders (`/api/site-image`) —
-  pendiente de que el dueño confirme el nombre real de esos archivos en la
-  raíz del drive de SharePoint (Onlineorders).
