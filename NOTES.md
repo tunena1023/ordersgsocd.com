@@ -224,7 +224,7 @@ Mismo aviso que en Admin: clientes con varias propiedades guardadas
 siempre van a la dirección default del cliente al usar este formulario,
 nunca a una distinta. Instrucción explícita del dueño, no bloqueante.
 
-## En local, sin subir (12/09/2026): Office Access unificado en gsocd-shared
+## SUBIDO Y DESPLEGADO (12/09/2026): Office Access unificado en gsocd-shared
 
 Mismo cambio que en Admin (ver su NOTES.md, y el de `gsocd-shared` para
 el detalle completo de la API nueva). Se reemplazaron las 2 tarjetas
@@ -255,5 +255,10 @@ truena porque el componente todavia no existe. Se envolvió en
 Título/label/placeholder nuevos confirmados con jsdom sobre el código
 real de `customer.html`: 20/20 en Add Unit.
 
-**Pendiente:** mismo aviso que en Admin -- depende de que
-`gsocd-shared@v1.25.0` se suba primero.
+**Estado real (12/09/2026, verificado con fetch directo a producción):**
+`gsocd-shared@v1.25.0` se subió primero (repo + tag), luego este repo.
+`customer.html` en producción ya referencia `gsocd-shared@v1.25.0` en su
+`<script src>`, el `#addunit-dialog` (modal viejo) ya no existe en el
+HTML servido, y no queda ningún rastro del texto viejo ni de
+`addUnitBuildingsCache`. Deployment en Vercel: `READY`, sin errores
+nuevos en runtime logs.
