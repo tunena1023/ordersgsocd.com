@@ -639,6 +639,136 @@
     #panel-templates .tpl-card { flex-direction: column; align-items: flex-start; }
     #panel-templates .svc-chip-grid, #panel-templates .jan-row-grid { grid-template-columns: 1fr; }
   }
+
+  /* ============================================================
+     PANEL PROFILE -- reglas de profile.html (su propia pagina
+     antes de unirla aqui), encapsuladas bajo #panel-profile.
+  ============================================================ */
+  #panel-profile .addr-wrap { padding: 40px 48px; }
+  #panel-profile .addr-wrap h2 { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 600; margin-bottom: 6px; }
+  #panel-profile .addr-wrap .list-sub { font-size: 12px; color: var(--gray); margin-bottom: 24px; line-height: 1.6; }
+  #panel-profile .client-3col {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0;
+    width: 100%; margin-top: 8px; border: 1px solid var(--border); overflow: hidden;
+  }
+  #panel-profile .client-addr-list { border-right: 1px solid var(--border); background: var(--off); min-width: 0; }
+  #panel-profile .client-addr-row { padding: 12px 14px; cursor: pointer; border-left: 3px solid transparent; transition: background .15s; }
+  #panel-profile .client-addr-row:hover { background: var(--white); }
+  #panel-profile .client-addr-row.selected { border-left-color: var(--gold); background: var(--white); }
+  #panel-profile .client-addr-row.archived-row { opacity: .5; }
+  #panel-profile .client-addr-row.primary-row { padding: 16px 14px; }
+  #panel-profile .client-addr-row.primary-row .client-addr-name { font-size: 15px; }
+  #panel-profile .client-addr-name { font-size: 13px; font-weight: 700; }
+  #panel-profile .client-addr-sub { font-size: 11px; color: var(--gray); margin-top: 2px; }
+  #panel-profile .client-addr-list-foot { padding: 10px 14px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
+  #panel-profile .client-addr-list-foot a { font-size: 11px; color: var(--gray); cursor: pointer; text-decoration: underline; }
+  #panel-profile .client-addr-list-foot a:hover { color: var(--gold-dk); }
+  #panel-profile .client-detail { padding: 20px; min-width: 0; }
+  #panel-profile .client-control { border-left: 1px solid var(--border); background: var(--off); padding: 18px; display: none; min-width: 0; }
+  #panel-profile .client-control.open { display: block; }
+  @media (max-width: 900px) {
+    #panel-profile .client-3col { grid-template-columns: 1fr; }
+    #panel-profile .client-control { border-left: none; border-top: 1px solid var(--border); }
+  }
+  #panel-profile .field-small { margin-bottom: 12px; }
+  #panel-profile .field-small label { display: block; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--gray); font-weight: 600; margin-bottom: 6px; }
+  #panel-profile .field-small input, #panel-profile .field-small select { width: 100%; border: 1.5px solid var(--border); padding: 10px 12px; font-size: 13px; font-family: 'Inter', sans-serif; outline: none; transition: border-color .2s; background: var(--white); }
+  #panel-profile .field-small input:focus, #panel-profile .field-small select:focus { border-color: var(--gold); }
+  #panel-profile .control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 560px) {
+    #panel-profile .control-grid { grid-template-columns: 1fr; }
+  }
+  #panel-profile .recipient-row { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 8px 10px; margin-bottom: 6px; background: var(--white); border: 1px solid var(--border); }
+  #panel-profile .recipient-row input[type="radio"] { width: auto; flex-shrink: 0; }
+  #panel-profile .contact-row-plain { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; padding: 8px 10px; margin-bottom: 6px; background: var(--white); border: 1px solid var(--border); }
+  #panel-profile .addr-top-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 12px; flex-wrap: wrap; }
+  #panel-profile .link-toggle { font-size: 11px; color: var(--gray); background: none; border: none; cursor: pointer; text-decoration: underline; letter-spacing: .04em; }
+  #panel-profile .link-toggle:hover { color: var(--gold-dk); }
+  #panel-profile .btn-gold {
+    background: var(--gold); color: var(--black); border: none;
+    padding: 12px 20px; font-size: 11px; font-family: 'Inter', sans-serif;
+    letter-spacing: .14em; text-transform: uppercase; font-weight: 700;
+    cursor: pointer; transition: background .2s;
+  }
+  #panel-profile .btn-gold:hover { background: var(--gold-dk); color: var(--white); }
+  #panel-profile .btn-ghost {
+    background: none; border: 1.5px solid var(--border); color: var(--black);
+    padding: 12px 20px; font-size: 11px; font-family: 'Inter', sans-serif;
+    letter-spacing: .14em; text-transform: uppercase; font-weight: 700; cursor: pointer;
+    transition: border-color .2s;
+  }
+  #panel-profile .btn-ghost:hover { border-color: var(--gold); }
+  #panel-profile .btn-small {
+    background: none; border: 1.5px solid var(--border); color: var(--black);
+    padding: 8px 14px; font-size: 10px; font-family: 'Inter', sans-serif;
+    letter-spacing: .1em; text-transform: uppercase; font-weight: 700; cursor: pointer;
+    transition: border-color .2s, color .2s; white-space: nowrap;
+  }
+  #panel-profile .btn-small:hover { border-color: var(--gold); }
+  #panel-profile .btn-small.danger:hover { border-color: #B33A3A; color: #B33A3A; }
+  #panel-profile .empty-note { font-size: 12px; color: #bbb; font-style: italic; padding: 12px 0; }
+  #panel-profile .dialog-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(17,17,17,.55);
+    z-index: 210; align-items: center; justify-content: center; padding: 20px;
+    overflow-y: auto;
+  }
+  #panel-profile .dialog-overlay.open { display: flex; }
+  #panel-profile .dialog-panel {
+    background: var(--white); border: 1px solid var(--border); max-width: 520px;
+    width: 100%; padding: 36px 32px; margin: auto;
+    animation: dialogIn .3s cubic-bezier(.22,.9,.28,1) both;
+  }
+  #panel-profile @keyframes dialogIn { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
+  #panel-profile .dialog-panel h3 { font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 600; margin-bottom: 20px; }
+  #panel-profile .field { margin-bottom: 16px; }
+  #panel-profile .field label { display: block; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--gray); font-weight: 600; margin-bottom: 8px; }
+  #panel-profile .field input { width: 100%; border: 1.5px solid var(--border); padding: 13px 14px; font-size: 14px; font-family: 'Inter', sans-serif; outline: none; transition: border-color .2s; }
+  #panel-profile .field input:focus { border-color: var(--gold); }
+  #panel-profile .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 560px) {
+    #panel-profile .field-row { grid-template-columns: 1fr; }
+  }
+  #panel-profile .dialog-btns { display: flex; gap: 10px; margin-top: 8px; }
+  #panel-profile .dialog-btns .btn-gold, #panel-profile .dialog-btns .btn-ghost { flex: 1; }
+  #panel-profile .dialog-error { font-size: 11px; color: #B33A3A; margin-top: 10px; min-height: 14px; }
+  #panel-profile .toast {
+    position: fixed; bottom: 32px; right: 32px; z-index: 300;
+    background: var(--black); color: var(--white); padding: 18px 24px;
+    border-left: 3px solid var(--gold); max-width: 380px;
+    font-size: 13px; line-height: 1.6; box-shadow: 0 10px 30px rgba(0,0,0,.3);
+    display: none; animation: toastIn .35s cubic-bezier(.22,.9,.28,1) both;
+  }
+  #panel-profile .toast.show { display: block; }
+  #panel-profile @keyframes toastIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+  #panel-profile footer { background: var(--black); padding: 24px 48px; display: flex; align-items: center; justify-content: space-between; }
+  #panel-profile footer p { font-size: 11px; color: #555; letter-spacing: .06em; }
+  #panel-profile footer span { color: var(--gold); }
+  #panel-profile .contact-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(17,17,17,.55);
+    z-index: 200; align-items: flex-start; justify-content: center; padding: 60px 20px;
+    overflow-y: auto;
+  }
+  #panel-profile .contact-overlay.open { display: flex; }
+  #panel-profile .contact-panel {
+    background: var(--white); border: 1px solid var(--border);
+    max-width: 460px; width: 100%; padding: 40px; position: relative;
+  }
+  #panel-profile .contact-close {
+    position: absolute; top: 12px; right: 16px; background: none; border: none;
+    font-size: 20px; color: var(--gray); cursor: pointer; line-height: 1;
+  }
+  #panel-profile .contact-close:hover { color: var(--black); }
+  #panel-profile .contact-logo-slot { display: flex; justify-content: center; margin-bottom: 12px; }
+  #panel-profile .contact-logo-slot img { width: 72px; height: 72px; object-fit: contain; }
+  #panel-profile .contact-panel h2 { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 600; text-align: center; margin-bottom: 6px; }
+  #panel-profile .contact-panel .contact-sub { font-size: 12px; color: var(--gray); text-align: center; margin-bottom: 24px; line-height: 1.6; }
+  #panel-profile .contact-panel textarea { width: 100%; border: 1.5px solid var(--border); padding: 13px 14px; font-size: 14px; font-family: 'Inter', sans-serif; outline: none; resize: vertical; min-height: 90px; }
+  #panel-profile .contact-panel textarea:focus { border-color: var(--gold); }
+  @media (max-width: 860px) {
+    #panel-profile .addr-wrap { padding: 28px 20px; }
+    #panel-profile footer { flex-direction: column; gap: 8px; padding: 20px; }
+    #panel-profile .toast { left: 20px; right: 20px; bottom: 20px; max-width: none; }
+  }
 </style>
 </head>
 <body>
@@ -956,6 +1086,25 @@ style="object-fit:contain">
 </div>
 </div>
 
+<!-- PROFILE -->
+<div class="panel" id="panel-profile">
+<div class="addr-wrap">
+  <h2>Profile</h2>
+  <p class="list-sub">Your business information, contacts, and saved buildings.</p>
+
+  <div class="client-3col">
+    <div class="client-addr-list" id="addr-list"><p class="empty-note" style="padding:12px">Loading…</p></div>
+    <div class="client-detail" id="detail-panel"></div>
+    <div class="client-control" id="control-panel"></div>
+  </div>
+</div>
+
+<footer>
+  <p>© 2026 <span>GS Solutions Inc.</span> — Des Moines, Iowa</p>
+  <p>orders@gsocd.com · (515) 473-5990</p>
+</footer>
+</div>
+
 <!-- Toast de notificación -->
 <div class="toast" id="toast"></div>
 
@@ -1111,7 +1260,7 @@ if (client) {
     { label: 'Processing', href: 'tracking.html#processing' },
     { label: 'History', href: 'tracking.html#history' },
     { label: 'Recurring', dataView: 'recurring', onclick: "showTab('recurring')" },
-    { label: 'Profile', href: 'profile.html' }
+    { label: 'Profile', dataView: 'profile', onclick: "showTab('profile')" }
   ]);
 
   /* Cambia de pestana sin recargar -- la parte generica (activar la
@@ -2449,6 +2598,759 @@ if (client) {
   }).catch(err => {
     $('tpl-picker').innerHTML = '<p class="flash-empty">Could not load services: ' + esc(err.message) + '</p>';
   });
+
+  /* ============================================================
+     PANEL PROFILE -- JS de profile.html (su propia pagina antes
+     de unirla aqui). Renombrado 'selected' -> 'profileSelected'
+     (choca con el estado del picker de servicios de New Order --
+     alla es un objeto de servicios elegidos, aca es un string
+     de cual building/contact esta viendo, comparten nombre por
+     accidente). esc/doSignout/showToast identicos, no se
+     duplican.
+
+     BUG REAL encontrado y corregido durante las pruebas: el
+     renombrado automatico de 'selected' se colo dentro de 3
+     strings literales que en realidad eran el nombre de clase
+     CSS 'selected' (para resaltar visualmente la fila activa),
+     no la variable -- se revirtieron esos 3 strings especificos
+     sin tocar las referencias reales a la variable renombrada.
+  ============================================================ */
+  /* client, $ ya existen en customer.html. La barra de navegacion
+     ya se inicializo una sola vez arriba. */
+
+  /* Un solo cliente (el que hizo login), asi que no hace falta el
+     mecanismo de pin/multiples-tarjetas-abiertas que usa admin.html
+     -- aqui solo hay una lista/detalle/control, siempre "abierta". */
+  let profileFields = {};
+  let addresses = [];   // buildings, TODOS (incluye archivados), se filtra al pintar
+  let contacts = [];    // TODOS (incluye archivados), se filtra al pintar
+  let profileSelected = 'primary';
+  let showArchivedBuildings = false;
+  let showArchivedContacts = false;
+  let addingNewBuilding = false;
+
+  $('client-name').textContent = client.businessName || client.clientId;
+  $('client-num-display').textContent = client.clientId;
+  GS.applyLogo();
+
+  loadAll();
+
+  async function loadAll() {
+    try {
+      const [p, addrData, contactData] = await Promise.all([
+        GS.api('/update-client-profile', { method: 'POST', body: { clientId: client.clientId } }),
+        GS.api('/get-client-addresses', { method: 'POST', body: { clientId: client.clientId, includeArchived: true } }),
+        GS.api('/get-client-contacts', { method: 'POST', body: { clientId: client.clientId, includeArchived: true } })
+      ]);
+      profileFields = p;
+      addresses = addrData.addresses || [];
+      contacts = contactData.contacts || [];
+      renderAddrList();
+      selectAddr(profileSelected || 'primary');
+    } catch (e) {
+      $('detail-panel').innerHTML = '<p class="empty-note">Could not load profile: ' + esc(e.message) + '</p>';
+    }
+  }
+
+  function renderAddrList() {
+    const buildings = addresses.filter(a => showArchivedBuildings || !a.archived);
+    let html = '<div class="client-addr-row primary-row' + (profileSelected === 'primary' ? ' selected' : '') + '" data-key="primary" onclick="selectAddr(\'primary\')">' +
+      '<div class="client-addr-name">Primary address</div>' +
+      '<div class="client-addr-sub">' + esc(profileFields.address || '—') + '</div>' +
+      '</div>';
+
+    buildings.forEach(a => {
+      html += '<div class="client-addr-row' + (profileSelected === a.id ? ' selected' : '') + (a.archived ? ' archived-row' : '') + '" data-key="' + esc(a.id) + '" onclick="selectAddr(\'' + esc(a.id) + '\')">' +
+        '<div class="client-addr-name">' + esc(a.label || 'Untitled') + '</div>' +
+        '<div class="client-addr-sub">' + esc(a.address || '—') + '</div>' +
+        '</div>';
+    });
+
+    const archivedCount = addresses.filter(a => a.archived).length;
+    html += '<div class="client-addr-list-foot">' +
+      (archivedCount ? '<a onclick="toggleShowArchivedBuildings()">' + (showArchivedBuildings ? 'Hide' : 'Show') + ' archived buildings (' + archivedCount + ')</a>' : '') +
+      '<button class="btn-gold" style="font-size:10px;padding:10px 14px" onclick="startAddBuilding()">+ Add Building</button>' +
+      '</div>';
+
+    $('addr-list').innerHTML = html;
+  }
+
+  function selectAddr(key) {
+    profileSelected = key;
+    document.querySelectorAll('#addr-list .client-addr-row').forEach(row => {
+      row.classList.toggle('selected', row.dataset.key === key);
+    });
+    const control = $('control-panel');
+    control.classList.remove('open');
+    control.innerHTML = '';
+    renderDetail();
+  }
+
+  function renderDetail() {
+    const detail = $('detail-panel');
+
+    if (profileSelected === 'primary') {
+      const active = contacts.filter(c => !c.archived);
+      const recipient = active.find(c => c.notifyRecipient);
+      let html = '<p style="font-size:12px;color:var(--gray);margin-bottom:4px">This is your <strong>primary address</strong> — used by default unless a different building is profileSelected when placing an order.</p>' +
+        '<div style="font-size:15px;font-weight:700;margin:14px 0 4px">' + esc(profileFields.businessName || client.businessName || client.clientId) + '</div>' +
+        '<div style="font-size:13px;color:var(--gray)">' + esc(profileFields.address || '—') + ' ' + esc(profileFields.suite || '') + ' ' + esc(profileFields.city || '') + ' ' + esc(profileFields.zip || '') + '</div>' +
+        '<div style="margin-top:18px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray)">Contacts on file</div>';
+
+      if (!recipient) {
+        html += '<div style="font-size:13px;margin-top:6px">' + esc(profileFields.contactPerson || profileFields.businessName || '') + ' (Email): ' + esc(profileFields.contact || '—') +
+          ' <span class="client-addr-sub" style="color:var(--gold-dk);text-transform:uppercase;font-weight:700;display:inline">Receives notifications</span></div>';
+      }
+      if (!active.length) {
+        html += '<p class="empty-note" style="padding:6px 0;text-align:left">No additional contacts yet.</p>';
+      } else {
+        active.forEach(c => {
+          html += '<div style="font-size:13px;margin-top:6px"><span style="color:var(--gray)">' + esc(c.name) + ' (' + esc(c.type) + '):</span> ' + esc(c.value) +
+            (c.notifyRecipient ? ' <span style="color:var(--gold-dk);font-size:9px;text-transform:uppercase;font-weight:700">Receives notifications</span>' : '') + '</div>';
+        });
+      }
+
+      html += '<div style="display:flex;gap:8px;margin-top:20px;max-width:280px">' +
+        '<button class="btn-ghost" style="flex:1;font-size:10px;padding:10px" onclick="openEdit()">Edit</button>' +
+        '<button class="btn-ghost" style="flex:1;font-size:10px;padding:10px" onclick="openNotifications()">Notifications</button>' +
+        '</div>';
+      detail.innerHTML = html;
+    } else {
+      const b = addresses.find(x => x.id === profileSelected);
+      if (!b) { detail.innerHTML = '<p class="empty-note">Not found.</p>'; return; }
+      const addrLine = [b.address, b.suite, b.city, b.zip].filter(Boolean).join(', ');
+      const assigned = contacts.find(c => c.id === b.contactId && !c.archived);
+      const contactLine = assigned
+        ? esc(assigned.name) + ' (' + esc(assigned.type) + '): ' + esc(assigned.value)
+        : esc(profileFields.contactPerson || profileFields.businessName || '') + ' (Email) — primary default';
+
+      detail.innerHTML = '<div style="font-size:11px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em">' + (b.archived ? 'Secondary · Archived' : 'Secondary') + '</div>' +
+        '<div style="font-size:15px;font-weight:700;margin:6px 0 4px">' + esc(b.label || 'Untitled building') +
+          (b.buildingNumber ? ' <span style="color:var(--gray);font-weight:400">#' + esc(b.buildingNumber) + '</span>' : '') + '</div>' +
+        '<div style="font-size:13px;color:var(--gray)">' + esc(addrLine || '—') + '</div>' +
+        '<div style="margin-top:18px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray)">Contact for this building</div>' +
+        '<div style="font-size:13px;margin-top:6px">' + contactLine + '</div>' +
+        '<div style="display:flex;gap:8px;margin-top:20px;max-width:280px">' +
+          '<button class="btn-ghost" style="flex:1;font-size:10px;padding:10px" onclick="openEdit()">Edit</button>' +
+          '<button class="btn-ghost" style="flex:1;font-size:10px;padding:10px" onclick="openBuildingNotifications()">Notifications</button>' +
+        '</div>' +
+        '<div style="margin-top:8px;max-width:280px">' +
+          '<button class="btn-ghost" style="width:100%;font-size:10px;padding:10px" onclick="' + (b.archived ? 'unarchiveBuilding' : 'archiveBuilding') + '(\'' + esc(b.id) + '\')">' + (b.archived ? 'Unarchive' : 'Archive') + '</button>' +
+        '</div>';
+    }
+  }
+
+  function openEdit() {
+    const control = $('control-panel');
+    control.classList.add('open');
+
+    if (profileSelected === 'primary') {
+      const active = contacts.filter(c => !c.archived);
+      let contactsHtml = '';
+      active.forEach(c => {
+        contactsHtml += '<div class="contact-row-plain">' +
+          '<span>' + esc(c.name) + ' (' + esc(c.type) + ') — ' + esc(c.value) + '</span>' +
+          '<button onclick="archiveContact(\'' + esc(c.id) + '\')" title="Remove contact" style="background:none;border:none;color:var(--gray);cursor:pointer;font-size:15px;line-height:1;padding:0 4px;flex-shrink:0">×</button>' +
+          '</div>';
+      });
+      if (!active.length) contactsHtml = '<p class="empty-note" style="padding:4px 0">No additional contacts yet.</p>';
+      const archivedCount = contacts.filter(c => c.archived).length;
+
+      control.innerHTML = '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin-bottom:12px">Edit primary address</div>' +
+        '<div class="control-grid">' +
+          field('bname', 'Business Name', profileFields.businessName) +
+          field('cperson', 'Contact Person', profileFields.contactPerson) +
+          field('email', 'Contact Email', profileFields.contact) +
+          field('phone', 'Phone', profileFields.phone) +
+          field('address', 'Address', profileFields.address) +
+          field('suite', 'Suite', profileFields.suite) +
+          field('city', 'City', profileFields.city) +
+          field('zip', 'Zip', profileFields.zip) +
+        '</div>' +
+        '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:20px 0 10px;padding-top:16px;border-top:1px solid var(--border)">Office hours at this address</div>' +
+        '<p style="font-size:11px;color:var(--gray);margin-bottom:10px">So our crew knows when someone will be there to let them in.</p>' +
+        officeHoursFieldsHtml(profileFields) +
+        holidaysSectionHtml('') +
+        '<button class="btn-gold" style="width:100%;margin-top:6px" onclick="savePrimaryEdit()">Save</button>' +
+        '<p class="dialog-error" id="ctl-error"></p>' +
+        '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:20px 0 8px;padding-top:16px;border-top:1px solid var(--border)">Contacts</div>' +
+        '<div id="ctl-contacts">' + contactsHtml + '</div>' +
+        '<div id="ctl-newcontacts"></div>' +
+        '<a onclick="addContactRow(false)" style="font-size:11px;color:var(--gray);text-decoration:underline;cursor:pointer;display:block;margin:4px 0 6px">+ Add another contact</a>' +
+        (archivedCount ? '<a onclick="toggleShowArchivedContacts(); openEdit()" style="font-size:11px;color:var(--gray);text-decoration:underline;cursor:pointer;display:block">' + (showArchivedContacts ? 'Hide' : 'Show') + ' archived contacts (' + archivedCount + ')</a>' : '') +
+        (showArchivedContacts ? archivedContactsHtml() : '');
+      loadHolidaysInto(client.clientId, '');
+    } else {
+      const b = addresses.find(x => x.id === profileSelected) || {};
+      control.innerHTML = '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin-bottom:12px">Edit ' + esc(b.label || 'building') + '</div>' +
+        '<div class="control-grid">' +
+          field('label', 'Label', b.label) +
+          field('building', 'Building #', b.buildingNumber) +
+          field('address', 'Address', b.address, true) +
+          field('suite', 'Suite', b.suite) +
+          field('city', 'City', b.city) +
+          field('zip', 'Zip', b.zip) +
+        '</div>' +
+        '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:20px 0 10px;padding-top:16px;border-top:1px solid var(--border)">Office hours at this building</div>' +
+        '<p style="font-size:11px;color:var(--gray);margin-bottom:10px">So our crew knows when someone will be there to let them in.</p>' +
+        officeHoursFieldsHtml(b) +
+        holidaysSectionHtml(b.id) +
+        '<button class="btn-gold" style="width:100%;margin-top:6px" onclick="saveBuildingEdit(\'' + esc(b.id) + '\')">Save</button>' +
+        '<p class="dialog-error" id="ctl-error"></p>';
+      loadHolidaysInto(client.clientId, b.id);
+    }
+  }
+
+  function archivedContactsHtml() {
+    let html = '';
+    contacts.filter(c => c.archived).forEach(c => {
+      html += '<div class="contact-row-plain" style="opacity:.55">' +
+        '<span>' + esc(c.name) + ' (' + esc(c.type) + ') — ' + esc(c.value) + ' <span style="text-transform:uppercase;font-size:9px;font-weight:700">Archived</span></span>' +
+        '<button onclick="unarchiveContact(\'' + esc(c.id) + '\')" style="background:none;border:none;color:var(--gray);cursor:pointer;font-size:9px;text-transform:uppercase;font-weight:700;padding:0 4px">Unarchive</button>' +
+        '</div>';
+    });
+    return html;
+  }
+
+  function field(key, label, value, fullWidth) {
+    return '<div class="field-small"' + (fullWidth ? ' style="grid-column:1/-1"' : '') + '><label>' + label + '</label><input type="text" id="ctl-' + key + '" value="' + esc(value || '') + '"></div>';
+  }
+
+  const DAY_FIELDS = ['monOpen', 'tueOpen', 'wedOpen', 'thuOpen', 'friOpen', 'satOpen', 'sunOpen'];
+  const DAY_LABELS = { monOpen: 'Mon', tueOpen: 'Tue', wedOpen: 'Wed', thuOpen: 'Thu', friOpen: 'Fri', satOpen: 'Sat', sunOpen: 'Sun' };
+
+  /* ===== Reloj oficial generico, mismo componente/patron ya usado en
+  /* Parsea "9:00 AM - 5:00 PM" (formato que ya se guardaba como texto
+     libre) a horas 24h, para pre-llenar los 2 relojes. Sin match
+     (vacio, o algo raro escrito a mano antes), cada reloj cae en su
+     default razonable. */
+  function parseOfficeHoursRange(s) {
+    const m = String(s || '').match(/(\d{1,2}):(\d{2})\s*(AM|PM)?\s*-\s*(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+    if (!m) return { open: null, close: null };
+    const to24 = (h, mm, ap) => {
+      h = parseInt(h, 10); mm = parseInt(mm, 10);
+      if (ap) { ap = ap.toUpperCase(); if (ap === 'PM' && h !== 12) h += 12; if (ap === 'AM' && h === 12) h = 0; }
+      return { h, m: mm };
+    };
+    return { open: to24(m[1], m[2], m[3]), close: to24(m[4], m[5], m[6]) };
+  }
+  /* Junta lo que hayan quedado los 2 relojes de vuelta a un solo
+     texto "9:00 AM - 5:00 PM" -- OfficeHours se queda como una sola
+     columna de texto en SharePoint. */
+  function buildOfficeHoursString(fieldPrefix) {
+    const openEl = $(fieldPrefix + 'Open');
+    const closeEl = $(fieldPrefix + 'Close');
+    if (!openEl || !closeEl || !openEl.value || !closeEl.value) return '';
+    const to12 = hhmm => {
+      const [h, m] = hhmm.split(':').map(Number);
+      const isPM = h >= 12; let h12 = h % 12; if (h12 === 0) h12 = 12;
+      return h12 + ':' + String(m).padStart(2, '0') + ' ' + (isPM ? 'PM' : 'AM');
+    };
+    return to12(openEl.value) + ' - ' + to12(closeEl.value);
+  }
+
+  /* Mismos campos que ya existen en Developer (Opcion E aprobada) --
+     ahora tambien editables por el propio cliente desde su perfil,
+     no solo por la oficina desde el panel interno. */
+  function officeHoursFieldsHtml(b) {
+    const dayCells = DAY_FIELDS.map(f =>
+      '<label style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10px;color:var(--gray)">' +
+        DAY_LABELS[f] +
+        '<input type="checkbox" id="ctl-' + f + '" ' + (b[f] ? 'checked' : '') + '>' +
+      '</label>'
+    ).join('');
+    const parsed = parseOfficeHoursRange(b.officeHours);
+    const openHHMM = parsed.open ? String(parsed.open.h).padStart(2, '0') + ':' + String(parsed.open.m).padStart(2, '0') : '09:00';
+    const closeHHMM = parsed.close ? String(parsed.close.h).padStart(2, '0') + ':' + String(parsed.close.m).padStart(2, '0') : '17:00';
+    return '<div style="display:flex;gap:10px;justify-content:space-between;margin-bottom:14px;max-width:320px">' + dayCells + '</div>' +
+      '<div style="display:flex;gap:14px;margin-bottom:14px">' +
+        '<div class="field-small" style="max-width:150px"><label>Opens at</label>' + GSDateTimePicker.timeHtml('ctl-officeOpen', openHHMM) + '</div>' +
+        '<div class="field-small" style="max-width:150px"><label>Closes at</label>' + GSDateTimePicker.timeHtml('ctl-officeClose', closeHHMM) + '</div>' +
+      '</div>';
+  }
+
+  /* ===== Holidays -- confirmado con el usuario, con minis de por
+     medio: cada eleccion (Open/Closed, y el horario si abre) se
+     guarda de inmediato al elegirla, no espera al boton "Save" de
+     arriba (que es de la direccion/horario normal, otra lista
+     distinta por dentro). Un festivo sin elegir todavia no aparece
+     en la lista principal -- vive detras de "+ Add a day", para no
+     abrumar con los 11 de una vez si el cliente solo le importan 2. */
+  let holidaysCache = {}; // safe(buildingId) -> [{...}] tal cual vino del backend
+  const holSafe = (buildingId) => String(buildingId || 'primary').replace(/[^a-z0-9]/gi, '_');
+
+  function holidaysSectionHtml(buildingId) {
+    const safe = holSafe(buildingId);
+    return '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:20px 0 8px;padding-top:16px;border-top:1px solid var(--border)">Holidays</div>' +
+      '<p style="font-size:11px;color:var(--gray);margin-bottom:10px">Choose which ones apply here, and whether you\'ll be open or closed.</p>' +
+      '<div id="hol-list-' + safe + '"><p class="empty-note" style="padding:8px 0">Loading…</p></div>' +
+      '<div id="hol-add-' + safe + '" style="margin-top:8px"></div>';
+  }
+
+  async function loadHolidaysInto(clientId, buildingId) {
+    const safe = holSafe(buildingId);
+    try {
+      const res = await GS.api('/get-holidays', { method: 'POST', body: { clientId, buildingId: buildingId || '' } });
+      holidaysCache[safe] = res.holidays || [];
+      renderHolidaysList(buildingId);
+    } catch (e) {
+      const el = $('hol-list-' + safe);
+      if (el) el.innerHTML = '<p class="empty-note">Could not load holidays.</p>';
+    }
+  }
+
+  function renderHolidaysList(buildingId) {
+    const safe = holSafe(buildingId);
+    const all = holidaysCache[safe] || [];
+    const chosen = all.filter(h => h.isOpen !== null);
+    const remaining = all.filter(h => h.isOpen === null);
+
+    const listEl = $('hol-list-' + safe);
+    if (listEl) {
+      listEl.innerHTML = chosen.length ? chosen.map(h => holidayRowHtml(h, safe)).join('') :
+        '<p class="empty-note" style="padding:8px 0">No holidays chosen yet.</p>';
+    }
+
+    const addEl = $('hol-add-' + safe);
+    if (addEl) {
+      if (!remaining.length) { addEl.innerHTML = ''; return; }
+      addEl.innerHTML = '<div id="hol-add-picker-' + safe + '" style="display:none;margin-bottom:8px">' +
+          remaining.map(h => '<button type="button" class="btn-ghost" style="font-size:11px;margin:0 6px 6px 0;padding:6px 12px" ' +
+            'onclick="addHolidayChoice(\'' + esc(safe) + '\',\'' + esc(h.name) + '\')">+ ' + esc(h.name) + '</button>').join('') +
+        '</div>' +
+        '<a onclick="toggleHolidayAddPicker(\'' + esc(safe) + '\')" style="font-size:11px;color:var(--gray);text-decoration:underline;cursor:pointer">+ Add a day</a>';
+    }
+  }
+
+  function toggleHolidayAddPicker(safe) {
+    const el = $('hol-add-picker-' + safe);
+    if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  }
+
+  /* Elegir un festivo de la lista de "+ Add a day" arranca en Closed
+     por default -- lo mas comun (la mayoria de negocios cierran en
+     festivo), sin guardar nada todavia hasta que el cliente confirme
+     con un clic en Open o Closed. */
+  function addHolidayChoice(safe, holidayName) {
+    const all = holidaysCache[safe] || [];
+    const h = all.find(x => x.name === holidayName);
+    if (!h) return;
+    h.isOpen = false;
+    renderHolidaysList(currentBuildingIdFor(safe));
+    saveHolidayChoice(safe, holidayName);
+  }
+
+  function currentBuildingIdFor(safe) {
+    return safe === 'primary' ? '' : safe;
+  }
+
+  function holidayRowHtml(h, safe) {
+    const rowId = 'hol-row-' + safe + '-' + h.id;
+    const openFieldId = 'hol-open-' + safe + '-' + h.id;
+    const closeFieldId = 'hol-close-' + safe + '-' + h.id;
+    return '<div id="' + rowId + '" style="padding:10px 0;border-bottom:1px solid var(--border)">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center">' +
+        '<div><div style="font-weight:600;font-size:12px">' + esc(h.name) + '</div>' +
+        '<div style="font-size:11px;color:var(--gray)">' + esc(h.date) + '</div></div>' +
+        '<div style="display:flex;gap:5px">' +
+          '<button type="button" onclick="setHolidayOpenState(\'' + esc(safe) + '\',\'' + esc(h.name) + '\',true)" ' +
+            'style="font-family:inherit;font-size:11px;font-weight:600;padding:5px 11px;border-radius:20px;cursor:pointer;' +
+            (h.isOpen === true ? 'background:#E4F3E8;border:1px solid #1F7A3F;color:#1F7A3F' : 'background:var(--white);border:1px solid var(--border);color:var(--gray)') + '">Open</button>' +
+          '<button type="button" onclick="setHolidayOpenState(\'' + esc(safe) + '\',\'' + esc(h.name) + '\',false)" ' +
+            'style="font-family:inherit;font-size:11px;font-weight:600;padding:5px 11px;border-radius:20px;cursor:pointer;' +
+            (h.isOpen === false ? 'background:#FBEAEA;border:1px solid #A6362D;color:#A6362D' : 'background:var(--white);border:1px solid var(--border);color:var(--gray)') + '">Closed</button>' +
+        '</div>' +
+      '</div>' +
+      (h.isOpen === true ? '<div style="margin-top:8px;padding:8px 10px;background:var(--off);border-radius:4px;font-size:11px;color:var(--gray);display:flex;align-items:center;gap:8px">' +
+        'Hours: ' + GSDateTimePicker.timeHtml(openFieldId, h.openTime || '09:00') + ' &ndash; ' + GSDateTimePicker.timeHtml(closeFieldId, h.closeTime || '17:00') +
+      '</div>' : '') +
+      '</div>';
+  }
+
+  function setHolidayOpenState(safe, holidayName, isOpen) {
+    const all = holidaysCache[safe] || [];
+    const h = all.find(x => x.name === holidayName);
+    if (!h) return;
+    h.isOpen = isOpen;
+    if (isOpen && !h.openTime) h.openTime = '09:00';
+    if (isOpen && !h.closeTime) h.closeTime = '17:00';
+    renderHolidaysList(currentBuildingIdFor(safe));
+    saveHolidayChoice(safe, holidayName);
+  }
+
+  async function saveHolidayChoice(safe, holidayName) {
+    const all = holidaysCache[safe] || [];
+    const h = all.find(x => x.name === holidayName);
+    if (!h) return;
+    try {
+      const res = await GS.api('/save-client-holiday', { method: 'POST', body: {
+        clientId: client.clientId,
+        buildingId: currentBuildingIdFor(safe),
+        choiceId: h.choiceId || null,
+        holidayName: h.name,
+        isOpen: h.isOpen,
+        openTime: h.openTime || '',
+        closeTime: h.closeTime || ''
+      }});
+      h.choiceId = res.id;
+    } catch (e) {
+      showToast('Could not save that holiday: ' + e.message);
+    }
+  }
+
+  document.addEventListener('gs-time-picked', (e) => {
+    const fid = e.detail.fieldId;
+    let m = fid.match(/^hol-open-(.+?)-(.+)$/) || fid.match(/^hol-close-(.+?)-(.+)$/);
+    if (!m) return;
+    const isOpenField = fid.indexOf('hol-open-') === 0;
+    const safe = m[1], holId = m[2];
+    const all = holidaysCache[safe] || [];
+    const h = all.find(x => x.id === holId);
+    if (!h) return;
+    if (isOpenField) h.openTime = e.detail.value; else h.closeTime = e.detail.value;
+    saveHolidayChoice(safe, h.name);
+  });
+
+  function openNotifications() {
+    const control = $('control-panel');
+    control.classList.add('open');
+
+    const active = contacts.filter(c => !c.archived);
+    const anyRecipient = active.some(c => c.notifyRecipient);
+
+    let html = '<label class="recipient-row"><input type="radio" name="notifpick" value="primary" ' + (anyRecipient ? '' : 'checked') + '> ' +
+      esc(profileFields.contactPerson || profileFields.businessName || '') + ' (Email) — ' + esc(profileFields.contact || '—') + '</label>';
+    active.forEach(c => {
+      html += '<div class="recipient-row" data-contact-id="' + esc(c.id) + '" style="justify-content:space-between">' +
+        '<label style="display:flex;align-items:center;gap:8px;flex:1;cursor:pointer;min-width:0">' +
+          '<input type="radio" name="notifpick" value="' + esc(c.id) + '" ' + (c.notifyRecipient ? 'checked' : '') + '>' +
+          '<span>' + esc(c.name) + ' (' + esc(c.type) + ') — ' + esc(c.value) + '</span>' +
+        '</label>' +
+        '<button onclick="archiveContact(\'' + esc(c.id) + '\')" title="Remove contact" style="background:none;border:none;color:var(--gray);cursor:pointer;font-size:15px;line-height:1;padding:0 4px;flex-shrink:0">×</button>' +
+        '</div>';
+    });
+
+    control.innerHTML = '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin-bottom:12px">Notifications</div>' +
+      '<label style="display:flex;align-items:center;gap:8px;font-weight:700;margin-bottom:10px;font-size:13px">' +
+        '<input type="checkbox" id="ctl-notif-master" ' + (profileFields.notificationsEnabled !== false ? 'checked' : '') + ' onchange="toggleNotifSubgroup()">' +
+        'Notifications enabled' +
+      '</label>' +
+      '<div id="ctl-notif-sub" style="display:flex;flex-direction:column;gap:8px;padding-left:20px;margin-bottom:16px;' + (profileFields.notificationsEnabled !== false ? '' : 'opacity:.4;pointer-events:none') + '">' +
+        '<label style="display:flex;align-items:center;gap:6px;font-size:12px"><input type="checkbox" id="ctl-notif-confirm" ' + (profileFields.notifyConfirmations !== false ? 'checked' : '') + '> Confirmations</label>' +
+        '<label style="display:flex;align-items:center;gap:6px;font-size:12px"><input type="checkbox" id="ctl-notif-changes" ' + (profileFields.notifyChanges !== false ? 'checked' : '') + '> Changes</label>' +
+        '<label style="display:flex;align-items:center;gap:6px;font-size:12px"><input type="checkbox" id="ctl-notif-updates" ' + (profileFields.notifyUpdates !== false ? 'checked' : '') + '> Updates</label>' +
+      '</div>' +
+      '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:16px 0 8px;padding-top:12px;border-top:1px solid var(--border)">Who receives notifications</div>' +
+      '<div id="ctl-contacts">' + html + '</div>' +
+      '<div id="ctl-newcontacts"></div>' +
+      '<a onclick="addContactRow(true)" style="font-size:11px;color:var(--gray);text-decoration:underline;cursor:pointer;display:block;margin:4px 0 14px">+ Add another contact</a>' +
+      '<button class="btn-gold" style="width:100%" onclick="saveNotifications()">Save</button>' +
+      '<p class="dialog-error" id="ctl-error"></p>';
+  }
+
+  function openBuildingNotifications() {
+    const control = $('control-panel');
+    const b = addresses.find(x => x.id === profileSelected);
+    if (!b) return;
+    control.classList.add('open');
+
+    const active = contacts.filter(c => !c.archived);
+    let html = '<label class="recipient-row"><input type="radio" name="notifpick" value="default" ' + (!b.contactId ? 'checked' : '') + '> Use primary contact (default) — ' + esc(profileFields.contactPerson || profileFields.businessName || '') + '</label>';
+    active.forEach(c => {
+      html += '<div class="recipient-row" data-contact-id="' + esc(c.id) + '" style="justify-content:space-between">' +
+        '<label style="display:flex;align-items:center;gap:8px;flex:1;cursor:pointer;min-width:0">' +
+          '<input type="radio" name="notifpick" value="' + esc(c.id) + '" ' + (b.contactId === c.id ? 'checked' : '') + '>' +
+          '<span>' + esc(c.name) + ' (' + esc(c.type) + ') — ' + esc(c.value) + '</span>' +
+        '</label>' +
+        '<button onclick="archiveContact(\'' + esc(c.id) + '\')" title="Remove contact" style="background:none;border:none;color:var(--gray);cursor:pointer;font-size:15px;line-height:1;padding:0 4px;flex-shrink:0">×</button>' +
+        '</div>';
+    });
+
+    control.innerHTML = '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin-bottom:12px">Notifications — ' + esc(b.label || 'building') + '</div>' +
+      '<p style="font-size:11px;color:var(--gray);margin-bottom:10px">Pick which contact should be notified for orders at this building.</p>' +
+      '<div id="ctl-contacts">' + html + '</div>' +
+      '<div id="ctl-newcontacts"></div>' +
+      '<a onclick="addContactRow(true)" style="font-size:11px;color:var(--gray);text-decoration:underline;cursor:pointer;display:block;margin:4px 0 14px">+ Add another contact</a>' +
+      '<button class="btn-gold" style="width:100%" onclick="saveBuildingNotifications()">Save</button>' +
+      '<p class="dialog-error" id="ctl-error"></p>';
+  }
+
+  let newContactRowCounter = 0;
+  function addContactRow(includeRadio) {
+    const container = $('ctl-newcontacts');
+    if (!container) return;
+    const idx = ++newContactRowCounter;
+    const row = document.createElement('div');
+    row.className = 'new-contact-row';
+    row.dataset.rowIndex = idx;
+    row.style.cssText = 'background:var(--white);border:1px dashed var(--border);padding:10px;margin-bottom:8px';
+    row.innerHTML = '<div class="field-small"><input type="text" id="newc-' + idx + '-name" placeholder="Name"></div>' +
+      '<div style="display:flex;gap:6px;align-items:center;' + (includeRadio ? 'margin-bottom:8px' : '') + '">' +
+        '<select id="newc-' + idx + '-type" style="border:1.5px solid var(--border);padding:10px;font-size:13px"><option value="Email">Email</option><option value="Phone">Phone</option></select>' +
+        '<input type="text" id="newc-' + idx + '-value" placeholder="Value" style="flex:1;min-width:0;border:1.5px solid var(--border);padding:10px 12px;font-size:13px">' +
+      '</div>' +
+      (includeRadio ? '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--gray)"><input type="radio" name="notifpick" value="new-' + idx + '" style="width:auto"> Receives notifications</label>' : '');
+    container.appendChild(row);
+  }
+
+  async function savePrimaryEdit() {
+    const $f = f => $('ctl-' + f);
+    const body = {
+      clientId:      client.clientId,
+      businessName:  $f('bname').value.trim(),
+      contactPerson: $f('cperson').value.trim(),
+      contact:       $f('email').value.trim(),
+      phone:         $f('phone').value.trim(),
+      address:       $f('address').value.trim(),
+      suite:         $f('suite').value.trim(),
+      city:          $f('city').value.trim(),
+      zip:           $f('zip').value.trim(),
+      officeHours:   buildOfficeHoursString('ctl-office')
+    };
+    DAY_FIELDS.forEach(f => { if ($f(f)) body[f] = $f(f).checked; });
+    /* Solo se agregan contactos nuevos aqui (sin marcar receptor -- eso
+       vive en Notifications). Los existentes no se tocan. */
+    const newContacts = [];
+    document.querySelectorAll('#ctl-newcontacts .new-contact-row').forEach(row => {
+      const idx = row.dataset.rowIndex;
+      const name = $('newc-' + idx + '-name')?.value.trim() || '';
+      const type = $('newc-' + idx + '-type')?.value || 'Email';
+      const value = $('newc-' + idx + '-value')?.value.trim() || '';
+      if (name && value) newContacts.push({ name, type, value });
+    });
+
+    try {
+      const res = await GS.api('/update-client-profile', { method: 'POST', body });
+      GS.session.set(Object.assign({}, client, {
+        businessName: res.businessName, address: res.address, suite: res.suite,
+        city: res.city, zip: res.zip, contact: res.contact, phone: res.phone
+      }));
+      $('client-name').textContent = res.businessName || client.clientId;
+      for (const nc of newContacts) {
+        await GS.api('/save-client-contact', { method: 'POST', body: { clientId: client.clientId, action: 'create', name: nc.name, type: nc.type, value: nc.value } });
+      }
+      showToast('Profile updated.');
+      await loadAll();
+    } catch (e) {
+      const err = $('ctl-error');
+      if (err) err.textContent = e.message; else showToast('Error: ' + e.message);
+    }
+  }
+
+  async function saveBuildingEdit(buildingId) {
+    const $f = f => $('ctl-' + f);
+    const errEl = $('ctl-error');
+    const label = $f('label').value.trim();
+    if (!label) { errEl.textContent = 'Please enter a label for this building.'; return; }
+
+    const body = {
+      clientId:       client.clientId,
+      label:          label,
+      buildingNumber: $f('building').value.trim(),
+      address:        $f('address').value.trim(),
+      suite:          $f('suite').value.trim(),
+      city:           $f('city').value.trim(),
+      zip:            $f('zip').value.trim(),
+      officeHours:    buildOfficeHoursString('ctl-office')
+    };
+    DAY_FIELDS.forEach(f => { if ($f(f)) body[f] = $f(f).checked; });
+    const isNew = buildingId === 'new' || !buildingId;
+    if (!isNew) body.addressId = buildingId;
+
+    /* El campo Phone solo existe en el formulario de "Add building"
+       (no en el de editar, que ya tiene su propio manejo de contactos
+       via Notifications) -- si se lleno, se manda como contacto nuevo
+       tipo Phone. */
+    const phoneEl = $f('phone');
+    const phoneVal = phoneEl ? phoneEl.value.trim() : '';
+    if (phoneVal) body.newContact = { name: label, type: 'Phone', value: phoneVal };
+
+    try {
+      const res = await GS.api('/save-client-address', { method: 'POST', body });
+      showToast(isNew ? 'Building saved.' : 'Building updated.');
+      profileSelected = isNew ? res.addressId : buildingId;
+      addingNewBuilding = false;
+      await loadAll();
+    } catch (e) {
+      errEl.textContent = e.message;
+    }
+  }
+
+  async function saveNotifications() {
+    const checked = document.querySelector('input[name="notifpick"]:checked');
+    const value = checked ? checked.value : 'primary';
+
+    const contactsPayload = [];
+    document.querySelectorAll('#ctl-contacts [data-contact-id]').forEach(el => {
+      const cid = el.dataset.contactId;
+      contactsPayload.push({ contactId: cid, isRecipient: value === cid });
+    });
+    document.querySelectorAll('#ctl-newcontacts .new-contact-row').forEach(row => {
+      const idx = row.dataset.rowIndex;
+      const name = $('newc-' + idx + '-name')?.value.trim() || '';
+      const type = $('newc-' + idx + '-type')?.value || 'Email';
+      const val = $('newc-' + idx + '-value')?.value.trim() || '';
+      if (name && val) contactsPayload.push({ name, type, value: val, isRecipient: value === ('new-' + idx) });
+    });
+
+    try {
+      const notifBody = {
+        clientId: client.clientId,
+        notificationsEnabled: $('ctl-notif-master')?.checked ?? true,
+        notifyConfirmations:  $('ctl-notif-confirm')?.checked ?? true,
+        notifyChanges:        $('ctl-notif-changes')?.checked ?? true,
+        notifyUpdates:        $('ctl-notif-updates')?.checked ?? true
+      };
+      await GS.api('/update-client-profile', { method: 'POST', body: notifBody });
+
+      for (const entry of contactsPayload) {
+        if (entry.contactId) {
+          if (entry.isRecipient) {
+            await GS.api('/save-client-contact', { method: 'POST', body: { clientId: client.clientId, action: 'setRecipient', contactId: entry.contactId } });
+          }
+        } else {
+          const res = await GS.api('/save-client-contact', { method: 'POST', body: { clientId: client.clientId, action: 'create', name: entry.name, type: entry.type, value: entry.value } });
+          if (entry.isRecipient) {
+            await GS.api('/save-client-contact', { method: 'POST', body: { clientId: client.clientId, action: 'setRecipient', contactId: res.contactId } });
+          }
+        }
+      }
+      if (value === 'primary') {
+        await GS.api('/save-client-contact', { method: 'POST', body: { clientId: client.clientId, action: 'setRecipient', contactId: '' } });
+      }
+      showToast('Notifications updated.');
+      await loadAll();
+    } catch (e) {
+      const err = $('ctl-error');
+      if (err) err.textContent = e.message; else showToast('Error: ' + e.message);
+    }
+  }
+
+  async function saveBuildingNotifications() {
+    const checked = document.querySelector('input[name="notifpick"]:checked');
+    const value = checked ? checked.value : 'default';
+    const errEl = $('ctl-error');
+
+    const body = { clientId: client.clientId, addressId: profileSelected };
+
+    if (value === 'default') {
+      body.contactId = '';
+    } else if (value.indexOf('new-') === 0) {
+      const idx = value.slice(4);
+      const name = $('newc-' + idx + '-name')?.value.trim() || '';
+      const type = $('newc-' + idx + '-type')?.value || 'Email';
+      const val = $('newc-' + idx + '-value')?.value.trim() || '';
+      if (!name || !val) { errEl.textContent = 'Enter a name and a value for the new contact.'; return; }
+      body.newContact = { name, type, value: val };
+    } else {
+      body.contactId = value;
+    }
+
+    try {
+      await GS.api('/save-client-address', { method: 'POST', body });
+      showToast('Building notifications updated.');
+      await loadAll();
+    } catch (e) {
+      errEl.textContent = e.message;
+    }
+  }
+
+  function toggleShowArchivedBuildings() {
+    showArchivedBuildings = !showArchivedBuildings;
+    renderAddrList();
+  }
+
+  function toggleNotifSubgroup() {
+    const master = $('ctl-notif-master')?.checked;
+    const sub = $('ctl-notif-sub');
+    if (!sub) return;
+    sub.style.opacity = master ? '1' : '.4';
+    sub.style.pointerEvents = master ? 'auto' : 'none';
+  }
+
+  function toggleShowArchivedContacts() {
+    showArchivedContacts = !showArchivedContacts;
+  }
+
+  function startAddBuilding() {
+    const control = $('control-panel');
+    control.classList.add('open');
+    control.innerHTML = '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin-bottom:12px">Add building</div>' +
+      '<div class="control-grid">' +
+        field('label', 'Label', '') +
+        field('building', 'Building #', '') +
+        field('address', 'Address', '', true) +
+        field('suite', 'Suite', '') +
+        field('city', 'City', '') +
+        field('zip', 'Zip', '') +
+        field('phone', 'Phone (optional)', '') +
+      '</div>' +
+      '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:20px 0 10px;padding-top:16px;border-top:1px solid var(--border)">Office hours at this building</div>' +
+      '<p style="font-size:11px;color:var(--gray);margin-bottom:10px">So our crew knows when someone will be there to let them in. You can also set this later.</p>' +
+      officeHoursFieldsHtml({}) +
+      '<button class="btn-gold" style="width:100%;margin-top:6px" onclick="saveBuildingEdit(\'new\')">Save</button>' +
+      '<p class="dialog-error" id="ctl-error"></p>';
+  }
+
+  async function archiveBuilding(id) {
+    try {
+      await GS.api('/save-client-address', { method: 'POST', body: { clientId: client.clientId, addressId: id, archived: true } });
+      showToast('Building archived.');
+      await loadAll();
+    } catch (e) {
+      showToast('Error: ' + e.message);
+    }
+  }
+
+  async function unarchiveBuilding(id) {
+    try {
+      await GS.api('/save-client-address', { method: 'POST', body: { clientId: client.clientId, addressId: id, archived: false } });
+      showToast('Building restored.');
+      await loadAll();
+    } catch (e) {
+      showToast('Error: ' + e.message);
+    }
+  }
+
+  async function archiveContact(id) {
+    try {
+      await GS.api('/save-client-contact', { method: 'POST', body: { clientId: client.clientId, action: 'archive', contactId: id } });
+      showToast('Contact removed.');
+      await loadAll();
+    } catch (e) {
+      showToast('Error: ' + e.message);
+    }
+  }
+
+  async function unarchiveContact(id) {
+    try {
+      await GS.api('/save-client-contact', { method: 'POST', body: { clientId: client.clientId, action: 'unarchive', contactId: id } });
+      showToast('Contact restored.');
+      await loadAll();
+    } catch (e) {
+      showToast('Error: ' + e.message);
+    }
+  }
+
+  /* doSignout, showToast, esc ya existen en customer.html. */
+
+  window.selectAddr = selectAddr;
+  window.openEdit = openEdit;
+  window.openNotifications = openNotifications;
+  window.openBuildingNotifications = openBuildingNotifications;
+  window.addContactRow = addContactRow;
+  window.savePrimaryEdit = savePrimaryEdit;
+  window.saveBuildingEdit = saveBuildingEdit;
+  window.saveNotifications = saveNotifications;
+  window.saveBuildingNotifications = saveBuildingNotifications;
+  window.toggleShowArchivedBuildings = toggleShowArchivedBuildings;
+  window.toggleNotifSubgroup = toggleNotifSubgroup;
+  window.toggleShowArchivedContacts = toggleShowArchivedContacts;
+  window.startAddBuilding = startAddBuilding;
+  window.archiveBuilding = archiveBuilding;
+  window.unarchiveBuilding = unarchiveBuilding;
+  window.archiveContact = archiveContact;
+  window.unarchiveContact = unarchiveContact;
   window.doSignout = doSignout;
 }
 </script>
