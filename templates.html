@@ -89,10 +89,7 @@
   .field-wrap label { display: block; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--gray); margin-bottom: 6px; }
   .field-wrap input[type=text] { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); font-size: 14px; font-family: inherit; }
 
-  .mode-toggle { display: flex; border: 1.5px solid var(--border); margin-bottom: 20px; }
-  .mode-toggle button { flex: 1; padding: 12px; border: none; background: var(--white); cursor: pointer; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gray); font-family: inherit; transition: background .2s, color .2s; }
-  .mode-toggle button.active { background: var(--gold); color: var(--black); }
-  .mode-toggle button:not(:last-child) { border-right: 1.5px solid var(--border); }
+
 
   /* ===== Selector de servicios: gsocd-shared/service-picker ===== */
 
@@ -156,10 +153,19 @@
       <input type="text" id="tpl-name" placeholder="e.g. Monthly common area clean">
     </div>
 
-    <div class="mode-toggle" id="div-toggle">
-      <button type="button" class="active" data-div="Janitorial" onclick="selectDiv('Janitorial', this)">Janitorial</button>
-      <button type="button" data-div="Renovations" onclick="selectDiv('Renovations', this)">Renovations</button>
-      <button type="button" data-div="Exteriors" onclick="selectDiv('Exteriors', this)">Exteriors</button>
+    <div class="gs-ofp-card gs-ofp-card-3" id="tpl-div-card">
+      <svg class="gs-ofp-tri" style="top:calc(50% - 199px);right:-60px;width:450px;height:426px;opacity:.55" viewBox="0 0 900 851">
+        <path d="M141.77,6.05 L209.78,829.96 L892.14,356.10 Z" fill="none" stroke="#FFF3D6" stroke-width="6"/>
+      </svg>
+      <div class="gs-ofp-tabsrow" id="tpl-div-tabs">
+        <div class="gs-ofp-tab active" data-div="Janitorial" onclick="selectDiv('Janitorial', this)">Janitorial</div>
+        <div class="gs-ofp-tab" data-div="Renovations" onclick="selectDiv('Renovations', this)">Renovations</div>
+        <div class="gs-ofp-tab" data-div="Exteriors" onclick="selectDiv('Exteriors', this)">Exteriors</div>
+      </div>
+      <div class="gs-ofp-uline-track">
+        <div class="gs-ofp-uline-active" id="tpl-div-underline" style="left:0;width:76px"></div>
+      </div>
+      <div class="gs-ofp-goldbase"></div>
     </div>
 
     <div id="tpl-picker"><p class="flash-empty">Loading services…</p></div>
@@ -193,6 +199,7 @@
 
 <script src="shared.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.18.0/service-picker/service-picker.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.17.0/order-form-premium/order-form-premium.js"></script>
 <script>
 const client = GS.requireSession();
 if (client) {
@@ -345,8 +352,7 @@ if (client) {
 
   function selectDiv(div, el) {
     currentDiv = div;
-    document.querySelectorAll('#div-toggle button').forEach(b => b.classList.remove('active'));
-    el.classList.add('active');
+    GSOrderFormPremium.activateDivTab(div, {cardId:'tpl-div-card', tabsId:'tpl-div-tabs', underlineId:'tpl-div-underline'});
     selected = {}; svcLevel = {}; propertyType = 'Commercial';
     renderPicker();
   }
@@ -446,6 +452,8 @@ if (client) {
   window.sendContact = sendContact;
 
   /* ===== Carga inicial ===== */
+  GSOrderFormPremium.styleTag();
+  GSOrderFormPremium.renderDivDecos('Janitorial', 'tpl-div-card');
   loadTemplates();
   GS.api('/get-services', { method: 'GET' }).then(data => {
     catalogCache = data.catalog || [];
