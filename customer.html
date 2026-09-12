@@ -769,6 +769,163 @@
     #panel-profile footer { flex-direction: column; gap: 8px; padding: 20px; }
     #panel-profile .toast { left: 20px; right: 20px; bottom: 20px; max-width: none; }
   }
+
+  /* ============================================================
+     PANELES PROCESSING/HISTORY -- reglas de tracking.html (su
+     propia pagina antes de unirla aqui), encapsuladas bajo
+     #panel-processing y #panel-history (comparten TODO el mismo
+     diseno, por eso cada regla aplica a ambos).
+  ============================================================ */
+  #panel-processing .tab-panel, #panel-history .tab-panel { display: none; }
+  #panel-processing .tab-panel.active, #panel-history .tab-panel.active { display: block; }
+  #panel-processing .history-wrap, #panel-history .history-wrap { padding: 40px 48px; }
+  #panel-processing .history-wrap h2, #panel-history .history-wrap h2 { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 600; margin-bottom: 6px; }
+  #panel-processing .history-wrap .list-sub, #panel-history .history-wrap .list-sub { font-size: 12px; color: var(--gray); margin-bottom: 24px; line-height: 1.6; }
+  #panel-processing .list-section-title, #panel-history .list-section-title { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold-dk); font-weight: 700; margin: 28px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  #panel-processing .list-section-title:first-of-type, #panel-history .list-section-title:first-of-type { margin-top: 0; }
+  #panel-processing .order-card, #panel-history .order-card { border: 1px solid var(--border); margin-bottom: 14px; background: var(--white); }
+  #panel-processing .order-card-header, #panel-history .order-card-header { padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); cursor: pointer; transition: background .15s; }
+  #panel-processing .order-card-header:hover, #panel-history .order-card-header:hover { background: var(--off); }
+  #panel-processing .order-num, #panel-history .order-num { font-size: 12px; font-weight: 700; letter-spacing: .06em; }
+  #panel-processing .order-pin, #panel-history .order-pin { font-size: 11px; }
+  #panel-processing .order-date, #panel-history .order-date { font-size: 11px; color: var(--gray); margin-top: 2px; }
+  #panel-processing .order-status, #panel-history .order-status { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; padding: 4px 12px; font-weight: 600; white-space: nowrap; }
+  #panel-processing .status-pending, #panel-history .status-pending { background: #FFF8E6; color: #8C6F2A; }
+  #panel-processing .status-review, #panel-history .status-review { background: #F0EAFE; color: #6B3FA0; }
+  #panel-processing .status-assigned, #panel-history .status-assigned { background: #EEF4FF; color: #2A5AC9; }
+  #panel-processing .status-working, #panel-history .status-working { background: #E6F4FB; color: #1F6E96; }
+  #panel-processing .status-changereq, #panel-history .status-changereq { background: #FDECEC; color: #B33A3A; }
+  #panel-processing .status-cancelreq, #panel-history .status-cancelreq { background: #FBEAEA; color: #B33A3A; }
+  #panel-processing .status-delayed, #panel-history .status-delayed { background: #FFF0E6; color: #B06A2A; }
+  #panel-processing .status-updated, #panel-history .status-updated { background: #EEF9F0; color: #2A7A4A; }
+  #panel-processing .notice, #panel-history .notice { margin-top: 14px; padding: 12px 14px; border-left: 3px solid #B06A2A;
+            background: #FFF6EE; font-size: 12px; line-height: 1.6; color: #6B4415; }
+  #panel-processing .notice b, #panel-history .notice b { color: #8A4E12; }
+  #panel-processing .print-hint, #panel-history .print-hint { display: block; font-size: 11px; color: var(--gray); margin-top: 6px; }
+  #panel-processing .btn-action[disabled], #panel-history .btn-action[disabled] { opacity: .45; cursor: not-allowed; }
+  @media (max-width: 560px) {
+  }
+  #panel-processing .dialog-note, #panel-history .dialog-note { font-size: 11px; color: var(--gray); line-height: 1.6; margin-top: 4px; }
+  #panel-processing .status-incomplete, #panel-history .status-incomplete { background: #F0EFEA; color: #6B6B6B; }
+  #panel-processing .status-confirmed, #panel-history .status-confirmed { background: #F0FAF0; color: #2A7A2A; }
+  #panel-processing .order-card-body, #panel-history .order-card-body { padding: 20px; display: none; }
+  #panel-processing .order-2col, #panel-history .order-2col {display:grid;grid-template-columns:1fr}
+  #panel-processing .order-2col.open, #panel-history .order-2col.open {grid-template-columns:1fr 1fr;gap:20px}
+  #panel-processing .col-left, #panel-history .col-left {min-width:0}
+  #panel-processing .col-right, #panel-history .col-right {display:none;min-width:0;padding:18px;background:var(--off)}
+  #panel-processing .order-2col.open .col-right, #panel-history .order-2col.open .col-right {display:block}
+  @media (min-width:701px) {
+    #panel-processing .order-2col.open .col-right, #panel-history .order-2col.open .col-right {border-left:1px solid var(--border)}
+  }
+  @media (max-width:700px) {
+    #panel-processing .order-2col.open, #panel-history .order-2col.open {grid-template-columns:1fr}
+    #panel-processing .order-2col.open .col-right, #panel-history .order-2col.open .col-right {border-top:1px solid var(--border)}
+  }
+  #panel-processing .order-card-body.open, #panel-history .order-card-body.open { display: block; animation: bodyIn .3s ease both; }
+  #panel-processing @keyframes bodyIn, #panel-history @keyframes bodyIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+  #panel-processing .detail-grid, #panel-history .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 20px; }
+  #panel-processing .detail-label, #panel-history .detail-label { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--gray); margin-bottom: 10px; }
+  #panel-processing .svc-line, #panel-history .svc-line { font-size: 12px; color: var(--black); line-height: 1.9; }
+  #panel-processing .svc-line b, #panel-history .svc-line b { color: var(--gold-dk); }
+  #panel-processing .meta-line, #panel-history .meta-line { font-size: 11px; color: var(--gray); line-height: 1.9; }
+  #panel-processing .change-row, #panel-history .change-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+  #panel-processing .change-icon, #panel-history .change-icon { font-size: 13px; flex-shrink: 0; width: 18px; text-align: center; }
+  #panel-processing .change-label, #panel-history .change-label { font-size: 12px; font-weight: 600; width: 110px; flex-shrink: 0; }
+  #panel-processing .change-values, #panel-history .change-values { font-size: 12px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  #panel-processing .old-val, #panel-history .old-val { color: var(--gray); text-decoration: line-through; }
+  #panel-processing .arrow, #panel-history .arrow { color: var(--gray); }
+  #panel-processing .new-val, #panel-history .new-val { color: var(--gold-dk); font-weight: 600; }
+  #panel-processing .added-val, #panel-history .added-val { color: #3F7D4F; font-weight: 600; }
+  #panel-processing .removed-val, #panel-history .removed-val { color: #B33A3A; text-decoration: line-through; }
+  #panel-processing .plain-val, #panel-history .plain-val { color: var(--black); }
+  #panel-processing .change-sub, #panel-history .change-sub { font-size: 11px; color: var(--gray); margin-left: 28px; margin-top: -2px; padding-bottom: 4px; font-style: italic; }
+  #panel-processing .order-actions, #panel-history .order-actions { display: flex; gap: 10px; margin-top: 12px; padding-top: 20px; border-top: 1px solid var(--border); flex-wrap: wrap; align-items: flex-start; }
+  #panel-processing .ready-block, #panel-history .ready-block { border: 1px solid var(--border); border-radius: 6px; padding: 16px 18px; margin-bottom: 14px; background: var(--off); }
+  #panel-processing .ready-row, #panel-history .ready-row { display: flex; gap: 24px; flex-wrap: wrap; }
+  #panel-processing .ready-field, #panel-history .ready-field { flex: 1; min-width: 180px; }
+  #panel-processing .ready-field:last-child, #panel-history .ready-field:last-child { margin-bottom: 0; }
+  #panel-processing .ready-field input[type=date], #panel-history .ready-field input[type=date], #panel-processing .ready-field input[type=time], #panel-history .ready-field input[type=time] { width: 100%; max-width: 200px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 3px; font-size: 13px; font-family: inherit; background: var(--white); }
+  #panel-processing .time-picker-trigger, #panel-history .time-picker-trigger { width: 100%; max-width: 200px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 3px; font-size: 13px; font-family: inherit; background: var(--white); text-align: left; cursor: pointer; color: var(--black); }
+  #panel-processing .time-picker-trigger:hover, #panel-history .time-picker-trigger:hover { border-color: var(--gold); }
+  #panel-processing .svc-toggle, #panel-history .svc-toggle { position: relative; display: inline-block; width: 44px; height: 24px; cursor: pointer; vertical-align: middle; }
+  #panel-processing .svc-toggle input, #panel-history .svc-toggle input { opacity: 0; width: 0; height: 0; }
+  #panel-processing .svc-toggle-track, #panel-history .svc-toggle-track { position: absolute; inset: 0; background: var(--border); border-radius: 24px; transition: background .2s; }
+  #panel-processing .svc-toggle-track::before, #panel-history .svc-toggle-track::before { content: ""; position: absolute; height: 20px; width: 20px; left: 2px; top: 2px; background: var(--white); border-radius: 50%; transition: transform .2s; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+  #panel-processing .svc-toggle input:checked + .svc-toggle-track, #panel-history .svc-toggle input:checked + .svc-toggle-track { background: var(--gold); }
+  #panel-processing .svc-toggle input:checked + .svc-toggle-track::before, #panel-history .svc-toggle input:checked + .svc-toggle-track::before { transform: translateX(20px); }
+  #panel-processing .toggle-row, #panel-history .toggle-row { display: flex; align-items: center; gap: 10px; }
+  #panel-processing .toggle-state, #panel-history .toggle-state { font-size: 13px; font-weight: 600; }
+  #panel-processing .toggle-state.off, #panel-history .toggle-state.off { color: var(--gray); }
+  #panel-processing .toggle-state.on, #panel-history .toggle-state.on { color: var(--gold-dk); }
+  #panel-processing .ready-reveal, #panel-history .ready-reveal { display: none; }
+  #panel-processing .ready-reveal.show, #panel-history .ready-reveal.show { display: block; }
+  #panel-processing .occupied-note, #panel-history .occupied-note { font-size: 11px; color: var(--gray); margin-top: 6px; line-height: 1.5; }
+  #panel-processing .order-num .gs-occupied-badge, #panel-history .order-num .gs-occupied-badge, #panel-processing .order-num .gs-office-need-badge, #panel-history .order-num .gs-office-need-badge { margin-left: 8px; }
+  #panel-processing .print-wrap, #panel-history .print-wrap { display: inline-flex; flex-direction: column; }
+  #panel-processing .btn-action, #panel-history .btn-action {
+    background: var(--white); border: 1.5px solid var(--border); color: var(--black);
+    padding: 10px 18px; font-size: 10px; font-family: 'Inter', sans-serif;
+    letter-spacing: .12em; text-transform: uppercase; font-weight: 700;
+    cursor: pointer; transition: border-color .2s, background .2s, color .2s;
+  }
+  #panel-processing .btn-action:hover, #panel-history .btn-action:hover { border-color: var(--gold); background: #FFFDF5; }
+  #panel-processing .btn-action.danger:hover, #panel-history .btn-action.danger:hover { border-color: #B33A3A; color: #B33A3A; background: #FFF5F5; }
+  #panel-processing .btn-action.primary, #panel-history .btn-action.primary { background: var(--gold); border-color: var(--gold); color: var(--black); }
+  #panel-processing .btn-action.primary:hover, #panel-history .btn-action.primary:hover { background: var(--gold-dk); border-color: var(--gold-dk); color: var(--white); }
+  #panel-processing .btn-action:disabled, #panel-history .btn-action:disabled { opacity: .5; cursor: not-allowed; }
+  #panel-processing .h-pending-note, #panel-history .h-pending-note { font-size: 12px; color: var(--gold-dk); background: var(--off); border-left: 3px solid var(--gold-dk); padding: 8px 12px; border-radius: 4px; margin-bottom: 14px; }
+  #panel-processing .h-cancelled-banner, #panel-history .h-cancelled-banner { font-size: 13px; color: #B33A3A; background: #FBEAEA; border-left: 3px solid #B33A3A; padding: 10px 14px; border-radius: 4px; margin-bottom: 10px; }
+  #panel-processing .empty-note, #panel-history .empty-note { font-size: 12px; color: #bbb; font-style: italic; padding: 12px 0; }
+  #panel-processing footer, #panel-history footer { background: var(--black); padding: 24px 48px; display: flex; align-items: center; justify-content: space-between; }
+  #panel-processing footer p, #panel-history footer p { font-size: 11px; color: #555; letter-spacing: .06em; }
+  #panel-processing footer span, #panel-history footer span { color: var(--gold); }
+  #panel-processing .contact-close:hover, #panel-history .contact-close:hover { color: var(--black); }
+  #panel-processing .contact-logo-slot img, #panel-history .contact-logo-slot img { width: 72px; height: 72px; object-fit: contain; }
+  #panel-processing .contact-panel h2, #panel-history .contact-panel h2 { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 600; text-align: center; margin-bottom: 6px; }
+  #panel-processing .contact-panel .contact-sub, #panel-history .contact-panel .contact-sub { font-size: 12px; color: var(--gray); text-align: center; margin-bottom: 24px; line-height: 1.6; }
+    font-family: 'Inter', sans-serif; outline: none; background: #fff; }
+  #panel-processing @keyframes dialogIn, #panel-history @keyframes dialogIn { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
+  #panel-processing .dialog-panel h3, #panel-history .dialog-panel h3 { font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 600; margin-bottom: 8px; }
+  #panel-processing .dialog-panel p, #panel-history .dialog-panel p { font-size: 13px; color: var(--gray); line-height: 1.7; margin-bottom: 20px; }
+  #panel-processing .btn-ghost:hover, #panel-history .btn-ghost:hover { border-color: var(--gold); }
+  #panel-processing .dialog-btns .btn-gold, #panel-history .dialog-btns .btn-gold, #panel-processing .dialog-btns .btn-danger, #panel-history .dialog-btns .btn-danger {
+    flex: 1; border: none; padding: 14px; font-size: 11px; font-family: 'Inter', sans-serif;
+    letter-spacing: .14em; text-transform: uppercase; font-weight: 700; cursor: pointer;
+    transition: background .2s;
+  }
+  #panel-processing .dialog-btns .btn-gold:hover, #panel-history .dialog-btns .btn-gold:hover { background: var(--gold-dk); color: var(--white); }
+  #panel-processing .dialog-btns .btn-danger, #panel-history .dialog-btns .btn-danger { background: #B33A3A; color: var(--white); }
+  #panel-processing .dialog-btns .btn-danger:hover, #panel-history .dialog-btns .btn-danger:hover { background: #8F2D2D; }
+  #panel-processing .dialog-error, #panel-history .dialog-error { font-size: 11px; color: #B33A3A; margin-top: 10px; min-height: 14px; }
+  #panel-processing @keyframes toastIn, #panel-history @keyframes toastIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+  #panel-processing .client-photos-box, #panel-history .client-photos-box { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+  #panel-processing .client-photos-label, #panel-history .client-photos-label { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gray); margin-bottom: 4px; }
+  #panel-processing .client-photos-sub, #panel-history .client-photos-sub { font-size: 11px; color: var(--gray); margin-bottom: 10px; }
+  @media (max-width: 860px) {
+    #panel-processing .history-wrap, #panel-history .history-wrap { padding: 28px 20px; }
+    #panel-processing .detail-grid, #panel-history .detail-grid { grid-template-columns: 1fr; }
+    #panel-processing footer, #panel-history footer { flex-direction: column; gap: 8px; padding: 20px; }
+  }
+
+  /* Estas SI van sin encapsular -- son de los 3 dialogos nuevos
+     (cancelar orden, agregar unidad, materiales no listos), que
+     viven SUELTOS al nivel de pagina (como el toast), no dentro
+     de ningun panel. Si el ejemplo de nombre ya existe encapsulado
+     en otro panel (ej. #panel-recurring .field-caption), esta
+     version generica no lo pisa -- la mas especifica gana. */
+  .dialog-panel .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .dialog-panel .field-row { grid-template-columns: 1fr; }
+  .field-caption { font-size: 10px; color: var(--gray); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 3px; }
+  .field-value { font-size: 13px; color: var(--black); }
+  .field-sub { font-size: 11px; color: var(--gray); margin: 3px 0 8px; line-height: 1.5; }
+  .field label { display: block; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--gray); font-weight: 600; margin-bottom: 8px; }
+  .field { margin-bottom: 18px; }
+  .field select { width: 100%; border: 1.5px solid var(--border); padding: 13px 14px; font-size: 14px;
+  .field select:focus { border-color: var(--gold); }
+  .field input, .field textarea { width: 100%; border: 1.5px solid var(--border); padding: 13px 14px; font-size: 14px; font-family: 'Inter', sans-serif; outline: none; transition: border-color .2s; }
+  .field input:focus, .field textarea:focus { border-color: var(--gold); }
+  .field textarea { resize: vertical; min-height: 90px; }
+  .dialog-panel .field { margin-bottom: 18px; }
 </style>
 </head>
 <body>
@@ -1105,6 +1262,93 @@ style="object-fit:contain">
 </footer>
 </div>
 
+<!-- PROCESSING -->
+<div id="panel-processing" class="panel active">
+  <div class="history-wrap">
+    <h2>Processing</h2>
+    <p class="list-sub">Orders in progress and unfinished drafts. Click an order to see its details and tracker.</p>
+    <div id="processing-container"><p class="empty-note">Loading…</p></div>
+  </div>
+</div>
+
+<!-- HISTORY -->
+<div id="panel-history" class="panel">
+  <div class="history-wrap">
+    <h2>History</h2>
+    <p class="list-sub">Completed orders.</p>
+    <div id="history-container"><p class="empty-note">Loading…</p></div>
+  </div>
+</div>
+
+<!-- Input de camara de Tracking (renombrado, chocaba con el de New Order) -->
+<input type="file" id="tracking-client-camera-input" accept="image/*" capture="environment" style="display:none">
+
+<!-- Dialogos propios de Tracking (cancelar / agregar unidad / materiales no listos) -->
+<div class="dialog-overlay" id="cancel-dialog">
+  <div class="dialog-panel">
+    <h3>Cancel this order?</h3>
+    <p>Requesting cancellation of order <strong id="cancel-order-id"></strong>.<br><br>
+       <strong style="color:#B33A3A">A cancelled order cannot be recovered.</strong> Our office will review your request and confirm the cancellation.</p>
+    <div class="dialog-btns">
+      <button class="btn-ghost" onclick="closeCancelDialog()">Go Back</button>
+      <button class="btn-danger" id="cancel-confirm-btn" onclick="confirmCancel()">Request Cancellation</button>
+    </div>
+    <p class="dialog-error" id="cancel-error"></p>
+  </div>
+</div>
+
+<div class="dialog-overlay" id="addunit-dialog">
+  <div class="dialog-panel">
+    <h3>Add a Unit to <span id="addunit-po-id"></span></h3>
+    <p style="font-size:12px;color:var(--gray);margin-bottom:16px">Uses the same services as the rest of this order. Just pick the building and this unit's details.</p>
+    <div class="field">
+      <label>Building</label>
+      <select id="addunit-building"></select>
+    </div>
+    <div class="field">
+      <label>Unit #</label>
+      <input type="text" id="addunit-unit-number" placeholder="e.g. 205">
+    </div>
+    <div class="field">
+      <label>Bedrooms</label>
+      <input type="number" id="addunit-bedrooms" min="1" max="5" placeholder="e.g. 2">
+    </div>
+    <div class="field">
+      <label>Bathrooms</label>
+      <input type="number" id="addunit-bathrooms" min="1" max="3" placeholder="e.g. 1">
+    </div>
+    <div class="field">
+      <label>Entry available from</label>
+      <div id="addunit-entry-date-mount"></div>
+    </div>
+    <div class="field">
+      <label>Service due date</label>
+      <div id="addunit-due-date-mount"></div>
+    </div>
+    <div class="dialog-btns">
+      <button class="btn-ghost" onclick="closeAddBatchUnit()">Cancel</button>
+      <button class="btn-gold" id="addunit-save-btn" onclick="submitAddBatchUnit()">Add Unit</button>
+    </div>
+    <p class="dialog-error" id="addunit-error"></p>
+  </div>
+</div>
+
+<div class="dialog-overlay" id="notready-dialog">
+  <div class="dialog-panel">
+    <h3>Turn off Materials Ready?</h3>
+    <p style="font-size:12px;color:var(--gray);margin-bottom:12px">Let us know why, so our office isn't left guessing.</p>
+    <div class="field">
+      <label>Note</label>
+      <textarea id="notready-note" rows="3" placeholder="e.g. delivery got pushed back"></textarea>
+    </div>
+    <div class="dialog-btns">
+      <button class="btn-ghost" onclick="closeNotReadyDialog(false)">Go Back</button>
+      <button class="btn-gold" id="notready-confirm-btn" onclick="confirmNotReady()">Turn Off</button>
+    </div>
+    <p class="dialog-error" id="notready-error"></p>
+  </div>
+</div>
+
 <!-- Toast de notificación -->
 <div class="toast" id="toast"></div>
 
@@ -1116,6 +1360,10 @@ style="object-fit:contain">
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.16.0/estimated-time/estimated-time.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.23.0/nav-premium/nav-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.19.0/order-form-premium/order-form-premium.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.14.0/order-history/order-history.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.0.0/lightbox/lightbox.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.8.0/order-badges/order-badges.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.15.0/order-tracker/order-tracker.js"></script>
 <script>
 const client = GS.requireSession();
 if (client) {
@@ -1257,8 +1505,8 @@ if (client) {
   GSNavPremium.init('gsNav', [
     { label: 'New Order', dataView: 'new-order', onclick: "showTab('new-order')", active: true },
     { label: 'Templates', dataView: 'templates', onclick: "showTab('templates')" },
-    { label: 'Processing', href: 'tracking.html#processing' },
-    { label: 'History', href: 'tracking.html#history' },
+    { label: 'Processing', dataView: 'processing', onclick: "showSection('processing')", active: true },
+    { label: 'History', dataView: 'history', onclick: "showSection('history')" },
     { label: 'Recurring', dataView: 'recurring', onclick: "showTab('recurring')" },
     { label: 'Profile', dataView: 'profile', onclick: "showTab('profile')" }
   ]);
@@ -3351,6 +3599,1706 @@ if (client) {
   window.unarchiveBuilding = unarchiveBuilding;
   window.archiveContact = archiveContact;
   window.unarchiveContact = unarchiveContact;
+
+  /* ============================================================
+     PANELES PROCESSING/HISTORY -- JS de tracking.html (su propia
+     pagina antes de unirla aqui).
+
+     Renombrado (choques reales):
+     - serviceTimesCache/serviceTimesPromise -> trackingServiceTimesCache/
+       trackingServiceTimesPromise (mismo proposito que la version de
+       customer.html, pero se dejo su propio fetch independiente en vez
+       de compartir uno solo, para no arriesgar problemas de tiempos
+       entre los 2 flujos de carga).
+     - client-camera-input -> tracking-client-camera-input (mismo
+       choque real que ya se encontro con Recurring -- cada uno sube
+       la foto a un lugar distinto).
+
+     Quitados por identicos (esc/doSignout/showToast): ya existen en
+     customer.html. showSection() se reescribio para usar
+     GSNavPremium.showPanel(), igual que showTab() en el resto de la
+     pagina.
+
+     BUG REAL encontrado (no en la revision manual, sino al armar
+     los scripts CDN): customer.html nunca cargaba order-history.js
+     ni lightbox.js -- Recurring YA los necesitaba desde su propio
+     merge anterior (GSOrderHistory.html/GSLightbox.open), pero eso
+     paso desapercibido porque las pruebas de aquella vez simulaban
+     esas piezas en vez de cargarlas de verdad. Se agregaron ambos
+     scripts arriba (junto con order-tracker.js y order-badges.js,
+     nuevos para Processing/History), lo cual de paso corrige ese
+     bug pendiente de Recurring tambien.
+  ============================================================ */
+  /* client, $ ya existen en customer.html. */
+  let ordersCache = [];
+  /* Tiempos por servicio -- solo se pide si el cliente tiene el
+     permiso activado, para no jalar datos de mas cuando no hace
+     falta. Se guarda la promesa (no solo el resultado) para poder
+     esperarla en expandOrder() sin condicion de carrera si se abre
+     una orden antes de que termine de cargar. */
+  let trackingServiceTimesCache = {};
+  const trackingServiceTimesPromise = client.showEstimatedTime
+    ? GS.api('/get-services', { method: 'GET' }).then(data => { trackingServiceTimesCache = data.serviceTimes || {}; }).catch(() => {})
+    : Promise.resolve();
+  /* Cache del detalle ya cargado de cada orden, para que reabrirla sea
+     instantaneo sin volver a pedirselo a la API. Se invalida entero
+     cada vez que se recarga la lista (loadOrders). */
+  let orderDetailCache = {};
+  /* Contactos del cliente, cacheados una vez por sesion de pagina --
+     se usan para resolver el nombre del contacto en el resumen de
+     notificaciones de cada orden, sin pedirlos de nuevo cada vez. */
+  let contactsCache = null;
+  async function ensureContactsCache() {
+    if (contactsCache) return contactsCache;
+    try {
+      const data = await GS.api('/get-client-contacts', { method: 'POST', body: { clientId: client.clientId, includeArchived: false } });
+      contactsCache = data.contacts || [];
+    } catch (e) {
+      contactsCache = [];
+    }
+    return contactsCache;
+  }
+  /* Aparte del cache de HTML de arriba, se guarda si la orden esta
+     esperando confirmacion del cliente ahora mismo -- lo necesita el
+     dialogo de Notifications para mostrar el aviso de Confirmations. */
+  let orderNeedsConfirmationCache = {};
+
+  /* Estado de "cual tarjeta esta abierta/fijada", uno por seccion
+     (processing agrupa drafts + active orders; history aparte) --
+     igual que en admin.html. */
+  function cardOpenState(context) {
+    const store = window.__cardOpenState || (window.__cardOpenState = {});
+    return store[context] || (store[context] = { open: null, pinned: {} });
+  }
+
+  function closeOtherCards(context, exceptOrderId) {
+    const st = cardOpenState(context);
+    const listEl = $(context === 'processing' ? 'processing-container' : 'history-container');
+    if (!listEl) return;
+    const exceptCard = listEl.querySelector('.order-card[data-order="' + CSS.escape(exceptOrderId) + '"]');
+    listEl.querySelectorAll('.order-card').forEach(card => {
+      const cid = card.dataset.order;
+      if (cid === exceptOrderId || st.pinned[cid]) return;
+      /* Si esta tarjeta es la que ENVUELVE a la que se esta abriendo
+         (ej. la tarjeta del PO al abrir una de sus unidades adentro),
+         no la cierres -- solo cierra las que de verdad son "otra
+         cosa", no un ancestro de la que se acaba de abrir. */
+      if (exceptCard && card !== exceptCard && card.contains(exceptCard)) return;
+      const body = card.querySelector('.order-card-body');
+      if (body) body.classList.remove('open');
+    });
+  }
+
+  /* La barra de navegacion ya se inicializo una sola vez arriba, en
+     el flujo de customer.html -- aqui solo lo que le toca
+     especificamente a Processing/History. showSection() ahora usa
+     GSNavPremium.showPanel(), igual que showTab() en el resto de la
+     pagina, en vez de tocar clases a mano. doSignout/showToast ya
+     existen en customer.html, no se duplican. */
+  function showSection(which) {
+    GSNavPremium.showPanel(which);
+  }
+
+  async function loadOrders() {
+    try {
+      const data = await GS.api('/get-orders', { method: 'POST', body: { clientId: client.clientId } });
+      ordersCache = data.orders || [];
+      orderDetailCache = {};
+      renderProcessing();
+      renderHistory();
+    } catch (e) {
+      $('processing-container').innerHTML = '<p class="empty-note">Could not load orders: ' + esc(e.message) + '</p>';
+      $('history-container').innerHTML = '<p class="empty-note">Could not load orders.</p>';
+    }
+  }
+
+  /* Separa las ordenes de esta seccion en sueltas (sin BatchId) y
+     agrupadas por PO (BatchId). Solo agrupa dentro de la MISMA seccion
+     -- si un PO tiene unidades activas y unidades completadas, sale
+     como un grupo chico en cada lado, no uno solo cruzando ambas. */
+  function groupByBatch(orders) {
+    const standalone = [];
+    const groupsMap = {};
+    const groupOrder = [];
+    orders.forEach(o => {
+      const bid = o.BatchId || '';
+      if (!bid) { standalone.push(o); return; }
+      if (!groupsMap[bid]) { groupsMap[bid] = []; groupOrder.push(bid); }
+      groupsMap[bid].push(o);
+    });
+    return { standalone, groupsMap, groupOrder };
+  }
+
+  function renderBatchGroupCard(batchId, units, cardRenderer, showAddButton) {
+    const groupOrderId = 'batch-' + batchId;
+    const innerHtml = units.map(cardRenderer).join('');
+    return `
+      <div class="order-card" data-order="${escAttr(groupOrderId)}">
+        <div class="order-card-header" onclick="toggleBatchCard(this, '${escAttr(groupOrderId)}')">
+          <div>
+            <div class="order-num">PO #${esc(client.clientId + '-' + batchId)}<span class="order-pin"></span></div>
+            <div class="order-date">${units.length} units in this order</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px">
+            <span style="font-size:11px;color:var(--gray)">▼</span>
+          </div>
+        </div>
+        <div class="order-card-body" style="padding:16px">
+          ${showAddButton ? '<button type="button" class="btn-action" style="margin-bottom:16px" onclick="event.stopPropagation(); openAddBatchUnit(\'' + escAttr(batchId) + '\')">+ Add a Unit</button>' : ''}
+          ${innerHtml}
+        </div>
+      </div>`;
+  }
+
+  function toggleBatchCard(headerEl, groupOrderId) {
+    const body = headerEl.nextElementSibling;
+    const context = body.closest('#processing-container') ? 'processing' : 'history';
+    const st = cardOpenState(context);
+    if (st.pinned[groupOrderId]) return;
+    if (body.classList.contains('open')) { body.classList.remove('open'); if (st.open === groupOrderId) st.open = null; return; }
+    closeOtherCards(context, groupOrderId);
+    body.classList.add('open');
+    st.open = groupOrderId;
+  }
+
+  function renderProcessing() {
+    const box = $('processing-container');
+    const drafts = ordersCache.filter(o => (o.Status || '') === 'Incomplete');
+    const active = ordersCache.filter(o => {
+      const s = o.Status || 'Received';
+      return s !== 'Completed' && s !== 'Incomplete' && s !== 'Cancelled';
+    });
+
+    let html = '<div class="list-section-title">Unfinished drafts</div>';
+    html += drafts.length ? drafts.map(renderDraftCard).join('') : '<p class="empty-note">No drafts.</p>';
+    html += '<div class="list-section-title">Active orders</div>';
+    if (!active.length) {
+      html += '<p class="empty-note">No active orders yet.</p>';
+    } else {
+      const { standalone, groupsMap, groupOrder } = groupByBatch(active);
+      html += groupOrder.map(bid => renderBatchGroupCard(bid, groupsMap[bid], renderActiveCard, true)).join('');
+      html += standalone.map(renderActiveCard).join('');
+    }
+    box.innerHTML = html;
+  }
+
+  function renderHistory() {
+    const box = $('history-container');
+    const done = ordersCache.filter(o => (o.Status || '') === 'Completed' || (o.Status || '') === 'Cancelled');
+    if (!done.length) {
+      box.innerHTML = '<p class="empty-note">No completed or cancelled orders yet.</p>';
+      return;
+    }
+    const { standalone, groupsMap, groupOrder } = groupByBatch(done);
+    box.innerHTML =
+      groupOrder.map(bid => renderBatchGroupCard(bid, groupsMap[bid], renderCompletedCard)).join('') +
+      standalone.map(renderCompletedCard).join('');
+  }
+
+  /* Los cuatro bloques de servicio. Tienen que decir EXACTAMENTE lo mismo
+     que la columna Orders.ServiceWindow de SharePoint y que la copia del
+     panel de administracion. */
+  const SERVICE_WINDOWS = [
+    '5:00 AM - 8:00 AM',
+    '8:00 AM - 11:00 AM',
+    '11:00 AM - 2:00 PM',
+    '2:00 PM - 5:00 PM'
+  ];
+
+  function dateInputValue(iso) {
+    if (!iso) return '';
+    const m = String(iso).match(/^(\d{4}-\d{2}-\d{2})/);
+    if (m) return m[1];
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+  }
+
+  /* parseSvcPayload/parseDatesPayload/changeRowHtml/addedRowHtml/
+     removedRowHtml/subLineHtml -- ya vienen dentro de GSOrderHistory
+     (gsocd-shared). Se quitaron de aqui por quedar huerfanas una vez
+     que se conecto el historial principal a la pieza compartida. */
+
+  /* Un estatus con solicitud abierta: el cliente solo puede deshacerla */
+  function hasOpenRequest(status) {
+    return status === 'Change Requested' || status === 'Cancellation Requested';
+  }
+
+  /* Un Change Requested puede venir de dos lados: el cliente pidio un
+     cambio (Undo Request tiene sentido), o la oficina propuso uno y
+     solo falta que el cliente le de Confirm. Se distinguen por el
+     mismo marcador que usa el admin.
+
+     BUG FIX: antes se buscaba en TODO el historial si ALGUNA VEZ hubo
+     un "Client Confirmation" -- una vez que pasaba, el cliente veia el
+     boton "Confirm" para siempre en cualquier solicitud futura,
+     aunque fuera una completamente nueva y distinta (por ejemplo, el
+     cliente pidiendo su propio cambio despues). Ahora se revisa
+     unicamente la solicitud abierta MAS RECIENTE. */
+  const REQUEST_OPENING_TYPES = ['Change Requested', 'Cancellation Requested', 'Reschedule Requested', 'Change Requested by Client', 'Reactivation Requested'];
+  function isWaitingForClientConfirmation(history) {
+    for (let i = (history || []).length - 1; i >= 0; i--) {
+      const h = history[i];
+      const type = String(h.ChangeType || '');
+      if (REQUEST_OPENING_TYPES.indexOf(type) !== -1) {
+        return type === 'Change Requested' && String(h.FieldChanged || '') === 'Client Confirmation';
+      }
+    }
+    return false;
+  }
+
+  /* Una orden que la oficina mando a reactivar (boton "Reactivate" en
+     History, del lado admin) tambien llega aqui como Change Requested
+     -- pero no es ni un cambio propio del cliente (Undo Request) ni
+     una confirmacion de cambio normal (Confirm): es un camino distinto,
+     donde el cliente puede reactivarla el mismo sin esperar al
+     director. Mismo patron de "solo la solicitud abierta mas
+     reciente". */
+  function isReactivationPending(history) {
+    for (let i = (history || []).length - 1; i >= 0; i--) {
+      const h = history[i];
+      const type = String(h.ChangeType || '');
+      if (REQUEST_OPENING_TYPES.indexOf(type) !== -1) {
+        return type === 'Reactivation Requested';
+      }
+    }
+    return false;
+  }
+
+  function statusClass(s) {
+    switch (s) {
+      case 'Received': return 'status-pending';
+      case 'Review': case 'Change Review': return 'status-review';
+      case 'Assigned': return 'status-assigned';
+      case 'Working': return 'status-working';
+      case 'Change Requested': return 'status-changereq';
+      case 'Cancellation Requested': case 'Cancelled': return 'status-cancelreq';
+      case 'Delayed': return 'status-delayed';
+      case 'Updated': return 'status-updated';
+      case 'Incomplete': return 'status-incomplete';
+      case 'Completed': return 'status-confirmed';
+      default: return 'status-pending';
+    }
+  }
+
+  function renderDraftCard(o) {
+    return `
+      <div class="order-card" data-order="${escAttr(o.OrderID || '')}">
+        <div class="order-card-header" onclick="toggleOrder(this,'${escAttr(o.OrderID || '')}')" ondblclick="pinOrder(this,'${escAttr(o.OrderID || '')}','processing')">
+          <div>
+            <div class="order-num">Draft · ${esc(o.OrderID || '')}<span class="order-pin"></span></div>
+            <div class="order-date">${esc(o.Division || '')} · saved ${fmtDate(o.createdDateTime)}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px">
+            <span class="order-status status-incomplete">Incomplete</span>
+            <span style="font-size:11px;color:var(--gray)">▼</span>
+          </div>
+        </div>
+        <div class="order-card-body">
+          <p class="empty-note">This order was started but not submitted. Continue where you left off or delete it.</p>
+          <div class="order-actions">
+            <button class="btn-action primary" onclick="continueDraft('${escAttr(o.OrderID || '')}')">Continue</button>
+            <button class="btn-action danger" onclick="openDeleteDraft('${escAttr(o.OrderID || '')}')">Delete draft</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  /* LIMPIEZA: aquí había una variable "actions" que armaba botones que
+     nunca se imprimían (los reales se generan al expandir, vía
+     actionButtonsFor). Eliminada — esta tarjeta es solo el contenedor. */
+  function orderSummaryLine(o) {
+    const parts = [esc(o.Division || '')];
+    if (o.UnitNumber) parts.push('Unit ' + esc(o.UnitNumber));
+    if (o.Bedrooms || o.Bathrooms) parts.push(esc(o.Bedrooms || '—') + 'bd/' + esc(o.Bathrooms || '—') + 'ba');
+    if (o.EntryDate) parts.push('Entry ' + fmtDate(o.EntryDate));
+    if (o.DueDate) parts.push('Due ' + fmtDate(o.DueDate));
+    return parts.join(' · ');
+  }
+
+  /* Badge azul de "unidad ocupada" -- mismo diseno aprobado en
+     Admin/Cliente/Tech, sin adaptar. Solo lectura para el cliente
+     tambien (aqui refleja lo que el mismo ya marco en Materials &
+     Access, no se puede tocar desde aqui arriba). */
+  /* Los badges de unidad ocupada y "se necesita algo de la oficina"
+     ahora vienen de GSOrderBadges (gsocd-shared) -- una sola pieza
+     compartida entre Admin/Tech/Orders. */
+
+  function renderActiveCard(o) {
+    const status = o.Status || 'Received';
+    return `
+      <div class="order-card" data-order="${escAttr(o.OrderID)}">
+        <div class="order-card-header" onclick="expandOrder(this, '${escAttr(o.OrderID)}')" ondblclick="pinOrder(this,'${escAttr(o.OrderID)}','processing')">
+          <div>
+            <div class="order-num">Order #${esc(o.OrderID || '')}${GSOrderBadges.occupied(o)}${GSOrderBadges.officeNeed(o)}<span class="order-pin"></span></div>
+            <div class="order-date">${orderSummaryLine(o)}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px">
+            <span class="order-status ${statusClass(status)}">${esc(status)}</span>
+            <span style="font-size:11px;color:var(--gray)">▼</span>
+          </div>
+        </div>
+        <div class="order-card-body"><p class="empty-note">Loading details…</p></div>
+      </div>`;
+  }
+
+  function renderCompletedCard(o) {
+    const status = o.Status || 'Completed';
+    return `
+      <div class="order-card" data-order="${escAttr(o.OrderID)}">
+        <div class="order-card-header" onclick="expandOrder(this, '${escAttr(o.OrderID)}')" ondblclick="pinOrder(this,'${escAttr(o.OrderID)}','history')">
+          <div>
+            <div class="order-num">Order #${esc(o.OrderID || '')}${GSOrderBadges.occupied(o)}${GSOrderBadges.officeNeed(o)}<span class="order-pin"></span></div>
+            <div class="order-date">${orderSummaryLine(o)}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px">
+            <span class="order-status ${statusClass(status)}">${esc(status)}</span>
+            <span style="font-size:11px;color:var(--gray)">▼</span>
+          </div>
+        </div>
+        <div class="order-card-body"><p class="empty-note">Loading details…</p></div>
+      </div>`;
+  }
+
+  /* Mismo criterio que orderNotificationsLineHtml() en admin.html: si
+     la orden no tiene NADA distinto al default de la cuenta, no se ve
+     ningun renglon extra. Si tiene algo custom, se resume aqui -- el
+     boton "Notifications" de mas abajo es para cambiarlo. */
+  function orderNotifSummaryHtml(o, contacts) {
+    const enabled    = o.OrderNotificationsEnabled || '';
+    const confirmVal = o.OrderNotifyConfirmations  || '';
+    const changesVal = o.OrderNotifyChanges        || '';
+    const updatesVal = o.OrderNotifyUpdates        || '';
+    const contactId  = o.OrderContactId            || '';
+
+    if (!enabled && !confirmVal && !changesVal && !updatesVal && !contactId) return '';
+
+    const parts = [];
+    if (enabled)    parts.push('Notifications ' + enabled);
+    if (confirmVal) parts.push('Confirmations ' + confirmVal);
+    if (changesVal) parts.push('Changes ' + changesVal);
+    if (updatesVal) parts.push('Updates ' + updatesVal);
+
+    let contactLabel = '';
+    if (contactId) {
+      const contact = (contacts || []).find(c => c.id === contactId);
+      contactLabel = contact ? (esc(contact.name) + ' (' + esc(contact.type) + ')') : 'a custom contact';
+    }
+
+    return '<p class="field-caption" style="margin-bottom:2px">Notifications for this order</p>' +
+      '<p class="meta-line" style="margin-bottom:14px;font-size:12px;color:var(--gray)">' +
+      'Custom' + (contactLabel ? ' — goes to ' + contactLabel : '') +
+      (parts.length ? (contactLabel ? '; ' : ' — ') + esc(parts.join(', ')) : '') +
+      '</p>';
+  }
+
+  async function expandOrder(headerEl, orderId) {
+    const body = headerEl.nextElementSibling;
+    const context = body.closest('#processing-container') ? 'processing' : 'history';
+    const st = cardOpenState(context);
+    if (st.pinned[orderId]) return; // fijada: solo el doble clic la mueve
+
+    if (body.classList.contains('open')) { body.classList.remove('open'); if (st.open === orderId) st.open = null; return; }
+    closeOtherCards(context, orderId);
+    body.classList.add('open');
+    st.open = orderId;
+
+    if (orderDetailCache[orderId]) {
+      body.innerHTML = orderDetailCache[orderId].html;
+      bindActions(body, orderDetailCache[orderId].order);
+      mountTracker(orderDetailCache[orderId].order, orderDetailCache[orderId].trackerSteps, 'tracker-mount-' + orderId);
+      loadClientPhotosInto(orderId);
+      return;
+    }
+
+    try {
+           const data = await GS.api('/get-order-detail', { method: 'POST', body: { orderId: orderId, clientId: client.clientId } });
+      const o = data.order || {};
+      const services = data.services || [];
+      const history = data.history || [];
+      const contactsForSummary = await ensureContactsCache();
+      await trackingServiceTimesPromise; // no-op si showEstimatedTime esta apagado
+
+      const byCat = {};
+      (services || []).forEach(s => {
+        const cat = s.Category || 'General';
+        if (!byCat[cat]) byCat[cat] = [];
+        byCat[cat].push(s);
+      });
+      const svcDetailId = 'svc-detail-' + String(orderId).replace(/[^a-z0-9]/gi, '_');
+      const svcRows = [];
+      Object.entries(byCat).forEach(([cat, list]) => {
+        list.forEach((s, i) => {
+          const nc = (s.NotCompleted === true || String(s.NotCompleted) === 'true');
+          const ncText = nc ? ' <b style="color:#B06A2A">· not completed' +
+                (s.NotCompletedReason ? ': ' + esc(s.NotCompletedReason) : '') + '</b>' : '';
+          const label = svcSubLabel(s);
+          const subText = (label ? esc(label) : '') + ncText;
+          svcRows.push({ cat: i === 0 ? cat : '', name: esc(s.ServiceName || ''), sub: (label || nc) ? subText : '', sku: s.SubOption, lvl: s.Level });
+        });
+      });
+      const showTime = !!client.showEstimatedTime;
+      const svcTableHtml = svcRows.length
+        ? '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
+          svcRows.map((r, i) => {
+            const mins = showTime ? GSEstimatedTime.svcMinutes(r.sku, r.lvl, trackingServiceTimesCache) : null;
+            return '<tr' + (i < svcRows.length - 1 ? ' style="border-bottom:1px solid var(--border)"' : '') + '>' +
+            '<td style="padding:8px 12px 8px 0;color:var(--gold-dk);font-weight:600;width:36%">' + r.cat + '</td>' +
+            '<td style="padding:8px 8px 8px 0;width:32%">' + r.name + '</td>' +
+            '<td style="padding:8px 0;color:' + (r.sub ? 'var(--black)' : 'var(--gray)') + '">' + (r.sub || '—') + '</td>' +
+            (showTime ? '<td style="padding:8px 0 8px 8px;color:#8C6F2A;font-weight:600;white-space:nowrap;text-align:right">' + (mins != null ? esc(GSEstimatedTime.fmtDuration(mins)) : '') + '</td>' : '') +
+            '</tr>';
+          }).join('') +
+          '</table>'
+        : '<div style="font-size:12px;padding:10px 0">No services recorded.</div>';
+      const svcHeaderHtml =
+        '<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">' +
+        '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;cursor:pointer;padding:10px 12px;background:var(--off)" ' +
+        'onclick="var d=document.getElementById(\'' + svcDetailId + '\');d.style.display=d.style.display===\'none\'?\'block\':\'none\'">' +
+        '<p class="detail-label" style="margin:0">Services Requested</p>' +
+        '<span style="font-size:10px;color:var(--gold-dk);white-space:nowrap">&#9660; ' + svcRows.length + ' service' + (svcRows.length === 1 ? '' : 's') + '</span>' +
+        '</div>' +
+        '<div id="' + svcDetailId + '" style="display:none;padding:0 12px">' + svcTableHtml + (showTime ? GSEstimatedTime.boxHtml(services, trackingServiceTimesCache) : '') + '</div>' +
+        '</div>';
+
+      const noticeHtml = delayNoticeHtml(o);
+
+      const dirtLine = o.DirtLevel ? `<p class="meta-line">Overall condition: <strong style="color:var(--black)">${esc(o.DirtLevel)}</strong></p>` : '';
+      const officeNeedLine = GSOrderBadges.officeNeedNote(o, 'What you told us you need from the office');
+
+      const readyBlockHtml = materialsReadyBlockHtml(o);
+
+      /* El historial ahora viene de GSOrderHistory (gsocd-shared) -- una
+         sola pieza compartida entre Admin/Tech/Orders, en modo 'client'
+         (filtrado a lo que le corresponde ver al cliente), en vez de esta
+         implementacion propia. */
+      const histHtml = GSOrderHistory.html(orderId, history, { mode: 'client', regressionTypes: Object.keys(STAGE_REGRESS) });
+
+      body.innerHTML = `
+        <div class="order-2col" id="ord2col-${escAttr(orderId)}">
+        <div class="col-left">
+        <div class="detail-grid">
+          <div>
+            <p class="detail-label">Order Details</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px 16px;margin-bottom:14px">
+              <div><div class="field-caption">Entry</div><div class="field-value">${fmtDateTime(o.EntryDate)}</div></div>
+              <div><div class="field-caption">Due</div><div class="field-value">${fmtDate(o.DueDate)}</div></div>
+              <div><div class="field-caption">Service window</div><div class="field-value">${esc(o.ServiceWindow || 'To be confirmed')}</div></div>
+              <div><div class="field-caption">Building / Unit</div><div class="field-value">${esc(o.BuildingNumber || '—')} / ${esc(o.UnitNumber || '—')}</div></div>
+              <div><div class="field-caption">Bed / Bath</div><div class="field-value">${esc(o.Bedrooms || '—')} / ${esc(o.Bathrooms || '—')}</div></div>
+            </div>
+            ${orderNotifSummaryHtml(o, contactsForSummary)}
+            ${dirtLine}
+            ${officeNeedLine}
+            ${readyBlockHtml}
+            ${o.Notes ? '<p class="meta-line" style="margin-bottom:14px">Notes: ' + esc(o.Notes) + '</p>' : ''}
+            ${noticeHtml}
+            ${svcHeaderHtml}
+            <div class="client-photos-box gs-mobile-only">
+              <div class="client-photos-label">Photos</div>
+              <div class="client-photos-sub">Something come up? Add a photo to let us know.</div>
+              <div class="client-photo-thumbs" id="client-photo-thumbs-${escAttr(orderId)}"></div>
+              <button type="button" class="btn-add-client-photo" onclick="startClientPhoto('${escAttr(orderId)}')">📷 Add Photo</button>
+            </div>
+          </div>
+          <div>
+            <p class="detail-label">History</p>
+            ${histHtml}
+          </div>
+        </div>
+        <div style="margin-top:8px">
+          <p class="detail-label">Order Tracker</p>
+          ${cancelledBannerHtml(o)}
+          <div id="tracker-mount-${escAttr(orderId)}"></div>
+        </div>
+        <div class="order-actions">${actionButtonsFor(o, history, data.document || null)}</div>
+        </div>
+        <div class="col-right" id="sidepanel-${escAttr(orderId)}"></div>
+        </div>`;
+
+      bindActions(body, o);
+      const trackerSteps = buildTrackerSteps(o, history);
+      mountTracker(o, trackerSteps, 'tracker-mount-' + orderId);
+      orderDetailCache[orderId] = { html: body.innerHTML, order: o, trackerSteps: trackerSteps };
+      orderNeedsConfirmationCache[orderId] = isWaitingForClientConfirmation(history);
+      loadClientPhotosInto(orderId);
+    } catch (e) {
+      body.innerHTML = '<p class="empty-note">Could not load details: ' + esc(e.message) + '</p>';
+    }
+  }
+
+  /* ===== Fotos del cliente -- confirmado con el usuario: siempre
+     opcionales, nunca bloquean nada, solo mobile (nunca existe esta
+     seccion en desktop, ni siquiera oculta). Sin ubicacion -- no es
+     para rastrear a nadie, solo para que el cliente muestre algo.
+     Van a la MISMA carpeta que ya usa Tech, para que el staff las vea
+     en la galeria de siempre sin que Admin necesite ningun cambio. */
+  let clientPhotoTargetOrderId = null;
+  /* Fotos cargadas por orden, para poder pasarle el arreglo completo
+     a GSLightbox.open() (necesita el conjunto, no solo la que se
+     toco, para poder navegar con flechas prev/next). */
+  const clientPhotosByOrder = {};
+
+  async function loadClientPhotosInto(orderId) {
+    const wrap = document.getElementById('client-photo-thumbs-' + orderId);
+    if (!wrap) return; // desktop -- la seccion ni existe en el DOM visible, pero el nodo si esta
+    try {
+      const res = await GS.api('/get-client-order-photos', { method: 'POST', body: { orderId } });
+      const photos = res.photos || [];
+      clientPhotosByOrder[orderId] = photos;
+      wrap.innerHTML = photos.map((p, pi) =>
+        '<img class="client-photo-thumb" src="' + escAttr(p.downloadUrl) + '" onclick="openClientLightbox(\'' + escAttr(orderId) + '\', ' + pi + ')">').join('');
+    } catch (e) {
+      // silencioso -- si falla, el cliente simplemente ve la seccion vacia, no es critico
+    }
+  }
+
+  /* Mismo componente compartido que ya usa tech.gsocd.com (Employee/
+     Supervisor) para su galeria -- overlay en la misma pagina, nunca
+     abre pestana ni navega directo a la downloadUrl de Graph. */
+  function openClientLightbox(orderId, photoIdx) {
+    GSLightbox.open(clientPhotosByOrder[orderId] || [], photoIdx);
+  }
+
+  function startClientPhoto(orderId) {
+    clientPhotoTargetOrderId = orderId;
+    document.getElementById('tracking-client-camera-input').click();
+  }
+
+  document.getElementById('tracking-client-camera-input').addEventListener('change', function () {
+    const file = this.files[0];
+    const orderId = clientPhotoTargetOrderId;
+    this.value = '';
+    clientPhotoTargetOrderId = null;
+    if (!file || !orderId) return;
+
+    const wrap = document.getElementById('client-photo-thumbs-' + orderId);
+    const localUrl = URL.createObjectURL(file);
+    let thumb = null;
+    if (wrap) {
+      thumb = document.createElement('img');
+      thumb.className = 'client-photo-thumb';
+      thumb.src = localUrl;
+      thumb.style.opacity = '.5';
+      wrap.appendChild(thumb);
+    }
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        await GS.api('/upload-client-photo', { method: 'POST', body: { orderId, imageBase64: reader.result } });
+        if (thumb) thumb.style.opacity = '1';
+        showToast('Photo added.');
+      } catch (e) {
+        if (thumb) thumb.remove();
+        showToast('Could not add that photo: ' + e.message);
+      }
+    };
+    reader.onerror = () => {
+      if (thumb) thumb.remove();
+      showToast('Could not read that photo -- please try again.');
+    };
+    reader.readAsDataURL(file);
+  });
+
+  /* Catalogo nuevo: SubOption ya es el SKU interno (ej. "222-68"), no
+     un texto legible -- nunca se muestra tal cual. Para esos casos el
+     nivel (si aplica, solo Janitorial) viene aparte en el campo Level.
+     Ordenes viejas (antes de la migracion) siguen con SubOption como
+     texto legible -- esas se muestran igual que siempre. */
+  function isSkuFormat(sub) { return /^\d{3}-\d+$/.test(String(sub || '')); }
+  function svcSubLabel(s) {
+    return isSkuFormat(s.SubOption) ? (s.Level || '') : (s.SubOption || '');
+  }
+
+  /* ===== Tracker dinamico: un punto por cada evento REAL relevante,
+     en el orden en que paso. Nada de etapas inventadas: si a la orden
+     nunca le pidieron un cambio, el tracker solo tiene 1 o 2 puntos.
+     Se ocultan los eventos puramente internos (Supervisor, Inspection
+     Date, PDFs, Archived) para que el cliente solo vea lo que a el le
+     importa. */
+  /* clientNoteText -- ya viene dentro de GSOrderHistory (gsocd-shared).
+     Se quito de aqui por quedar huerfana. */
+  function isHiddenFromClient(h) {
+    const fc = String(h.FieldChanged || '');
+    const ct = String(h.ChangeType || '');
+    if (fc === 'Office Change (Internal)') return true;
+    if (fc === 'Supervisor') return true;
+    if (fc === 'Inspection Date') return true;
+    if (fc === 'Delay Reason' || fc === 'Delay Reason Notes') return true;
+    if (ct === 'Document Generated' || ct === 'Document Failed') return true;
+    if (ct === 'Archived') return true;
+    if (ct === 'Order Details Set') return true;
+    /* Formato viejo (antes de consolidar): un renglon suelto por cada
+       campo que se guardo al aprobar por primera vez (Supervisor,
+       Service Window, Dispatch Date, Due Date, Inspection Date...).
+       El chip "Order Approved" ya cubre ese momento; estos renglones
+       sueltos solo quedan en ordenes ya creadas antes del cambio. */
+    if (/ Changed$/.test(ct) &&
+        ['Supervisor', 'Service Window', 'Dispatch Date', 'Due Date',
+         'Inspection Date', 'Notes'].indexOf(fc) !== -1) return true;
+    return false;
+  }
+
+  /* Catalogo COMPLETO de ChangeType reales -- sacado directo de donde
+     se escriben (grep sobre los 3 repos: admin, orders, tech), no
+     reconstruido de memoria. label = texto corto (debajo del puntito),
+     stage = frase completa (arriba, cuando ese paso esta activo). */
+  const STEP_META = {
+    'Created':                     { label: 'Created',            stage: 'Order created' },
+    'Order Assigned':              { label: 'Assigned',           stage: 'Order assigned' },
+    'Change Reassigned':           { label: 'Reassigned',         stage: 'Order reassigned' },
+    'Dates Confirmed':             { label: 'Confirmed',          stage: 'Schedule confirmed' },
+    'Order Approved':              { label: 'Approved',           stage: 'Order approved' },
+    'Sent to Scheduling':          { label: 'Rescheduling',       stage: 'Rescheduling in progress' },
+    'Materials Ready':             { label: 'Materials ready',    stage: 'Materials ready' },
+    'Materials Ready Cancelled':   { label: 'Materials not ready',stage: 'Materials ready was cancelled' },
+    'Materials Ready Seen':        { label: 'Notice seen',        stage: 'Materials ready notice, seen' },
+    'Completed':                   { label: 'Completed',          stage: 'Order completed' },
+    'Tech Marked Complete':        { label: 'Completed',          stage: 'Order marked complete by the technician' },
+    'Change Requested':            { label: 'Change requested',   stage: 'Change requested' },
+    'Change Rejected':             { label: 'Not approved',       stage: 'Change not approved' },
+    'Change Request Cancelled':    { label: 'Withdrawn',          stage: 'Change requested, withdrawn' },
+    'Cancellation Requested':      { label: 'Cancellation asked', stage: 'Cancellation requested' },
+    'Cancellation Approved':       { label: 'Cancellation OK',    stage: 'Cancellation approved' },
+    'Cancellation Rejected':       { label: 'Not cancelled',      stage: 'Cancellation not approved' },
+    'Cancellation Reversed':       { label: 'Reactivated',        stage: 'Order active again' },
+    'Order Reactivated':           { label: 'Reactivated',        stage: 'Order reactivated' },
+    'Reactivation Requested':      { label: 'Reactivation asked', stage: 'Reactivation requested' },
+    'Request Cancelled by Client': { label: 'Withdrawn',          stage: 'Request withdrawn' },
+    'Requested Dates Rejected':    { label: 'Dates not OK',       stage: 'Requested dates not approved' },
+    'Requested Dates Withdrawn':   { label: 'Dates withdrawn',    stage: 'Requested dates withdrawn' },
+    'Reschedule Requested':        { label: 'New date',           stage: 'New dates requested' },
+    'Expected Ready Date':         { label: 'Estimated date',     stage: 'Estimated materials ready date' },
+    'Occupied Unit Reported':      { label: 'Unit occupied',      stage: 'Client reported the unit occupied' },
+    'Services Updated':            { label: 'Services',           stage: 'Services updated' },
+    'Client Data Updated':         { label: 'Client info',        stage: 'Client info updated' },
+    'Scheduling':                  { label: 'Scheduling',         stage: 'In Scheduling' },
+    'Change Approved':             { label: 'Change approved',    stage: 'Change approved' },  // PENDING: does this advance a stage?
+    'Batch Created':               { label: 'Batch created',      stage: 'Order created in a batch' } // PENDING: same as 'Created'?
+  };
+
+  /* Etapas del ícono (confirmado con el usuario): el ícono avanza
+     SOLO cuando la orden de verdad avanza; si un evento no cambia
+     nada de fondo, el ícono se queda igual; si algo deshace un
+     avance, el ícono retrocede tambien -- no es un conteo que solo
+     puede subir.
+
+     1 Creada -> 2 Asignada -> 3 Calendario confirmado -> 4 Material
+     listo -> 5 Completada. */
+  const STAGE_ADVANCE = {
+    'Created': 1,
+    'Order Assigned': 2,
+    'Change Reassigned': 2,        // mismo trato que Order Assigned, confirmado
+    'Dates Confirmed': 3,
+    'Order Approved': 3,
+    'Sent to Scheduling': 3,
+    'Materials Ready': 4,
+    'Completed': 5,
+    'Tech Marked Complete': 5
+  };
+  const STAGE_REGRESS = {
+    'Materials Ready Cancelled': 3   // deshace 'Materials Ready' (etapa 4) -- regresa a 3
+  };
+  /* Todo lo demas (Change Requested, Cancellation Requested,
+     Reschedule Requested, Reactivation Requested, Change Rejected,
+     Cancellation Rejected/Approved/Reversed, Order Reactivated,
+     Requested Dates Rejected/Withdrawn, Occupied Unit Reported,
+     Materials Ready Seen, Client Data Updated, Expected Ready Date,
+     Scheduling, Change Request Cancelled, Request Cancelled by
+     Client, Services Updated) es NEUTRAL -- confirmado con el
+     usuario: son peticiones pendientes o puros avisos, la orden no
+     cambio de verdad todavia, asi que el icono no se mueve. El caso
+     de cancelacion completo (pedida/aprobada/revertida) tambien
+     queda neutral a proposito -- el icono se congela donde estaba
+     mientras la cancelacion esta en juego, y retoma desde ahi mismo
+     si se reactiva, en vez de resetear al principio. */
+
+  const G_STAGE = 2;             // Asignada
+  const S_STAGE = 5;             // Completada
+  const TRIANGLE_MAX_STAGE = 4;  // Material listo -- el triangulo llega al 100% aqui
+
+  function stepFrom(h) {
+    const meta = STEP_META[h.ChangeType] || { label: h.ChangeType || 'Update', stage: h.ChangeType || 'Update' };
+    const who = h.ChangedBy ? ' — ' + esc(h.ChangedBy) : '';
+    return {
+      label: meta.label,
+      stage: meta.stage,
+      detail: fmtDate(h.ChangeDate) + who,
+      changeType: h.ChangeType || ''
+    };
+  }
+
+  /* Aviso aparte, ya no forma parte del tracker mismo. */
+  function cancelledBannerHtml(o) {
+    return (o.Status || '') === 'Cancelled'
+      ? '<div class="h-cancelled-banner">This order was cancelled.</div>'
+      : '';
+  }
+
+  function buildTrackerSteps(o, history) {
+    const events = (history || [])
+      .filter(h => !isHiddenFromClient(h))
+      .sort((a, b) => String(a.ChangeDate || '').localeCompare(String(b.ChangeDate || '')));
+
+    /* BUG FIX: aprobar un cambio que toco varios campos de fecha a la
+       vez (Entry/Due/Service Window) escribe un renglon de historial
+       POR CADA campo (ver admin-approve-order.js, 'Dates Confirmed'),
+       aunque para el cliente sea una sola decision: "se confirmo el
+       nuevo calendario". Sin agrupar, el tracker mostraba la misma
+       burbuja repetida 2 o 3 veces seguidas. Como cada renglon se
+       escribe por separado (await secuenciales), sus timestamps no
+       son identicos al segundo -- se agrupan por tipo + una ventana
+       de tiempo corta en vez de exigir el mismo instante exacto. */
+    const GROUP_WINDOW_MS = 60000;
+    const events2 = [];
+    events.forEach(h => {
+      const last = events2[events2.length - 1];
+      const sameType = last && String(last.ChangeType || '') === String(h.ChangeType || '');
+      const closeInTime = last &&
+        Math.abs(new Date(h.ChangeDate) - new Date(last.ChangeDate)) < GROUP_WINDOW_MS;
+      if (sameType && closeInTime) return;
+      events2.push(h);
+    });
+
+    /* 'Change Requested' seguido de inmediato por 'Reschedule Requested'
+       (mismo actor, mismo momento) es UNA sola accion del cliente --
+       pedir un cambio que incluye fecha/hora escribe 2 renglones
+       aparte por diseno (ver request-change.js), pero para el cliente
+       es un solo paso. Se fusionan usando 'Reschedule Requested' como
+       el visible (mas especifico que el generico 'Change Requested'). */
+    const events2b = [];
+    events2.forEach(h => {
+      const last = events2b[events2b.length - 1];
+      const isReschedule = String(h.ChangeType || '') === 'Reschedule Requested';
+      const lastIsChangeRequested = last && String(last.ChangeType || '') === 'Change Requested';
+      const sameActor = last && String(last.ChangedBy || '') === String(h.ChangedBy || '');
+      const closeInTime = last &&
+        Math.abs(new Date(h.ChangeDate) - new Date(last.ChangeDate)) < GROUP_WINDOW_MS;
+      if (isReschedule && lastIsChangeRequested && sameActor && closeInTime) {
+        events2b[events2b.length - 1] = h;
+        return;
+      }
+      events2b.push(h);
+    });
+
+    /* Mismo criterio aplicado en el historial detallado del admin: al
+       aprobar, 'Dates Confirmed' queda seguido de inmediato por un
+       evento generico de decision ('Change Approved'/etc.) en la misma
+       accion -- dos pasos para una sola decision. Se fusionan, usando
+       la decision como paso visible (mas claro que 'Schedule
+       confirmed' seguido de otro paso sin nada nuevo que decir). */
+    const DECISION_TYPES = ['Change Approved', 'Change Rejected', 'Cancellation Approved', 'Cancellation Rejected', 'Change Reassigned', 'Sent to Scheduling'];
+    const events3 = [];
+    events2b.forEach(h => {
+      const last = events3[events3.length - 1];
+      const isDecision = DECISION_TYPES.indexOf(String(h.ChangeType || '')) !== -1;
+      const lastIsDatesConfirmed = last && String(last.ChangeType || '') === 'Dates Confirmed';
+      const closeInTime = last &&
+        Math.abs(new Date(h.ChangeDate) - new Date(last.ChangeDate)) < GROUP_WINDOW_MS;
+      if (isDecision && lastIsDatesConfirmed && closeInTime) {
+        events3[events3.length - 1] = h;
+        return;
+      }
+      events3.push(h);
+    });
+
+    if (!events3.length) {
+      return [{ label: 'Received', stage: 'Order received', detail: fmtDateTime(o.createdDateTime), resultStage: 1, isRegression: false }];
+    }
+
+    /* Camina el historial en orden aplicando avanza/retrocede/neutral
+       -- resultStage de cada paso es la etapa en la que quedo la orden
+       DESPUES de ese evento especifico, no un conteo que solo sube. */
+    let stage = 0;
+    return events3.map(h => {
+      const step = stepFrom(h);
+      const advanceTo = STAGE_ADVANCE[step.changeType];
+      const regressTo = STAGE_REGRESS[step.changeType];
+      let isRegression = false;
+      if (advanceTo != null && advanceTo > stage) {
+        stage = advanceTo;
+      } else if (regressTo != null) {
+        stage = regressTo;
+        isRegression = true;
+      }
+      // neutral (ninguno de los dos, o un avance que ya se habia alcanzado antes): stage sin cambio
+      return Object.assign(step, { resultStage: stage, isRegression: isRegression });
+    });
+  }
+
+  /* Uno por orden -- si la pantalla llega a mostrar varias tarjetas
+     de orden a la vez, cada una necesita su propio fieldId. */
+  function mountTracker(o, steps, mountId) {
+    GSOrderTracker.mount(o.OrderID, mountId, {
+      steps: steps, current: steps.length,
+      gStage: G_STAGE, sStage: S_STAGE, triangleMaxStage: TRIANGLE_MAX_STAGE
+    });
+  }
+  
+  /* ===== Aviso de retraso =====
+     Es un AVISO, nada mas. No cobra, no calcula y no compromete un monto:
+     dice lo que paso y le pide al cliente que llame a la oficina.
+     El cargo lo decide la oficina, nunca el portal. */
+  function delayNoticeHtml(o) {
+    const type = o.DelayReasonType || '';
+    if (!type) return '';
+    const feeCause = (type === 'Site not ready' || type === 'Rescheduled by client');
+    let what = '';
+    if (type === 'Site not ready') what = 'Our crew could not start because the unit was not ready.';
+    else if (type === 'Rescheduled by client') what = 'This visit was rescheduled at your request.';
+    else if (type === 'Rescheduled by us') what = 'We had to move this visit. We are sorry for the change.';
+    else if (type === 'Weather') what = 'This visit was affected by weather conditions.';
+    else what = 'This visit was delayed.';
+
+    return '<div class="notice"><b>' + esc(type) + '.</b> ' + esc(what) +
+      (o.DelayReasonNotes ? '<br>' + esc(o.DelayReasonNotes) : '') +
+      (feeCause
+        ? '<br><br>A delay fee may apply to this visit. Please call our office if you have any questions about it.'
+        : '<br><br>Please call our office if you have any questions.') +
+      '</div>';
+  }
+
+  /* ============================================================
+     RENOVATIONS + JANITORIAL — Ready Date & Time / switch de listo
+     para entrar / Unidad ocupada. Solo ordenes activas (no
+     Cancelled/Completed). La fecha nunca es obligatoria; el switch
+     ahora SI exige hora al prenderse (antes era opcional).
+  ============================================================ */
+  function materialsReadyBlockHtml(o) {
+    const div = String(o.Division || '').toLowerCase();
+    if (div !== 'renovations' && div !== 'janitorial') return '';
+    if (o.Status === 'Cancelled' || o.Status === 'Completed') return '';
+    const safe = String(o.OrderID || '').replace(/[^a-z0-9]/gi, '_');
+    const ready = !!o.MaterialsReady;
+    orderIdBySafe[safe] = o.OrderID;
+
+    /* Unico texto que cambia por division: el nombre del switch
+       ("Materials ready" para Renovations, "Unit ready" para
+       Janitorial -- ahi el tema no es material, es que la unidad ya
+       se desocupo). El estado on/off y todo lo demas es igual. */
+    const toggleLabel = div === 'janitorial' ? 'Unit ready' : 'Materials ready';
+    const toggleSub = div === 'janitorial'
+      ? "Turn this on once the unit is empty and we're clear to come in."
+      : "Turn this on once everything is on site and we're clear to come in.";
+    const readyDateSub = div === 'janitorial'
+      ? 'If you know roughly when the unit will be ready, let us know so we can plan ahead.'
+      : 'If you know roughly when materials will arrive, let us know so we can plan ahead.';
+
+    const dateVal = dateInputValue(o.ExpectedReadyDate);
+    const occupied = !!o.UnitOccupied;
+
+    return `<div class="ready-block">
+      <p class="detail-label" style="margin-bottom:12px">Materials &amp; Access</p>
+      <div class="ready-row">
+        <div class="ready-field">
+          <div style="font-weight:600;font-size:13px">${toggleLabel}</div>
+          <div class="field-sub">${toggleSub}</div>
+          <div class="toggle-row">
+            <label class="svc-toggle">
+              <input type="checkbox" id="readyToggle-${safe}" ${ready ? 'checked' : ''} onchange="onMaterialsReadyToggle('${escAttr(o.OrderID)}', this)">
+              <span class="svc-toggle-track"></span>
+            </label>
+            <span class="toggle-state ${ready ? 'on' : 'off'}" id="readyState-${safe}">${ready ? 'Ready for us to come in' : 'Not ready yet'}</span>
+          </div>
+        </div>
+
+        <div class="ready-field ready-reveal${ready ? ' show' : ''}" id="readyDateBlock-${safe}">
+          <div style="font-weight:600;font-size:13px">Ready Date &amp; Time</div>
+          <div class="field-sub">${readyDateSub}</div>
+          ${GSDateTimePicker.dateHtml('readyDate-' + safe, dateVal || null)}
+        </div>
+
+        <div class="ready-field ready-reveal${ready ? ' show' : ''}" id="entryTimeBlock-${safe}">
+          <div style="font-weight:600;font-size:13px">What time can we come in?</div>
+          <div class="field-sub">Earliest time on that day we're clear to start.</div>
+          ${GSDateTimePicker.timeHtml('entryTime-' + safe, o.EntryTime || null)}
+        </div>
+
+        <div class="ready-field">
+          <div style="font-weight:600;font-size:13px">Is someone currently living in the unit?</div>
+          <div class="field-sub">So our team knows what to expect when they arrive.</div>
+          <div class="toggle-row">
+            <label class="svc-toggle">
+              <input type="checkbox" id="occupiedToggle-${safe}" ${occupied ? 'checked' : ''} onchange="onUnitOccupiedToggle('${escAttr(o.OrderID)}', this)">
+              <span class="svc-toggle-track"></span>
+            </label>
+            <span class="toggle-state ${occupied ? 'on' : 'off'}" id="occupiedState-${safe}">${occupied ? 'Yes' : 'No'}</span>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  const orderIdBySafe = {};
+  const pendingActivation = {};
+
+  document.addEventListener('gs-date-picked', (e) => {
+    if (e.detail.fieldId.indexOf('readyDate-') !== 0) return;
+    const safe = e.detail.fieldId.slice('readyDate-'.length);
+    const orderId = orderIdBySafe[safe];
+    if (orderId) saveExpectedReadyDate(orderId, e.detail.value);
+  });
+
+  document.addEventListener('gs-time-picked', (e) => {
+    if (e.detail.fieldId.indexOf('entryTime-') !== 0) return;
+    const safe = e.detail.fieldId.slice('entryTime-'.length);
+    const orderId = orderIdBySafe[safe];
+    if (!orderId) return;
+    if (pendingActivation[safe]) {
+      pendingActivation[safe] = false;
+      const cb = $('readyToggle-' + safe);
+      if (cb) cb.checked = true;
+    }
+    saveEntryTime(orderId, e.detail.value).catch(() => { /* ya se mostro el toast de error */ });
+  });
+
+
+  async function onUnitOccupiedToggle(orderId, checkboxEl) {
+    const safe = String(orderId).replace(/[^a-z0-9]/gi, '_');
+    const occupied = checkboxEl.checked;
+    const stateEl = $('occupiedState-' + safe);
+    try {
+      await GS.api('/save-unit-occupied', { method: 'POST', body: { orderId, clientId: client.clientId, occupied } });
+      delete orderDetailCache[orderId];
+      if (stateEl) { stateEl.textContent = occupied ? 'Yes' : 'No'; stateEl.className = 'toggle-state ' + (occupied ? 'on' : 'off'); }
+      showToast('Got it, thanks for letting us know.');
+    } catch (e) {
+      checkboxEl.checked = !occupied;
+      showToast('Error: ' + e.message);
+    }
+  }
+
+  async function saveExpectedReadyDate(orderId, value) {
+    try {
+      await GS.api('/save-expected-ready-date', { method: 'POST', body: { orderId, clientId: client.clientId, expectedReadyDate: value } });
+      showToast('Ready date & time saved.');
+      delete orderDetailCache[orderId];
+    } catch (e) {
+      showToast('Error: ' + e.message);
+    }
+  }
+
+  let notReadyOrderId = null;
+  let notReadyCheckbox = null;
+
+  function onMaterialsReadyToggle(orderId, checkboxEl) {
+    const safe = String(orderId).replace(/[^a-z0-9]/gi, '_');
+    if (checkboxEl.checked) {
+      /* Se prende y se ve prendido de inmediato -- no se revierte.
+         Se revelan fecha y hora, pero SIN abrir ningun popover solo:
+         el usuario decide cuando darle click al campo que quiera
+         llenar. Si nunca elige nada y apaga el switch el mismo, o
+         cierra un popover que si abrio manualmente sin elegir, el
+         listener de gs-popover-closed de abajo revierte -- pero
+         mientras tanto, se ve prendido. */
+      const block = $('entryTimeBlock-' + safe);
+      if (block) block.classList.add('show');
+      const dateBlock = $('readyDateBlock-' + safe);
+      if (dateBlock) dateBlock.classList.add('show');
+      pendingActivation[safe] = true;
+    } else if (pendingActivation[safe]) {
+      /* Estaba prendido nomas en pantalla, esperando la hora --
+         nunca se guardo nada de verdad en el backend. El usuario se
+         arrepintio y lo apago el mismo antes de elegir hora: cancelar
+         sin pedir nota (no hay nada real que revertir todavia). */
+      pendingActivation[safe] = false;
+      const block = $('entryTimeBlock-' + safe);
+      if (block) block.classList.remove('show');
+      const dateBlock = $('readyDateBlock-' + safe);
+      if (dateBlock) dateBlock.classList.remove('show');
+      GSDateTimePicker.closeAllPopovers();
+    } else {
+      /* Ya estaba prendido de verdad (guardado en el backend) --
+         apagar pide nota obligatoria, se revierte el checkbox
+         visualmente hasta que confirme, para no mentir sobre el
+         estado real */
+      checkboxEl.checked = true;
+      notReadyOrderId = orderId;
+      notReadyCheckbox = checkboxEl;
+      $('notready-note').value = '';
+      $('notready-error').textContent = '';
+      $('notready-dialog').classList.add('open');
+    }
+  }
+
+  /* Si el reloj se cierra (clic afuera, o cualquier otra forma) SIN
+     que el usuario haya elegido nada -- ni siquiera la hora sola --
+     pendingActivation sigue en true, y hay que revertir el switch y
+     ocultar el campo de hora otra vez. Si SI se eligio algo,
+     gs-time-picked ya puso pendingActivation en false antes de que
+     este evento llegue, asi que aqui no se hace nada. */
+  document.addEventListener('gs-popover-closed', (e) => {
+    if (e.detail.fieldId.indexOf('entryTime-') !== 0) return;
+    const safe = e.detail.fieldId.slice('entryTime-'.length);
+    if (!pendingActivation[safe]) return;
+    pendingActivation[safe] = false;
+    const cb = $('readyToggle-' + safe);
+    if (cb) cb.checked = false;
+    const block = $('entryTimeBlock-' + safe);
+    if (block) block.classList.remove('show');
+    const dateBlock = $('readyDateBlock-' + safe);
+    if (dateBlock) dateBlock.classList.remove('show');
+  });
+
+  function closeNotReadyDialog(reverted) {
+    $('notready-dialog').classList.remove('open');
+    notReadyOrderId = null;
+    notReadyCheckbox = null;
+  }
+
+  async function confirmNotReady() {
+    const note = $('notready-note').value.trim();
+    if (!note) { $('notready-error').textContent = 'Please add a short note.'; return; }
+    const orderId = notReadyOrderId;
+    const checkboxEl = notReadyCheckbox;
+    try {
+      await setMaterialsReady(orderId, false, '', note);
+      if (checkboxEl) checkboxEl.checked = false;
+      $('notready-dialog').classList.remove('open');
+      notReadyOrderId = null;
+      notReadyCheckbox = null;
+    } catch (e) {
+      $('notready-error').textContent = e.message;
+    }
+  }
+
+  async function setMaterialsReady(orderId, materialsReady, entryTime, offNote) {
+    const safe = String(orderId).replace(/[^a-z0-9]/gi, '_');
+    try {
+      await GS.api('/set-materials-ready', {
+        method: 'POST',
+        body: { orderId, clientId: client.clientId, materialsReady, entryTime: entryTime || '', offNote: offNote || '' }
+      });
+      delete orderDetailCache[orderId];
+      const stateEl = $('readyState-' + safe);
+      const revealEl = $('entryTimeBlock-' + safe);
+      const dateRevealEl = $('readyDateBlock-' + safe);
+      if (stateEl) {
+        stateEl.textContent = materialsReady ? 'Ready for us to come in' : 'Not ready yet';
+        stateEl.className = 'toggle-state ' + (materialsReady ? 'on' : 'off');
+      }
+      if (revealEl) revealEl.classList.toggle('show', materialsReady);
+      if (dateRevealEl) dateRevealEl.classList.toggle('show', materialsReady);
+      showToast(materialsReady ? 'We\'ve let the office know.' : 'Got it, thanks for the update.');
+    } catch (e) {
+      showToast('Error: ' + e.message);
+      throw e;
+    }
+  }
+
+  async function saveEntryTime(orderId, value) {
+    try {
+      await setMaterialsReady(orderId, true, value, '');
+    } catch (e) { /* ya se mostro el toast de error */ }
+  }
+
+  /* ===== Botones por estatus (regla aprobada) =====
+     - Con solicitud pendiente (Change/Cancellation Requested) → SOLO Undo Request
+     - Sin solicitud:  Edit (solo Pending) + Request Change,
+                       y Cancel Request SOLO si la orden realmente pasó
+                       por Assigned o después (mismo cálculo de hito:
+                       mirar el historial, no solo el estatus actual)
+     - Completed → añade Print PDF                                    */
+  function actionButtonsFor(o, history, storedDoc) {
+    const status = o.Status || 'Received';
+    const reachedAssignment = status !== 'Received';
+
+    let html = '';
+    if (hasOpenRequest(status)) {
+      if (isReactivationPending(history)) {
+        html += `<button class="btn-action primary" data-act="confirm-reactivation">Review &amp; Reactivate</button>`;
+      } else if (isWaitingForClientConfirmation(history)) {
+        html += `<button class="btn-action primary" data-act="confirm-change">Confirm</button>`;
+      } else {
+        html += `<button class="btn-action" data-act="undo">Undo Request</button>`;
+      }
+    } else if (status !== 'Completed' && status !== 'Cancelled') {
+      if (status === 'Received') html += `<button class="btn-action primary" data-act="edit">Edit Order</button>`;
+      html += `<button class="btn-action" data-act="change">Request Change</button>`;
+      if (reachedAssignment) html += `<button class="btn-action danger" data-act="cancel">Cancel Request</button>`;
+    }
+    /* El PDF es el documento GUARDADO de la orden, el mismo que llega por
+       correo. Existe desde que la oficina aprueba la orden, no solo al
+       terminarla; antes de eso el boton se ve pero no se puede usar. */
+    if (storedDoc) {
+      html += `<button class="btn-action" data-act="print" title="Open ${escAttr(storedDoc.name || '')}">Print PDF</button>`;
+    } else {
+      html += `<span class="print-wrap"><button class="btn-action" data-act="print" disabled
+        title="Available once the order is approved">Print PDF</button>
+        <span class="print-hint">Available once the order is approved</span></span>`;
+    }
+    html += `<button class="btn-action" data-act="notifications">Notifications</button>`;
+return html;
+  }
+
+  function bindActions(container, o) {
+    container.querySelectorAll('[data-act]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const act = btn.dataset.act;
+        if (act === 'edit') editOrder(o.OrderID);
+        if (act === 'change') toggleChangePanel(o.OrderID);
+        if (act === 'cancel') openCancelDialog(o.OrderID);
+        if (act === 'undo') undoRequest(o.OrderID);
+        if (act === 'confirm-change') confirmChange(o.OrderID);
+        if (act === 'confirm-reactivation') confirmReactivation(o.OrderID);
+        if (act === 'print') openOrderDocument(o.OrderID);
+        if (act === 'printhist') printOrder(o.OrderID);
+        if (act === 'notifications') toggleNotifPanel(o);
+      });
+    });
+  }
+
+  /* ===== Undo Request: regresa la orden a su estatus/servicios previos ===== */
+  async function undoRequest(orderId) {
+    if (!confirm('Undo your pending request? The order will go back to its previous state. Our office will be notified that you cancelled your request.')) return;
+    try {
+      await GS.api('/undo-request', { method: 'POST', body: { orderId: orderId } });
+      showToast('Your request was cancelled. The order went back to its previous state. Our office has been notified.');
+      loadOrders();
+    } catch (e) {
+      alert('Error undoing request: ' + e.message);
+    }
+  }
+
+  /* ===== Confirm: la oficina propuso un cambio directo, el cliente lo acepta ===== */
+  async function confirmChange(orderId) {
+    if (!confirm('Confirm this change? The order will be updated with the new schedule/services shown above.')) return;
+    try {
+      await GS.api('/confirm-change', { method: 'POST', body: { orderId: orderId, clientId: client.clientId } });
+      showToast('Change confirmed. Thank you!');
+      loadOrders();
+    } catch (e) {
+      alert('Error confirming the change: ' + e.message);
+    }
+  }
+
+  /* ===== Reactivate: la oficina pidio reactivar una orden cancelada y
+     archivada, y el cliente la confirma el mismo sin esperar al
+     director -- el que actue primero gana. ===== */
+  async function confirmReactivation(orderId) {
+    if (!confirm('Reactivate this order? It will go back to being active with our office.')) return;
+    try {
+      await GS.api('/confirm-reactivation', { method: 'POST', body: { orderId: orderId, clientId: client.clientId } });
+      showToast('Order reactivated. Thank you!');
+      loadOrders();
+    } catch (e) {
+      alert('Error reactivating the order: ' + e.message);
+    }
+  }
+
+  /* ===== Drafts ===== */
+  function continueDraft(orderId) {
+    location.href = 'customer.html?continue=' + encodeURIComponent(orderId);
+  }
+
+  function openDeleteDraft(orderId) {
+    if (!confirm('Delete this draft? Its order number will be released.')) return;
+    GS.api('/delete-draft', { method: 'POST', body: { orderId: orderId } })
+      .then(() => loadOrders())
+      .catch(e => alert('Error deleting draft: ' + e.message));
+  }
+
+  function editOrder(orderId) {
+    location.href = 'customer.html?edit=' + encodeURIComponent(orderId);
+  }
+
+  /* ===== Cancel request ===== */
+  function openCancelDialog(orderId) {
+    $('cancel-order-id').textContent = orderId;
+    $('cancel-error').textContent = '';
+    $('cancel-dialog').classList.add('open');
+  }
+  function closeCancelDialog() { $('cancel-dialog').classList.remove('open'); }
+  async function confirmCancel() {
+    const orderId = $('cancel-order-id').textContent;
+    const btn = $('cancel-confirm-btn');
+    btn.disabled = true; btn.textContent = 'Sending…';
+    try {
+      await GS.api('/request-change', { method: 'POST', body: { orderId: orderId, type: 'cancel', description: 'Client requested order cancellation.' } });
+      closeCancelDialog();
+      showToast('Cancellation request sent. Our office will review it and contact you.');
+      loadOrders();
+    } catch (e) {
+      $('cancel-error').textContent = 'Error: ' + e.message;
+    } finally {
+      btn.disabled = false; btn.textContent = 'Request Cancellation';
+    }
+  }
+
+  /* ============================================================
+     Request Change / Notifications -- panel inline de 2 columnas
+     dentro de la misma tarjeta, NO ventana emergente. Mismo patron
+     ya usado en Update Services del portal de Supervisor
+     (tech.gsocd.com): un solo panel compartido por tarjeta
+     (.col-right, id="sidepanel-<orderId>"), que se llena segun cual
+     boton se aprieta. Solo un panel abierto a la vez -- abrir uno
+     nuevo cierra cualquier otro que estuviera abierto, sea de la
+     misma orden o de otra.
+  ============================================================ */
+  let openPanelOrderId = null;
+  let openPanelType = null; // 'change' | 'notif'
+
+  function closeOpenPanel() {
+    if (openPanelOrderId) {
+      const wrap = $('ord2col-' + openPanelOrderId);
+      if (wrap) wrap.classList.remove('open');
+    }
+    openPanelOrderId = null;
+    openPanelType = null;
+  }
+
+  /* ===== Change request ===== */
+  function toggleChangePanel(orderId) {
+    if (openPanelOrderId === orderId && openPanelType === 'change') { closeOpenPanel(); return; }
+    closeOpenPanel();
+    const wrap = $('ord2col-' + orderId);
+    if (!wrap) return;
+    openPanelOrderId = orderId;
+    openPanelType = 'change';
+    wrap.classList.add('open');
+    renderChangePanel(orderId);
+  }
+
+  function renderChangePanel(orderId) {
+    const panel = $('sidepanel-' + orderId);
+    if (!panel) return;
+    /* Las fechas llegan prellenadas con las que la orden tiene hoy, para
+       que el cliente vea de donde parte. Si no las toca, no pide cambio
+       de fecha: solo se manda lo que realmente sea distinto. */
+    const o = (ordersCache || []).find(x => x.OrderID === orderId) || {};
+    const entryVal = dateInputValue(o.EntryDate);
+    const dueVal = dateInputValue(o.DueDate);
+    const current = o.ServiceWindow || '';
+    const windowOptions = ['<option value="">Keep the current window' + (current ? ' (' + current + ')' : '') + '</option>']
+      .concat(SERVICE_WINDOWS.map(w => '<option value="' + escAttr(w) + '"' +
+        (w === current ? ' selected' : '') + '>' + esc(w) + '</option>')).join('');
+
+    panel.innerHTML = `
+      <p class="detail-label" style="margin-bottom:4px">Request a change</p>
+      <p style="font-size:12px;color:var(--gray);margin-bottom:18px;line-height:1.6">Tell us what you'd like to change about order ${esc(orderId)}. Our office will review your request and contact you.</p>
+      <div class="field">
+        <label>Describe the change</label>
+        <textarea id="panel-change-text" placeholder="e.g. I need to reschedule the entry date..."></textarea>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>New entry date (optional)</label>
+          ${GSDateTimePicker.dateHtml('panel-change-entry', entryVal)}
+        </div>
+        <div class="field">
+          <label>New due date (optional)</label>
+          ${GSDateTimePicker.dateHtml('panel-change-due', dueVal)}
+        </div>
+      </div>
+      <div class="field">
+        <label>Preferred service window (optional)</label>
+        <select id="panel-change-window">${windowOptions}</select>
+      </div>
+      <p style="font-size:11px;color:var(--gray);line-height:1.6;margin-bottom:16px">Dates and service windows are a request only. Nothing changes until our office approves it, and you will receive the confirmed dates by email.</p>
+      <div class="dialog-btns">
+        <button type="button" class="btn-ghost" onclick="closeOpenPanel()">Cancel</button>
+        <button type="button" class="btn-gold" id="panel-change-submit-btn" onclick="submitChangePanel('${escAttr(orderId)}')">Send Request</button>
+      </div>
+      <p class="dialog-error" id="panel-change-error"></p>`;
+
+    /* GSDateTimePicker.dateHtml() no acepta atributos custom -- se
+       pone data-original a mano justo despues de insertar, mismo dato
+       que ya traia el input nativo, para que submitChangePanel siga
+       pudiendo comparar "lo toco o no" sin tocar esa logica. */
+    $('panel-change-entry').dataset.original = entryVal;
+    $('panel-change-due').dataset.original = dueVal;
+  }
+
+  async function submitChangePanel(orderId) {
+    const txt = $('panel-change-text').value.trim();
+    if (!txt) { $('panel-change-error').textContent = 'Please describe the change.'; return; }
+
+    const entryEl = $('panel-change-entry'), dueEl = $('panel-change-due');
+    const entryDate = entryEl.value !== (entryEl.dataset.original || '') ? entryEl.value : '';
+    const dueDate   = dueEl.value !== (dueEl.dataset.original || '') ? dueEl.value : '';
+    const serviceWindow = $('panel-change-window').value;
+
+    if (entryDate && dueDate && entryDate > dueDate) {
+      $('panel-change-error').textContent = 'The due date cannot be earlier than the entry date.';
+      return;
+    }
+
+    const btn = $('panel-change-submit-btn');
+    btn.disabled = true; btn.textContent = 'Sending…';
+    try {
+      await GS.api('/request-change', { method: 'POST', body: {
+        orderId: orderId, type: 'change', description: txt,
+        entryDate: entryDate, dueDate: dueDate, serviceWindow: serviceWindow
+      } });
+      closeOpenPanel();
+      showToast('Your request was sent. Our office will review it and you will receive the confirmed dates by email.');
+      loadOrders();
+    } catch (e) {
+      $('panel-change-error').textContent = 'Error: ' + e.message;
+    } finally {
+      btn.disabled = false; btn.textContent = 'Send Request';
+    }
+  }
+
+  /* ===== Notifications por orden individual ===== */
+  function orderToggleUiValue(v) {
+    if (v === 'Yes') return 'on';
+    if (v === 'No') return 'off';
+    return 'inherit';
+  }
+
+  function toggleNotifPanel(o) {
+    const orderId = o.OrderID;
+    if (openPanelOrderId === orderId && openPanelType === 'notif') { closeOpenPanel(); return; }
+    closeOpenPanel();
+    const wrap = $('ord2col-' + orderId);
+    if (!wrap) return;
+    openPanelOrderId = orderId;
+    openPanelType = 'notif';
+    wrap.classList.add('open');
+    renderNotifPanel(o);
+  }
+
+  function notifSelectHtml(id, value) {
+    const v = orderToggleUiValue(value);
+    return '<select id="' + id + '">' +
+      '<option value="inherit"' + (v === 'inherit' ? ' selected' : '') + '>Account default</option>' +
+      '<option value="on"' + (v === 'on' ? ' selected' : '') + '>On</option>' +
+      '<option value="off"' + (v === 'off' ? ' selected' : '') + '>Off</option>' +
+      '</select>';
+  }
+
+  async function renderNotifPanel(o) {
+    const panel = $('sidepanel-' + o.OrderID);
+    if (!panel) return;
+    panel.innerHTML = '<p class="empty-note">Loading…</p>';
+
+    let contacts = [];
+    try {
+      const data = await GS.api('/get-client-contacts', { method: 'POST', body: { clientId: client.clientId, includeArchived: false } });
+      contacts = data.contacts || [];
+    } catch (e) { contacts = []; }
+
+    /* Si se cerro el panel o se cambio a otro mientras esto cargaba,
+       no pintar nada -- evita que una respuesta tardia sobreescriba
+       lo que el usuario ya esta viendo. */
+    if (openPanelOrderId !== o.OrderID || openPanelType !== 'notif') return;
+
+    let contactOptHtml = '<option value="">Account default</option>';
+    contacts.forEach(c => {
+      contactOptHtml += '<option value="' + escAttr(c.id) + '"' + (o.OrderContactId === c.id ? ' selected' : '') + '>' + esc(c.name) + ' (' + esc(c.type) + ')</option>';
+    });
+
+    const needsConfirmation = !!orderNeedsConfirmationCache[o.OrderID];
+
+    panel.innerHTML = `
+      <p class="detail-label" style="margin-bottom:4px">Notifications for ${esc(o.OrderID)}</p>
+      <p style="font-size:12px;color:var(--gray);margin-bottom:18px;line-height:1.6">These settings apply only to this order. Leave as "Account default" to use your regular Profile settings.</p>
+      <div class="field">
+        <label>Notifications for this order</label>
+        ${notifSelectHtml('panel-notif-enabled', o.OrderNotificationsEnabled)}
+      </div>
+      <div class="field">
+        <label>Confirmations</label>
+        ${notifSelectHtml('panel-notif-confirmations', o.OrderNotifyConfirmations)}
+        ${needsConfirmation ? '<p style="font-size:11px;color:var(--gold-dk);margin-top:6px">This order currently needs your confirmation — you\'ll still be notified about that specific request even if this is off.</p>' : ''}
+      </div>
+      <div class="field">
+        <label>Changes</label>
+        ${notifSelectHtml('panel-notif-changes', o.OrderNotifyChanges)}
+      </div>
+      <div class="field">
+        <label>Updates</label>
+        ${notifSelectHtml('panel-notif-updates', o.OrderNotifyUpdates)}
+      </div>
+      <div class="field">
+        <label>Who receives notifications for this order</label>
+        <select id="panel-notif-contact">${contactOptHtml}</select>
+      </div>
+      <div class="dialog-btns">
+        <button type="button" class="btn-ghost" onclick="closeOpenPanel()">Cancel</button>
+        <button type="button" class="btn-gold" id="panel-notif-save-btn" onclick="submitNotifPanel('${escAttr(o.OrderID)}')">Save</button>
+      </div>
+      <p class="dialog-error" id="panel-notif-error"></p>`;
+    if (!o.OrderContactId) $('panel-notif-contact').value = '';
+  }
+
+  async function submitNotifPanel(orderId) {
+    const body = {
+      clientId:             client.clientId,
+      orderId:              orderId,
+      notificationsEnabled: $('panel-notif-enabled').value,
+      notifyConfirmations:  $('panel-notif-confirmations').value,
+      notifyChanges:        $('panel-notif-changes').value,
+      notifyUpdates:        $('panel-notif-updates').value,
+      contactId:            $('panel-notif-contact').value
+    };
+    const btn = $('panel-notif-save-btn');
+    btn.disabled = true;
+    try {
+      await GS.api('/save-order-notifications', { method: 'POST', body });
+      closeOpenPanel();
+      showToast('Notification settings updated for this order.');
+      delete orderDetailCache[orderId];
+      loadOrders();
+    } catch (e) {
+      $('panel-notif-error').textContent = e.message;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  /* ===== Add a Unit a un PO ya existente ===== */
+  let addUnitBatchId = null;
+  let addUnitBuildingsCache = null;
+
+  async function openAddBatchUnit(batchId) {
+    addUnitBatchId = batchId;
+    $('addunit-po-id').textContent = client.clientId + '-' + batchId;
+    $('addunit-error').textContent = '';
+    $('addunit-unit-number').value = '';
+    $('addunit-bedrooms').value = '';
+    $('addunit-bathrooms').value = '';
+    $('addunit-entry-date-mount').innerHTML = GSDateTimePicker.dateHtml('addunit-entry-date', '');
+    $('addunit-due-date-mount').innerHTML = GSDateTimePicker.dateHtml('addunit-due-date', '');
+
+    if (!addUnitBuildingsCache) {
+      try {
+        const data = await GS.api('/get-client-addresses', { method: 'POST', body: { clientId: client.clientId, includeArchived: false } });
+        addUnitBuildingsCache = data.addresses || [];
+      } catch (e) {
+        addUnitBuildingsCache = [];
+      }
+    }
+    let optHtml = '<option value="CLIENT_ADDRESS">Use my address (' + esc(client.address || client.businessName || 'on file') + ')</option>';
+    addUnitBuildingsCache.forEach(b => {
+      optHtml += '<option value="' + escAttr(b.id) + '">' + esc(b.label || 'Building') + (b.buildingNumber ? ' #' + esc(b.buildingNumber) : '') + '</option>';
+    });
+    $('addunit-building').innerHTML = optHtml;
+
+    $('addunit-dialog').classList.add('open');
+  }
+
+  function closeAddBatchUnit() {
+    $('addunit-dialog').classList.remove('open');
+    addUnitBatchId = null;
+  }
+
+  async function submitAddBatchUnit() {
+    if (!addUnitBatchId) return;
+    const errEl = $('addunit-error');
+    errEl.textContent = '';
+
+    const buildingId = $('addunit-building').value;
+    const unitNumber = $('addunit-unit-number').value.trim();
+    const bedrooms = $('addunit-bedrooms').value.trim();
+    const bathrooms = $('addunit-bathrooms').value.trim();
+    const entryDateVal = $('addunit-entry-date').value;
+    const dueDateVal = $('addunit-due-date').value;
+
+    if (!buildingId)  { errEl.textContent = 'Please choose a building.'; return; }
+    if (!unitNumber)  { errEl.textContent = 'Please enter the Unit Number.'; return; }
+    if (!bedrooms || parseInt(bedrooms) < 1)  { errEl.textContent = 'Please enter a valid number of Bedrooms.'; return; }
+    if (!bathrooms || parseInt(bathrooms) < 1) { errEl.textContent = 'Please enter a valid number of Bathrooms.'; return; }
+    if (!entryDateVal) { errEl.textContent = 'Please enter the entry date.'; return; }
+    if (!dueDateVal)   { errEl.textContent = 'Please enter the due date.'; return; }
+
+    const body = {
+      clientId:   client.clientId,
+      batchId:    addUnitBatchId,
+      buildingId: buildingId,
+      unitNumber: unitNumber,
+      bedrooms:   bedrooms,
+      bathrooms:  bathrooms,
+      entryDate:  new Date(entryDateVal + 'T08:00').toISOString(),
+      dueDate:    new Date(dueDateVal + 'T23:59:59').toISOString()
+    };
+
+    $('addunit-save-btn').disabled = true;
+    try {
+      await GS.api('/add-batch-unit', { method: 'POST', body });
+      closeAddBatchUnit();
+      showToast('Unit added to ' + client.clientId + '-' + addUnitBatchId + '.');
+      loadOrders();
+    } catch (e) {
+      errEl.textContent = e.message;
+    } finally {
+      $('addunit-save-btn').disabled = false;
+    }
+  }
+
+  /* submitChange() (vieja, basada en el modal) fue reemplazada por
+     submitChangePanel() arriba -- ver el bloque de Request Change /
+     Notifications al inicio de esta seccion. */
+
+  /* ===== PDF guardado de la orden =====
+     Nunca se genera aqui: se abre el archivo que ya vive en SharePoint,
+     idéntico al que el cliente recibió por correo. */
+  function openOrderDocument(orderId) {
+    window.open('/api/get-order-document?orderId=' + encodeURIComponent(orderId), '_blank');
+  }
+
+  /* ===== Print PDF (History) — CONECTADO al botón de las Completed.
+     Formato provisional mientras se define el definitivo
+     (réplica del Excel con Nivel 1/2/3 + X en la celda contigua). */
+  async function printOrder(orderId) {
+    /* window.open() debe pasar en el MISMO instante sincronico del
+       clic -- si se abre despues de un await (como estaba antes), el
+       navegador ya no lo reconoce como "resultado directo del clic" y
+       puede bloquear el popup en silencio, sin ningun aviso visible
+       para el usuario mas alla de un iconito chico en la barra de
+       direcciones, facil de no notar. Se abre la ventana YA, con un
+       mensaje de carga, y se llena con el contenido real cuando
+       llegue la respuesta. */
+    const w = window.open('', '_blank');
+    if (w) {
+      w.document.write('<!DOCTYPE html><html><head><title>Order ' + esc(orderId) + '</title></head>' +
+        '<body style="font-family:Arial,sans-serif;padding:40px;color:#666">Loading order details…</body></html>');
+      w.document.close();
+    }
+    try {
+      const data = await GS.api('/get-order-detail', { method: 'POST', body: { orderId: orderId, clientId: client.clientId } });
+      const o = data.order || {};
+      const services = data.services || [];
+
+      const byCat = {};
+      services.forEach(s => {
+        const cat = s.Category || 'General';
+        if (!byCat[cat]) byCat[cat] = [];
+        byCat[cat].push(s);
+      });
+
+      if (!w) {
+        alert('Your browser blocked the print window. Please allow pop-ups for this site and try again.');
+        return;
+      }
+      w.document.open();
+      w.document.write(`<!DOCTYPE html><html><head><title>Order ${esc(orderId)}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 40px; color: #111; }
+          h1 { font-size: 20px; border-bottom: 2px solid #C9A84C; padding-bottom: 8px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+          td { padding: 6px 8px; border-bottom: 1px solid #ddd; font-size: 13px; }
+          td:first-child { font-weight: bold; width: 180px; }
+          .cat { margin-top: 14px; font-size: 13px; }
+          .cat b { color: #8C6F2A; }
+        </style></head><body>
+        <h1>GS Solutions Inc. — Order ${esc(orderId)}</h1>
+        <table>
+          <tr><td>Status</td><td>${esc(o.Status || '')}</td></tr>
+          <tr><td>Division</td><td>${esc(o.Division || '')}</td></tr>
+          <tr><td>Client</td><td>${esc(o.BusinessName || '')} (${esc(o.ClientID || '')})</td></tr>
+          <tr><td>Address</td><td>${esc([o.Address, o.Suite, o.City, o.Zip].filter(Boolean).join(', '))}</td></tr>
+          <tr><td>Building/Unit</td><td>${esc(o.BuildingNumber || '—')} / ${esc(o.UnitNumber || '—')}</td></tr>
+          <tr><td>Bed/Bath</td><td>${esc(o.Bedrooms || '—')} / ${esc(o.Bathrooms || '—')}</td></tr>
+          <tr><td>Entry</td><td>${fmtDateTime(o.EntryDate)}</td></tr>
+          <tr><td>Due</td><td>${fmtDate(o.DueDate)}</td></tr>
+          ${o.DirtLevel ? `<tr><td>Overall condition</td><td>${esc(o.DirtLevel)}</td></tr>` : ''}
+          ${o.Notes ? `<tr><td>Notes</td><td>${esc(o.Notes)}</td></tr>` : ''}
+        </table>
+        ${Object.entries(byCat).map(([cat, list]) =>
+          `<div class="cat"><b>${esc(cat)}:</b> ${list.map(s => esc(s.ServiceName) + (svcSubLabel(s) ? ' — ' + esc(svcSubLabel(s)) : '')).join(' · ')}</div>`
+        ).join('')}
+        </body></html>`);
+      w.document.close();
+      w.focus();
+      setTimeout(() => { w.print(); }, 400);
+    } catch (e) {
+      if (w) {
+        w.document.open();
+        w.document.write('<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;padding:40px;color:#B33A3A">Could not prepare the print view: ' + esc(e.message) + '</body></html>');
+        w.document.close();
+      } else {
+        alert('Could not prepare the print view: ' + e.message);
+      }
+    }
+  }
+
+  /* ===== Helpers ===== */
+  /* esc ya existe en customer.html, identica. */
+  function escAttr(s) { return esc(s).replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+  function fmtDateTime(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  }
+
+  window.toggleOrder = function (el, orderId) {
+    const body = el.nextElementSibling;
+    const context = body.closest('#processing-container') ? 'processing' : 'history';
+    const st = cardOpenState(context);
+    if (st.pinned[orderId]) return; // fijada: solo el doble clic la mueve
+    const isOpen = body.classList.contains('open');
+    if (isOpen) {
+      body.classList.remove('open');
+      if (st.open === orderId) st.open = null;
+      return;
+    }
+    closeOtherCards(context, orderId);
+    body.classList.add('open');
+    st.open = orderId;
+  };
+
+  /* Doble clic fija una tarjeta abierta (draft, active order, o
+     completada) con un candadito, sin importar la seccion. */
+  window.pinOrder = function (headerEl, orderId, context) {
+    const body = headerEl.nextElementSibling;
+    const st = cardOpenState(context);
+    const pinEl = headerEl.querySelector('.order-pin');
+    if (st.pinned[orderId]) {
+      delete st.pinned[orderId];
+      if (pinEl) pinEl.innerHTML = '';
+      return;
+    }
+    st.pinned[orderId] = true;
+    if (pinEl) pinEl.innerHTML = ' &#128274;';
+    if (!body.classList.contains('open')) {
+      const onclickAttr = headerEl.getAttribute('onclick') || '';
+      if (onclickAttr.indexOf('expandOrder') === 0) {
+        expandOrder(headerEl, orderId);
+      } else {
+        body.classList.add('open');
+      }
+    }
+    st.open = orderId;
+  };
+  window.expandOrder = expandOrder;
+  window.continueDraft = continueDraft;
+  window.openDeleteDraft = openDeleteDraft;
+  window.editOrder = editOrder;
+  window.openCancelDialog = openCancelDialog;
+  window.closeCancelDialog = closeCancelDialog;
+  window.confirmCancel = confirmCancel;
+  window.closeOpenPanel = closeOpenPanel;
+  window.toggleChangePanel = toggleChangePanel;
+  window.submitChangePanel = submitChangePanel;
+  window.toggleBatchCard = toggleBatchCard;
+  window.openAddBatchUnit = openAddBatchUnit;
+  window.closeAddBatchUnit = closeAddBatchUnit;
+  window.submitAddBatchUnit = submitAddBatchUnit;
+  window.toggleNotifPanel = toggleNotifPanel;
+  window.submitNotifPanel = submitNotifPanel;
+  window.undoRequest = undoRequest;
+  window.printOrder = printOrder;
+  window.openOrderDocument = openOrderDocument;
+  window.doSignout = doSignout;
+  window.confirmNotReady = confirmNotReady;
+  window.saveExpectedReadyDate = saveExpectedReadyDate;
+  window.showSection = showSection;
+  /* async function llamada por onchange="..." (atributo HTML inline)
+     -- las 'function' normales dentro de este bloque if(client){} SI
+     se filtran solas al scope global por compatibilidad legacy de
+     navegadores (Annex B), pero las 'async function' estan EXCLUIDAS
+     a proposito de ese mecanismo. Sin esto, el switch de "is someone
+     living there" tronaba en silencio (onUnitOccupiedToggle is not
+     defined) y nunca guardaba nada -- por eso nunca pasaba de No a
+     Yes de verdad. */
+  window.onUnitOccupiedToggle = onUnitOccupiedToggle;
+
+  loadOrders();
   window.doSignout = doSignout;
 }
 </script>
