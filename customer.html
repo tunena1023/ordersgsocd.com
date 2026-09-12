@@ -593,6 +593,52 @@
   @media (max-width: 768px) {
     #panel-recurring .wrap, #panel-recurring .gallery-view { padding: 24px 20px 60px; }
   }
+
+  /* ============================================================
+     PANEL TEMPLATES -- reglas de templates.html (su propia
+     pagina antes de unirla aqui), encapsuladas bajo
+     #panel-templates.
+  ============================================================ */
+  #panel-templates .wrap { padding: 40px 48px; }
+  #panel-templates .wrap h2 { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 600; margin-bottom: 6px; }
+  #panel-templates .list-sub { font-size: 12px; color: var(--gray); margin-bottom: 24px; line-height: 1.6; }
+  #panel-templates .subtabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 28px; }
+  #panel-templates .subtab { padding: 10px 4px; margin-right: 28px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gray); cursor: pointer; border-bottom: 2px solid transparent; background: none; border-left: none; border-right: none; border-top: none; font-family: inherit; }
+  #panel-templates .subtab.active { color: var(--black); border-bottom-color: var(--gold); }
+  #panel-templates .subview { display: none; }
+  #panel-templates .subview.active { display: block; }
+  #panel-templates .empty-note { color: var(--gray); font-size: 13px; padding: 40px 0; text-align: center; }
+  #panel-templates .add-tpl-btn { display: inline-flex; align-items: center; gap: 6px; background: var(--gold); color: var(--black); border: none; padding: 11px 20px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; cursor: pointer; margin-bottom: 22px; font-family: inherit; }
+  #panel-templates .add-tpl-btn:hover { background: var(--gold-lt); }
+  #panel-templates .tpl-card { border: 1px solid var(--border); background: var(--white); padding: 18px 22px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; cursor: pointer; }
+  #panel-templates .tpl-card-wrap { border: 1px solid var(--border); margin-bottom: 12px; }
+  #panel-templates .tpl-card-wrap .tpl-card { border: none; margin-bottom: 0; }
+  #panel-templates .tpl-name { font-family: 'Cormorant Garamond', serif; font-size: 19px; font-weight: 600; }
+  #panel-templates .tpl-meta { font-size: 12px; color: var(--gray); margin-top: 3px; }
+  #panel-templates .tpl-badge { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gold-dk); background: #FDF3E0; padding: 2px 9px; border-radius: 12px; margin-right: 8px; }
+  #panel-templates .tpl-badge-shared { color: var(--gray); background: var(--off); }
+  #panel-templates .tpl-actions { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
+  #panel-templates .tpl-detail { display: none; border-top: 1px solid var(--border); background: var(--off); padding: 16px 22px; }
+  #panel-templates .tpl-detail.open { display: block; }
+  #panel-templates .tpl-svc-row { font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; gap: 12px; }
+  #panel-templates .tpl-svc-row:last-of-type { border-bottom: none; margin-bottom: 14px; }
+  #panel-templates .tpl-svc-cat { color: var(--gold-dk); font-weight: 600; }
+  #panel-templates .tpl-svc-sub { color: var(--gray); }
+  #panel-templates .btn-gold { background: var(--gold); color: var(--black); border: none; padding: 10px 22px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; cursor: pointer; font-family: inherit; }
+  #panel-templates .btn-gold:hover { background: var(--gold-lt); }
+  #panel-templates .btn-outline { background: var(--white); border: 1.5px solid var(--border); color: var(--black); padding: 9px 20px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; cursor: pointer; font-family: inherit; }
+  #panel-templates .btn-outline:hover { border-color: var(--gold); }
+  #panel-templates .btn-text-danger { background: none; border: none; color: #B33A3A; font-size: 11px; text-decoration: underline; cursor: pointer; letter-spacing: .03em; font-family: inherit; }
+  #panel-templates .field-wrap { margin-bottom: 24px; max-width: 420px; }
+  #panel-templates .field-wrap label { display: block; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--gray); margin-bottom: 6px; }
+  #panel-templates .field-wrap input[type=text] { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); font-size: 14px; font-family: inherit; }
+  #panel-templates .flash-empty { font-size: 12px; color: var(--gray); font-style: italic; padding: 20px 0; }
+  #panel-templates .save-row { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border); max-width: 420px; }
+  @media (max-width: 640px) {
+    #panel-templates nav, #panel-templates .portal-header, #panel-templates .tabs, #panel-templates .wrap, #panel-templates footer { padding-left: 20px; padding-right: 20px; }
+    #panel-templates .tpl-card { flex-direction: column; align-items: flex-start; }
+    #panel-templates .svc-chip-grid, #panel-templates .jan-row-grid { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
@@ -862,6 +908,54 @@ style="object-fit:contain">
 </div>
 </div>
 
+<!-- TEMPLATES -->
+<div class="panel" id="panel-templates">
+<div class="wrap">
+  <h2>Templates</h2>
+  <p class="list-sub">Saved combos of services you use often. Load one to start a new order without rebuilding it from scratch — you'll still fill in the dates, address and any other details for that order.</p>
+
+  <div class="subtabs">
+    <button type="button" class="subtab active" data-view="saved" onclick="showSubview('saved')">Saved</button>
+    <button type="button" class="subtab" data-view="add" onclick="startNewTemplate()">+ Add Template</button>
+  </div>
+
+  <!-- ===== SAVED ===== -->
+  <div class="subview active" id="subview-saved">
+    <button type="button" class="add-tpl-btn" onclick="startNewTemplate()">+ Add Template</button>
+    <div id="tpl-list"><p class="empty-note">Loading…</p></div>
+  </div>
+
+  <!-- ===== ADD TEMPLATE ===== -->
+  <div class="subview" id="subview-add">
+    <div class="field-wrap">
+      <label>Template name</label>
+      <input type="text" id="tpl-name" placeholder="e.g. Monthly common area clean">
+    </div>
+
+    <div class="gs-ofp-card gs-ofp-card-3" id="tpl-div-card">
+      <svg class="gs-ofp-tri" style="top:calc(50% - 199px);right:-60px;width:450px;height:426px;opacity:.55" viewBox="0 0 900 851">
+        <path d="M141.77,6.05 L209.78,829.96 L892.14,356.10 Z" fill="none" stroke="#FFF3D6" stroke-width="6"/>
+      </svg>
+      <div class="gs-ofp-tabsrow" id="tpl-div-tabs">
+        <div class="gs-ofp-tab active" data-div="Janitorial" onclick="tplSelectDiv('Janitorial', this)">Janitorial</div>
+        <div class="gs-ofp-tab" data-div="Renovations" onclick="tplSelectDiv('Renovations', this)">Renovations</div>
+        <div class="gs-ofp-tab" data-div="Exteriors" onclick="tplSelectDiv('Exteriors', this)">Exteriors</div>
+      </div>
+      <div class="gs-ofp-uline-track">
+        <div class="gs-ofp-uline-active" id="tpl-div-underline" style="left:0;width:76px"></div>
+      </div>
+      <div class="gs-ofp-goldbase"></div>
+    </div>
+
+    <div id="tpl-picker"><p class="flash-empty">Loading services…</p></div>
+
+    <div class="save-row">
+      <button type="button" class="btn-gold" style="padding:14px 28px;width:100%" onclick="saveTemplate()">Save Template</button>
+    </div>
+  </div>
+</div>
+</div>
+
 <!-- Toast de notificación -->
 <div class="toast" id="toast"></div>
 
@@ -1013,7 +1107,7 @@ if (client) {
 
   GSNavPremium.init('gsNav', [
     { label: 'New Order', dataView: 'new-order', onclick: "showTab('new-order')", active: true },
-    { label: 'Templates', href: 'templates.html' },
+    { label: 'Templates', dataView: 'templates', onclick: "showTab('templates')" },
     { label: 'Processing', href: 'tracking.html#processing' },
     { label: 'History', href: 'tracking.html#history' },
     { label: 'Recurring', dataView: 'recurring', onclick: "showTab('recurring')" },
@@ -2093,6 +2187,268 @@ if (client) {
     }
   }
 
+
+  /* ============================================================
+     PANEL TEMPLATES -- JS de templates.html (su propia pagina
+     antes de unirla aqui). Renombrado lo que chocaba con el
+     picker de New Order (mismo patron, estado separado):
+     selectDiv -> tplSelectDiv, catalogCache -> tplCatalogCache,
+     currentDiv -> tplCurrentDiv, propertyType -> tplPropertyType,
+     selected -> tplSelected, svcLevel -> tplSvcLevel,
+     buildServicesArray -> tplBuildServicesArray. svcKey se
+     comparte (pura, sin estado). client/$/esc/showToast/
+     doSignout identicos, no se duplican.
+
+     De paso: openContact/closeContact/sendContact NO existian en
+     customer.html (solo el HTML/CSS del modal, sin las funciones
+     -- el link "Contact" del nav estaba roto, no hacia nada).
+     Se traen de aqui, adaptadas al patron de clase .open que ya
+     usa el contact-overlay real de esta pagina.
+  ============================================================ */
+  /* client, $, esc, showToast, doSignout ya existen en customer.html. */
+
+  /* ===== Sub-tabs ===== */
+  function showSubview(v) {
+    document.querySelectorAll('.subtab').forEach(t => t.classList.toggle('active', t.dataset.view === v));
+    $('subview-saved').classList.toggle('active', v === 'saved');
+    $('subview-add').classList.toggle('active', v === 'add');
+    if (v === 'saved') loadTemplates();
+  }
+
+  /* ===== Saved ===== */
+  let templates = [];
+
+  async function loadTemplates() {
+    try {
+      const data = await GS.api('/list-templates', { method: 'POST', body: { clientId: client.clientId } });
+      templates = data.templates || [];
+      renderTemplates();
+    } catch (e) {
+      $('tpl-list').innerHTML = '<p class="empty-note">Could not load templates: ' + esc(e.message) + '</p>';
+    }
+  }
+
+  function renderTemplates() {
+    const box = $('tpl-list');
+    if (!templates.length) {
+      box.innerHTML = '<p class="empty-note">No templates saved yet — click "+ Add Template" above to build one.</p>';
+      return;
+    }
+    box.innerHTML = templates.map(t => `
+      <div class="tpl-card-wrap">
+        <div class="tpl-card" onclick="toggleTplDetail('${t.id}')">
+          <div>
+            <div class="tpl-name">${esc(t.name)}</div>
+            <div class="tpl-meta"><span class="tpl-badge">${esc(t.division)}</span>${t.mine ? '' : '<span class="tpl-badge tpl-badge-shared">Shared</span>'}${t.services.length} service${t.services.length === 1 ? '' : 's'}</div>
+          </div>
+          <div class="tpl-actions">
+            ${t.mine ? '<button class="btn-text-danger" onclick="event.stopPropagation(); deleteTemplate(\'' + t.id + '\')">Delete</button>' : ''}
+            <button class="btn-gold" onclick="event.stopPropagation(); useTemplate('${t.id}')">Use This Template</button>
+          </div>
+        </div>
+        <div class="tpl-detail" id="tpl-detail-${t.id}">
+          ${tplServiceListHtml(t.services)}
+          ${t.mine ? '<button type="button" class="btn-outline" onclick="editTemplate(\'' + t.id + '\')">Edit</button>' : ''}
+        </div>
+      </div>`).join('');
+  }
+
+  /* Lista de solo lectura de lo que trae el template -- mismo criterio
+     visual que "Services Requested" en las ordenes reales, agrupado
+     por categoria. */
+  function tplServiceListHtml(services) {
+    if (!services || !services.length) return '<p class="empty-note" style="padding:0 0 14px">No services in this template.</p>';
+    return services.map(s =>
+      `<div class="tpl-svc-row"><span><span class="tpl-svc-cat">${esc(s.Category || '')}</span> — ${esc(s.ServiceName || '')}</span>` +
+      `<span class="tpl-svc-sub">${esc(s.Level || s.SubOption || '')}</span></div>`
+    ).join('');
+  }
+
+  function toggleTplDetail(id) {
+    const el = $('tpl-detail-' + id);
+    if (el) el.classList.toggle('open');
+  }
+
+  /* Ya no navega a otra pagina -- New Order vive en el mismo archivo
+     ahora. Cambia de panel y carga el template directo, usando la
+     misma loadFromTemplate(id) que ya existe mas abajo. */
+  function useTemplate(id) {
+    showTab('new-order');
+    loadFromTemplate(id);
+  }
+
+  async function deleteTemplate(id) {
+    if (!confirm('Delete this template? This cannot be undone.')) return;
+    try {
+      await GS.api('/delete-template', { method: 'POST', body: { templateId: id, clientId: client.clientId } });
+      showToast('Template deleted.');
+      loadTemplates();
+    } catch (e) {
+      showToast('Error: ' + e.message);
+    }
+  }
+
+  /* ===== Add Template (mismo picker que New Order, sin fechas/direccion) ===== */
+  let tplCatalogCache = [];
+  let tplCurrentDiv = 'Janitorial';
+  let tplPropertyType = 'Commercial';
+  let tplSelected = {};
+  let tplSvcLevel = {};
+    let editingTemplateId = null;   /* null = crear nuevo; id = actualizando este template */
+
+  /* svcKey ya existe en customer.html, identica (pura, sin estado). */
+
+  /* "+ Add Template" desde cero -- limpia cualquier estado que haya
+     quedado de una edicion anterior, para no arrastrar servicios de
+     OTRO template al picker en blanco. */
+  function startNewTemplate() {
+    editingTemplateId = null;
+    $('tpl-name').value = '';
+    tplCurrentDiv = 'Janitorial';
+    tplSelected = {}; tplSvcLevel = {}; tplPropertyType = 'Commercial';
+    document.querySelectorAll('#div-toggle button').forEach(b => b.classList.toggle('active', b.dataset.div === tplCurrentDiv));
+    showSubview('add');
+    renderPicker();
+  }
+
+  /* Abre el picker YA cargado con lo que trae un template existente,
+     listo para cambiarle servicios y volver a guardar -- mismo picker
+     exacto que "+ Add Template", nomas pre-llenado. */
+  function editTemplate(id) {
+    const t = templates.find(x => x.id === id);
+    if (!t) return;
+    editingTemplateId = id;
+    $('tpl-name').value = t.name;
+    tplCurrentDiv = t.division || 'Janitorial';
+    tplSelected = {}; tplSvcLevel = {}; tplPropertyType = 'Commercial';
+    (t.services || []).forEach(s => {
+      const cat = s.Category || 'Commercial';
+      if (!tplSelected[cat]) tplSelected[cat] = {};
+      tplSelected[cat][s.ServiceName] = s.SubOption;
+      if (s.Level) tplSvcLevel[svcKey(cat, s.ServiceName)] = s.Level;
+    });
+    /* La primera categoria con algo elegido es el property type real
+       de este template -- mismo criterio ya usado en customer.html. */
+    const firstCat = Object.keys(tplSelected)[0];
+    if (firstCat) tplPropertyType = firstCat;
+    document.querySelectorAll('#div-toggle button').forEach(b => b.classList.toggle('active', b.dataset.div === tplCurrentDiv));
+    showSubview('add');
+    renderPicker();
+  }
+
+  function tplSelectDiv(div, el) {
+    tplCurrentDiv = div;
+    GSOrderFormPremium.activateDivTab(div, {cardId:'tpl-div-card', tabsId:'tpl-div-tabs', underlineId:'tpl-div-underline'});
+    tplSelected = {}; tplSvcLevel = {}; tplPropertyType = 'Commercial';
+    renderPicker();
+  }
+
+  let tplPicker = null;
+
+  function renderPicker() {
+    const container = $('tpl-picker');
+    if (!tplCatalogCache.length) { container.innerHTML = '<p class="flash-empty">No services available right now — please check back shortly.</p>'; return; }
+    const isJan = tplCurrentDiv === 'Janitorial';
+
+    tplPicker = GSServicePicker.mount('template-editor', container, {
+      catalog: tplCatalogCache,
+      division: tplCurrentDiv,
+      mode: isJan ? 'levels' : 'toggle',
+      showSelectAll: isJan,
+      groupByCategory: true,
+      tplPropertyType: tplPropertyType,
+      initialSelected: tplSelected,
+      initialLevels: tplSvcLevel,
+      onChange: function (sel, lvl, propType) {
+        tplSelected = sel;
+        tplSvcLevel = lvl;
+        tplPropertyType = propType;
+      }
+    });
+  }
+
+  function tplBuildServicesArray() {
+    const out = [];
+    Object.entries(tplSelected).forEach(([propType, svcs]) => {
+      Object.entries(svcs).forEach(([svcName, sku]) => {
+        out.push({
+          Category:    propType,
+          ServiceName: svcName,
+          SubOption:   sku,
+          Division:    tplCurrentDiv,
+          Level:       tplSvcLevel[svcKey(propType, svcName)] || ''
+        });
+      });
+    });
+    return out;
+  }
+
+  async function saveTemplate() {
+    const name = $('tpl-name').value.trim();
+    const services = tplBuildServicesArray();
+    if (!name) { alert('Please give this template a name.'); return; }
+    if (!services.length) { alert('Select at least one service first — nothing is checked/filled in yet below.'); return; }
+    const btn = event && event.target;
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+    try {
+      const res = await GS.api('/save-template', {
+        method: 'POST',
+        body: { clientId: client.clientId, templateId: editingTemplateId || undefined, name, division: tplCurrentDiv, services }
+      });
+      console.log('save-template response:', res);
+      showToast(editingTemplateId ? 'Template "' + name + '" updated.' : 'Template "' + name + '" saved.');
+      $('tpl-name').value = '';
+      tplSelected = {}; tplSvcLevel = {}; editingTemplateId = null;
+      if (tplPicker) tplPicker.setSelected({}, {});
+      showSubview('saved');
+    } catch (e) {
+      console.error('save-template failed:', e);
+      alert('Could not save the template: ' + e.message);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Save Template'; }
+    }
+  }
+
+  /* Adaptado al patron de clase que ya usa el contact-overlay real
+     de customer.html (.open), en vez de tocar style.display directo. */
+  function openContact() { $('contact-overlay').classList.add('open'); }
+  function closeContact() { $('contact-overlay').classList.remove('open'); }
+  async function sendContact() {
+    const name = $('contact-name').value.trim();
+    const email = $('contact-email').value.trim();
+    const message = $('contact-message').value.trim();
+    $('contact-error').textContent = '';
+    if (!name || !email || !message) { $('contact-error').textContent = 'Please fill in all fields.'; return; }
+    try {
+      await GS.api('/submit-contact', { method: 'POST', body: { name, email, message, clientId: client.clientId } });
+      $('contact-ok').style.display = 'block';
+      setTimeout(closeContact, 1500);
+    } catch (e) {
+      $('contact-error').textContent = e.message;
+    }
+  }
+
+  /* Exponer al scope global las funciones que usan los onclick del HTML.
+     Las async function declaradas dentro de este bloque NO son visibles
+     para los atributos onclick (mismo patrón que tracking.html/customer.html) --
+     este archivo nunca tuvo este bloque, por eso "Save Template",
+     "Delete" y "Send Message" no hacian nada (ReferenceError silencioso
+     en consola, invisible sin abrir devtools). */
+  window.saveTemplate = saveTemplate;
+  window.deleteTemplate = deleteTemplate;
+  window.sendContact = sendContact;
+
+  /* ===== Carga inicial -- la barra de navegacion ya se inicializo
+     una sola vez arriba, en el flujo de customer.html. Aqui solo lo
+     que le toca especificamente a Templates. ===== */
+  GSOrderFormPremium.renderDivDecos('Janitorial', 'tpl-div-card');
+  loadTemplates();
+  GS.api('/get-services', { method: 'GET' }).then(data => {
+    tplCatalogCache = data.catalog || [];
+    renderPicker();
+  }).catch(err => {
+    $('tpl-picker').innerHTML = '<p class="flash-empty">Could not load services: ' + esc(err.message) + '</p>';
+  });
   window.doSignout = doSignout;
 }
 </script>
