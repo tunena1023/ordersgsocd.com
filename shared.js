@@ -895,5 +895,10 @@ DEMO.handle = async function (path, opts) {
 })();
 
 /* Logo automático en páginas internas — NUNCA en index (ahí es embebido).
-   toLowerCase() porque el archivo puede llamarse Index.html con mayúscula. */
-if (!location.pathname.toLowerCase().endsWith('index.html') && location.pathname !== '/' && !location.pathname.toLowerCase().endsWith('/')) GS.applyLogo();
+   toLowerCase() porque el archivo puede llamarse Index.html con mayúscula.
+   Se espera a DOMContentLoaded (mismo patrón ya confirmado en Tech, que
+   funciona bien) -- llamarlo de inmediato, sin esperar nada, es mas fragil
+   en paginas mas pesadas como customer.html (junta 4 paginas ahora). */
+if (!location.pathname.toLowerCase().endsWith('index.html') && location.pathname !== '/' && !location.pathname.toLowerCase().endsWith('/')) {
+  document.addEventListener('DOMContentLoaded', () => GS.applyLogo());
+}
