@@ -2262,7 +2262,16 @@ if (client) {
 
     let unitsPayload = null;
     if (multiUnitsOn) {
-      unitsPayload = gatherUnitsRaw();
+      /* Las tarjetas que se crean por default (3 al prender Multiple
+         Units) pueden quedar sin usarse -- si el cliente solo llena 2
+         de 3, la tercera completamente vacia se descarta en silencio
+         en vez de bloquear el envio pidiendo que la llene. Una tarjeta
+         PARCIALMENTE llena (le falta un campo, pero tiene otros) SI se
+         sigue validando completa -- ahi lo mas probable es que se le
+         haya olvidado algo, no que la dejo vacia a proposito. */
+      const gathered = gatherUnitsRaw();
+      unitsPayload = gathered.filter(u => u.buildingId || u.unitNumber || u.bedrooms || u.bathrooms);
+      if (!unitsPayload.length) { alert('Please fill in at least one unit.'); return; }
       for (const u of unitsPayload) {
         if (!u.buildingId) { alert('Please choose a building for every unit.'); return; }
         if (!u.unitNumber) { alert('Please enter the Unit Number for every unit.'); return; }
