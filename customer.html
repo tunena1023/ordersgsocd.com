@@ -8,6 +8,12 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+  /* Quitar las flechitas de subir/bajar de todos los campos numericos,
+     en toda la pagina -- se ven feas y no aportan nada aqui. */
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; }
+
   :root {
     --black:   #111111;
     --gold:    #C9A84C;
@@ -85,9 +91,96 @@
   .yn-btn.active { background: var(--gold); color: var(--black); border-color: var(--gold); }
 
   .toggle-b { position: relative; width: 74px; height: 32px; border-radius: 16px; background: var(--border); cursor: pointer; flex-shrink: 0; }
+
+  /* Header fijo arriba de Building/Unit/Bed/Bath -- el switch y el
+     boton de agregar unidad SIEMPRE estan aqui, nunca se mueven ni
+     desaparecen; solo cambia lo de abajo (campos vs. lista de
+     unidades) segun el modo. */
+  .gs-ofp-unit-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .gs-ofp-add-unit-link {
+    background: none; border: none; color: var(--gold-dk); cursor: pointer;
+    font-size: 12px; font-weight: 600; font-family: 'Inter', sans-serif; letter-spacing: .02em;
+    padding: 0; transition: color .2s;
+  }
+  .gs-ofp-add-unit-link:hover { color: var(--gold); text-decoration: underline; }
   .toggle-b-thumb { position: absolute; top: 3px; left: 3px; width: 44px; height: 26px; background: var(--white); border-radius: 13px; transition: transform .2s cubic-bezier(.4,0,.2,1); box-shadow: 0 1px 3px rgba(0,0,0,.2); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: var(--gray); }
   .toggle-b.on { background: var(--gold); }
   .toggle-b.on .toggle-b-thumb { transform: translateX(27px); color: var(--black); }
+
+  /* ===== Las 3 tarjetas premium del flujo (aprobadas en mini):
+     profundidad real (sombras en capas), el triangulo real del logo
+     por su CENTRO (verificado con render, no un vertice al azar),
+     linea dorada con destello lento abajo. El tono se va calentando
+     de un paso a otro -- negro -> bronce -> dorado -- como indicador
+     de que tan avanzado vas. */
+  
+  
+  
+  
+  
+  
+  
+
+  
+  
+  
+
+  
+  
+  
+  
+
+  /* Acceso de oficina: candado en vez de switch generico -- se
+     ilumina en dorado cuando esta prendido (setOfficeNeed ya lo
+     conecta). */
+  
+  
+  
+  
+  
+  
+  
+  
+
+  /* ===== Caja de notas de "que necesitamos de la oficina": mas
+     grande, fondo blanco (destaca contra la tarjeta oscura), con la
+     etiqueta como una esquinita dentro de la caja en vez de arriba. ===== */
+  
+  
+  
+
+  /* Paso 3: mismo mode-toggle de siempre, nomas mas claro para
+     contrastar contra el fondo dorado (texto oscuro en el activo). */
+  .mode-toggle-gold button.active { background: #FFF3D6; color: #111; }
+  .mode-toggle-gold button:not(.active) { color: #F5E9C8; }
+  .mode-toggle-gold { position: relative; z-index: 2; border-color: rgba(255,255,255,.2); }
+
+  /* ===== Selector de division: pestanas subrayadas con destellos/
+     herramientas animadas por division (aprobado en mini, nunca antes
+     puesto en el archivo real). ===== */
+  
+  
+  
+  
+  
+  
+  
+
+  /* ===== Building/Unit/Bed/Bath: switch redondito + campos con linea
+     inferior en vez de recuadro completo, todo en una sola linea en
+     escritorio (aprobado en mini) -- se apila en movil. ===== */
+  
+  
+  
+  
+  
+  
+  @media (max-width: 720px) {
+    .gs-ofp-unitrow { flex-wrap: wrap; }
+    .gs-ofp-unitfield { flex: 1 1 calc(50% - 13px); }
+    
+    .gs-ofp-unitline .gs-ofp-unitfield { flex: 1 1 calc(50% - 9px); }
+  }
 
   /* Solo mobile -- confirmado con el usuario: fotos del cliente NUNCA
      existen en desktop, ni ocultas, no existen. */
@@ -110,10 +203,12 @@
   .mode-toggle button.active { background: var(--gold); color: var(--black); }
   .mode-toggle button:not(:last-child) { border-right: 1.5px solid var(--border); }
 
-  .unit-card { border: 1.5px solid var(--border); padding: 18px 20px; margin-bottom: 14px; background: var(--white); position: relative; }
-  .unit-card-title { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--gold-dk); font-weight: 700; margin-bottom: 14px; }
-  .unit-remove-btn { position: absolute; top: 14px; right: 16px; background: none; border: none; color: var(--gray); cursor: pointer; font-size: 18px; line-height: 1; padding: 0 4px; }
-  .unit-remove-btn:hover { color: #B33A3A; }
+  .gs-ofp-unitline { display: flex; align-items: flex-end; gap: 18px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+  
+  
+  
+  
+  .gs-ofp-unit-remove:hover { color: #B33A3A; }
 
   .field-row.three { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; margin-top: 14px; }
   .field-row .field-wrap { margin-bottom: 0; }
@@ -490,85 +585,124 @@ style="object-fit:contain">
         <div id="edit-banner">Editing order <strong id="edit-order-id"></strong> — your changes will be sent to our office for review. The order stays in Processing.</div>
 
         <div class="step-label">Step 1 of 3</div>
-        <div class="step-title">Select a division</div>
-        <div class="mode-toggle">
-          <button type="button" class="active" data-div="Janitorial" onclick="selectDiv('Janitorial', this)">Janitorial</button>
-          <button type="button" data-div="Renovations" onclick="selectDiv('Renovations', this)">Renovations</button>
-          <button type="button" data-div="Exteriors" onclick="selectDiv('Exteriors', this)">Exteriors</button>
-        </div>
+        <div class="step-title">Where is this?</div>
 
-        <div class="step-label">Step 2 of 3</div>
-        <div class="step-title">Select your services</div>
-        <div class="services-section" id="services-container"><p class="flash-empty">Loading services…</p></div>
-
-        <div class="step-label">Step 3 of 3</div>
-        <div class="step-title">Dates &amp; property details</div>
-
-        <div class="field-wrap" style="margin-bottom:24px" id="account-location-wrap">
-          <label>Billing Address</label>
-          <div id="account-details-block" style="border:1.5px solid var(--border);background:var(--off);padding:16px 18px;font-size:13px;line-height:1.9;color:var(--black)">
-            <div><strong id="ad-business">—</strong></div>
-            <div id="ad-address">—</div>
-            <div id="ad-citystatezip">—</div>
-            <div style="margin-top:6px;color:var(--gray);font-size:12px" id="ad-email">—</div>
+        <div class="gs-ofp-card gs-ofp-card-1">
+          <svg class="gs-ofp-tri" style="top:calc(50% - 199px);left:-31px;width:450px;height:426px;opacity:.4" viewBox="0 0 900 851">
+            <path d="M141.77,6.05 L209.78,829.96 L892.14,356.10 Z" fill="none" stroke="#E8CE85" stroke-width="6"/>
+          </svg>
+          <div id="account-details-block">
+            <div class="gs-ofp-name"><strong id="ad-business">—</strong></div>
+            <div class="gs-ofp-lines"><span id="ad-address">—</span><br><span id="ad-citystatezip">—</span></div>
+            <div class="gs-ofp-email" id="ad-email">—</div>
           </div>
+          <div class="gs-ofp-goldbase"></div>
         </div>
 
-        <div class="mode-toggle">
-          <button type="button" id="mode-single-btn" class="active" onclick="setOrderMode('single')">Single Unit</button>
-          <button type="button" id="mode-multi-btn" onclick="setOrderMode('multi')">Multiple Units</button>
+        <div class="gs-ofp-unit-header">
+          <div class="toggle-b" id="unit-mode-toggle" onclick="toggleUnitMode()">
+            <div class="toggle-b-thumb" id="unit-mode-thumb">Single</div>
+          </div>
+          <button type="button" id="add-unit-btn" class="gs-ofp-add-unit-link" style="display:none" onclick="addUnitCard()">+ Add Another Unit</button>
         </div>
-
-        <div class="property-grid" id="single-unit-fields">
-          <div class="field-wrap">
-            <label>Building #</label>
+        <div class="gs-ofp-unitrow" id="single-unit-fields">
+          <div class="gs-ofp-unitfield">
+            <div class="gs-ofp-unitfield-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 21V5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v16"/><path d="M12 21V9a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v12"/><path d="M8 8h1M8 12h1M8 16h1M16 12h1M16 16h1"/></svg>
+              Building #
+            </div>
             <input type="text" id="building-number" placeholder="e.g. 1215" />
           </div>
-          <div class="field-wrap">
-            <label>Unit #</label>
+          <div class="gs-ofp-unitfield">
+            <div class="gs-ofp-unitfield-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 10h16"/></svg>
+              Unit #
+            </div>
             <input type="text" id="unit-number" placeholder="e.g. 205" />
           </div>
-          <div class="field-wrap">
-            <label>Bedrooms</label>
+          <div class="gs-ofp-unitfield">
+            <div class="gs-ofp-unitfield-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4"/><path d="M2 10h20v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-3z"/><path d="M2 18l1-4M22 18l-1-4"/></svg>
+              Bedrooms
+            </div>
             <input type="number" id="bedrooms" placeholder="e.g. 2" min="1" max="5" />
           </div>
-          <div class="field-wrap">
-            <label>Bathrooms</label>
+          <div class="gs-ofp-unitfield">
+            <div class="gs-ofp-unitfield-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12h16M4 12a2 2 0 0 0-2 2v1a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-1a2 2 0 0 0-2-2M4 12V7a2 2 0 0 1 2-2h1"/><circle cx="7" cy="8" r="1"/><path d="M6 18l-1 3M18 18l1 3"/></svg>
+              Bathrooms
+            </div>
             <input type="number" id="bathrooms" placeholder="e.g. 1" min="1" max="3" />
           </div>
         </div>
-
         <div id="multi-units-container" style="display:none">
           <div id="unit-cards"></div>
-          <button type="button" class="btn-ghost" onclick="addUnitCard()" style="margin-bottom:24px">+ Add Another Unit</button>
         </div>
 
+        <div class="step-label" style="margin-top:36px">Step 2 of 3</div>
+        <div class="step-title">Access &amp; scheduling</div>
 
-        <div class="field-wrap" id="office-need-block" style="margin-bottom:20px">
-          <label>Do we need anything from the property office?</label>
-          <div class="field-sub">Keys, storage access, or anything like that before we start.</div>
-          <div class="toggle-b" id="office-toggle" onclick="toggleOfficeNeed()">
-            <div class="toggle-b-thumb" id="office-toggle-thumb">No</div>
+        <div class="gs-ofp-card gs-ofp-card-2">
+          <svg class="gs-ofp-tri" style="top:calc(50% - 199px);left:calc(50% - 207px);width:450px;height:426px;opacity:.4;animation:gs-ofp-spinrev 95s linear infinite" viewBox="0 0 900 851">
+            <path d="M141.77,6.05 L209.78,829.96 L892.14,356.10 Z" fill="none" stroke="#F3DFA5" stroke-width="6"/>
+          </svg>
+          <div class="gs-ofp-accessrow">
+            <div class="gs-ofp-lockwrap" id="office-toggle-lock">
+              <svg class="gs-ofp-lockicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+              </svg>
+            </div>
+            <div class="gs-ofp-accesstext">
+              <div class="gs-ofp-accessq">Need anything from the office?</div>
+              <div class="gs-ofp-accesssub">Keys, storage access, or anything before we start.</div>
+            </div>
+            <div class="toggle-b" id="office-toggle" onclick="toggleOfficeNeed()">
+              <div class="toggle-b-thumb" id="office-toggle-thumb">No</div>
+            </div>
           </div>
-          <div id="office-need-detail" style="display:none;margin-top:12px">
-            <label>What do we need from the office?</label>
-            <textarea id="office-need-text" rows="3" placeholder="e.g. Keys for the mailroom, gate code, access to the roof..."></textarea>
+          <div id="office-need-detail" style="display:none;margin-top:16px;position:relative;z-index:2">
+            <div class="gs-ofp-notewrap">
+              <label class="gs-ofp-notelabel">What do we need from the office?</label>
+              <textarea id="office-need-text" class="gs-ofp-notetextarea" rows="5" placeholder="e.g. Keys for the mailroom, gate code, access to the roof..."></textarea>
+            </div>
           </div>
+          <div class="gs-ofp-goldbase"></div>
         </div>
 
-        <div class="field-wrap gs-mobile-only" id="client-photos-block" style="margin-bottom:20px">
+        <div class="field-wrap gs-mobile-only" id="client-photos-block" style="margin:20px 0">
           <label>Photos <span style="text-transform:none;font-weight:400;color:var(--gray)">(optional)</span></label>
           <div class="field-sub">Show us what needs attention — helps our team prep before they arrive.</div>
           <div class="client-photo-thumbs" id="client-photo-thumbs-new"></div>
           <button type="button" class="btn-add-client-photo" onclick="document.getElementById('client-camera-input').click()">📷 Add Photo</button>
         </div>
 
-        <div class="dates-grid" id="dates-grid-container">
+        <div class="dates-grid" id="dates-grid-container" style="margin-top:20px">
         </div>
 
         <div class="due-warning" id="due-warning">
           Heads-up: this order is due the same day or the day after entry. A rush fee may apply, and the office will need to confirm availability.
         </div>
+
+        <div class="step-label" style="margin-top:36px">Step 3 of 3</div>
+        <div class="step-title">Select a division</div>
+
+        <div class="gs-ofp-card gs-ofp-card-3" id="div-card">
+          <svg class="gs-ofp-tri" style="top:calc(50% - 199px);right:-60px;width:450px;height:426px;opacity:.55;animation:gs-ofp-spin 65s linear infinite" viewBox="0 0 900 851">
+            <path d="M141.77,6.05 L209.78,829.96 L892.14,356.10 Z" fill="none" stroke="#FFF3D6" stroke-width="6"/>
+          </svg>
+          <div class="gs-ofp-tabsrow" id="div-tabs">
+            <div class="gs-ofp-tab active" data-div="Janitorial" onclick="selectDiv('Janitorial', this)">Janitorial</div>
+            <div class="gs-ofp-tab" data-div="Renovations" onclick="selectDiv('Renovations', this)">Renovations</div>
+            <div class="gs-ofp-tab" data-div="Exteriors" onclick="selectDiv('Exteriors', this)">Exteriors</div>
+          </div>
+          <div class="gs-ofp-uline-track">
+            <div class="gs-ofp-uline-active" id="div-underline" style="left:0;width:76px"></div>
+          </div>
+          <div class="gs-ofp-goldbase"></div>
+        </div>
+
+        <div class="step-title" style="margin-top:28px;font-size:20px">Select your services</div>
+        <div class="services-section" id="services-container"><p class="flash-empty">Loading services…</p></div>
 
         <div class="submit-row">
           <p class="submit-note" id="submit-note-text">Your order will be reviewed by our team. You'll receive confirmation with full details.</p>
@@ -676,6 +810,7 @@ style="object-fit:contain">
 <!-- Pendiente: gsocd-shared va en v1.15.0, el siguiente tag real seria v1.16.0
      (componente nuevo, todavia solo vive en local). Ajustar cuando se suba. -->
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.16.0/estimated-time/estimated-time.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.17.0/order-form-premium/order-form-premium.js"></script>
 <script>
 const client = GS.requireSession();
 if (client) {
@@ -705,6 +840,8 @@ if (client) {
     $('office-toggle-thumb').textContent = yes ? 'Yes' : 'No';
     $('office-need-detail').style.display = yes ? 'block' : 'none';
     $('entry-time-label').textContent = yes ? 'Office availability time' : 'Entry time';
+    const lockEl = $('office-toggle-lock');
+    if (lockEl) lockEl.classList.toggle('on', yes);
   }
   /* El onclick del HTML no puede leer officeNeedYes directo -- es un
      let dentro de este bloque if(client), invisible para atributos
@@ -811,6 +948,10 @@ if (client) {
   const continueParam = params.get('continue');
   const templateParam = params.get('template');
 
+
+  GSOrderFormPremium.styleTag();
+  GSOrderFormPremium.renderDivDecos('Janitorial', 'div-card');
+
   GS.api('/get-services', { method: 'GET' }).then(data => {
     serviceData = data;
     catalogCache = data.catalog || [];
@@ -824,12 +965,13 @@ if (client) {
     } else {
       const divParam = params.get('division');
       if (divParam && serviceData[divParam]) {
-        const card = document.querySelector('.mode-toggle button[data-div="' + divParam + '"]');
+        const card = document.querySelector('.gs-ofp-tab[data-div="' + divParam + '"]');
         if (card) selectDiv(divParam, card);
-        else { renderServices('Janitorial'); checkDraftFor('Janitorial'); }
+        else { GSOrderFormPremium.activateDivTab('Janitorial', {cardId:'div-card', tabsId:'div-tabs', underlineId:'div-underline'}); renderServices('Janitorial'); checkDraftFor('Janitorial'); }
       } else {
         renderServices('Janitorial');
         checkDraftFor('Janitorial');
+        GSOrderFormPremium.renderDivDecos('Janitorial', 'div-card');
       }
     }
   }).catch(err => {
@@ -869,9 +1011,9 @@ if (client) {
   }
 
   /* ===== División ===== */
+
   async function selectDiv(div, el) {
-    document.querySelectorAll('.mode-toggle button[data-div]').forEach(c => c.classList.remove('active'));
-    if (el) el.classList.add('active');
+    GSOrderFormPremium.activateDivTab(div, {cardId:'div-card', tabsId:'div-tabs', underlineId:'div-underline'});
     /* Si habia un guardado pendiente (el usuario acababa de escribir
        algo y todavia no pasaban los 3 segundos del debounce), se
        fuerza ya mismo antes de cambiar de division -- si no, ese
@@ -1020,19 +1162,24 @@ if (client) {
   /* ===== Single / Multiple Units ===== */
   async function setOrderMode(mode) {
     multiUnitsOn = mode === 'multi';
-    $('mode-single-btn').classList.toggle('active', !multiUnitsOn);
-    $('mode-multi-btn').classList.toggle('active', multiUnitsOn);
+    $('unit-mode-toggle').classList.toggle('on', multiUnitsOn);
+    $('unit-mode-thumb').textContent = multiUnitsOn ? 'Multi' : 'Single';
     $('single-unit-fields').style.display    = multiUnitsOn ? 'none'  : '';
     $('multi-units-container').style.display = multiUnitsOn ? 'block' : 'none';
+    $('add-unit-btn').style.display          = multiUnitsOn ? 'block' : 'none';
 
     if (multiUnitsOn) {
       if (!clientBuildings.length) await loadClientBuildingsForUnits();
       if (!$('unit-cards').children.length) {
         addUnitCard();
         addUnitCard();
+        addUnitCard();
       }
     }
     scheduleDraftSave();
+  }
+  function toggleUnitMode() {
+    setOrderMode(multiUnitsOn ? 'single' : 'multi');
   }
 
   async function loadClientBuildingsForUnits() {
@@ -1057,14 +1204,24 @@ if (client) {
 
   function unitCardHtml(idx) {
     return '' +
-      '<div class="unit-card-title">Unit</div>' +
-      '<button type="button" class="unit-remove-btn" onclick="removeUnitCard(' + idx + ')" title="Remove unit">×</button>' +
-      '<div class="field-wrap"><label>Building</label><select id="unit-' + idx + '-building-select">' + buildingOptionsHtml() + '</select></div>' +
-      '<div class="field-row three">' +
-        '<div class="field-wrap"><label>Unit #</label><input type="text" id="unit-' + idx + '-unit-number" placeholder="e.g. 205"></div>' +
-        '<div class="field-wrap"><label>Bedrooms</label><input type="number" id="unit-' + idx + '-bedrooms" min="1" max="5" placeholder="e.g. 2"></div>' +
-        '<div class="field-wrap"><label>Bathrooms</label><input type="number" id="unit-' + idx + '-bathrooms" min="1" max="3" placeholder="e.g. 1"></div>' +
-      '</div>';
+      '<div class="gs-ofp-unitline-num">' + idx + '</div>' +
+      '<div class="gs-ofp-unitfield">' +
+        '<div class="gs-ofp-unitfield-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 21V5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v16"/><path d="M12 21V9a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v12"/><path d="M8 8h1M8 12h1M8 16h1M16 12h1M16 16h1"/></svg>Building</div>' +
+        '<select id="unit-' + idx + '-building-select" class="gs-ofp-unitselect">' + buildingOptionsHtml() + '</select>' +
+      '</div>' +
+      '<div class="gs-ofp-unitfield">' +
+        '<div class="gs-ofp-unitfield-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 10h16"/></svg>Unit #</div>' +
+        '<input type="text" id="unit-' + idx + '-unit-number" placeholder="e.g. 205">' +
+      '</div>' +
+      '<div class="gs-ofp-unitfield">' +
+        '<div class="gs-ofp-unitfield-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4"/><path d="M2 10h20v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-3z"/><path d="M2 18l1-4M22 18l-1-4"/></svg>Bedrooms</div>' +
+        '<input type="number" id="unit-' + idx + '-bedrooms" min="1" max="5" placeholder="e.g. 2">' +
+      '</div>' +
+      '<div class="gs-ofp-unitfield">' +
+        '<div class="gs-ofp-unitfield-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12h16M4 12a2 2 0 0 0-2 2v1a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-1a2 2 0 0 0-2-2M4 12V7a2 2 0 0 1 2-2h1"/><circle cx="7" cy="8" r="1"/><path d="M6 18l-1 3M18 18l1 3"/></svg>Bathrooms</div>' +
+        '<input type="number" id="unit-' + idx + '-bathrooms" min="1" max="3" placeholder="e.g. 1">' +
+      '</div>' +
+      '<button type="button" class="gs-ofp-unit-remove" onclick="removeUnitCard(' + idx + ')" title="Remove unit">×</button>';
   }
 
   /* Autoguardado tambien para las filas de unidad -- se crean dinamico,
@@ -1081,7 +1238,7 @@ if (client) {
   function addUnitCard(prefill) {
     const idx = ++unitCardCounter;
     const div = document.createElement('div');
-    div.className = 'unit-card';
+    div.className = 'gs-ofp-unitline';
     div.dataset.unit = idx;
     div.innerHTML = unitCardHtml(idx);
     $('unit-cards').appendChild(div);
@@ -1097,21 +1254,21 @@ if (client) {
   }
 
   function removeUnitCard(idx) {
-    const cards = document.querySelectorAll('.unit-card');
+    const cards = document.querySelectorAll('.gs-ofp-unitline');
     if (cards.length <= 2) {
       alert('A multi-unit order needs at least 2 units. Switch to "Single Unit" above if you only need one.');
       return;
     }
-    const el = document.querySelector('.unit-card[data-unit="' + idx + '"]');
+    const el = document.querySelector('.gs-ofp-unitline[data-unit="' + idx + '"]');
     if (el) el.remove();
     renumberUnitCards();
     scheduleDraftSave();
   }
 
   function renumberUnitCards() {
-    document.querySelectorAll('.unit-card').forEach((card, i) => {
-      const title = card.querySelector('.unit-card-title');
-      if (title) title.textContent = 'Unit ' + (i + 1);
+    document.querySelectorAll('.gs-ofp-unitline').forEach((card, i) => {
+      const num = card.querySelector('.gs-ofp-unitline-num');
+      if (num) num.textContent = (i + 1);
     });
   }
 
@@ -1375,12 +1532,11 @@ if (client) {
         showToast('That template could not be found.');
         renderServices('Janitorial');
         checkDraftFor('Janitorial');
+        GSOrderFormPremium.renderDivDecos('Janitorial', 'div-card');
         return;
       }
       currentDiv = tpl.division;
-      const card = document.querySelector('.mode-toggle button[data-div="' + currentDiv + '"]');
-      document.querySelectorAll('.mode-toggle button[data-div]').forEach(c => c.classList.remove('active'));
-      if (card) card.classList.add('active');
+      const card = GSOrderFormPremium.activateDivTab(currentDiv, {cardId:'div-card', tabsId:'div-tabs', underlineId:'div-underline'});
       $('summary-division').textContent = card ? card.textContent : currentDiv;
 
       restoreSelectionFrom(tpl.services);
@@ -1407,9 +1563,7 @@ if (client) {
       draftOrderId = orderId;
 
       currentDiv = o.Division || 'Janitorial';
-      const card = document.querySelector('.mode-toggle button[data-div="' + currentDiv + '"]');
-      document.querySelectorAll('.mode-toggle button[data-div]').forEach(c => c.classList.remove('active'));
-      if (card) card.classList.add('active');
+      const card = GSOrderFormPremium.activateDivTab(currentDiv, {cardId:'div-card', tabsId:'div-tabs', underlineId:'div-underline'});
       $('summary-division').textContent = (card ? card.textContent : currentDiv);
 
       restoreSelectionFrom(data.services);
@@ -1457,9 +1611,7 @@ if (client) {
       $('submit-note-text').textContent = 'Your changes will be sent to our office for review. You will receive a confirmation email.';
 
       currentDiv = o.Division || 'Janitorial';
-      const card = document.querySelector('.mode-toggle button[data-div="' + currentDiv + '"]');
-      document.querySelectorAll('.mode-toggle button[data-div]').forEach(c => c.classList.remove('active'));
-      if (card) card.classList.add('active');
+      const card = GSOrderFormPremium.activateDivTab(currentDiv, {cardId:'div-card', tabsId:'div-tabs', underlineId:'div-underline'});
       $('summary-division').textContent = (card ? card.textContent : currentDiv);
 
       restoreSelectionFrom(data.services);
@@ -1491,7 +1643,7 @@ if (client) {
 
   /* ===== Submit / Save ===== */
   function gatherUnitsRaw() {
-    const cards = document.querySelectorAll('.unit-card');
+    const cards = document.querySelectorAll('.gs-ofp-unitline');
     const out = [];
     cards.forEach(card => {
       const idx = card.dataset.unit;
