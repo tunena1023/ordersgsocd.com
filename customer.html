@@ -935,8 +935,8 @@
 <nav>
   <div class="logo-wrap">
     <img id="nav-logo" src="/api/site-image?name=Logo.jpg" alt="GS Solutions Inc." class="logo-diamond"
-         style="object-fit:contain" onerror="this.style.display='none'">
-
+         style="object-fit:contain" onerror="this.style.display='none';document.getElementById('nav-logo-text').style.display='block'">
+    <span id="nav-logo-text" style="display:none;font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--black)">GS Solutions</span>
   </div>
   <div class="nav-right">
     <a href="https://gsocd.com" class="nav-link">Home</a>
