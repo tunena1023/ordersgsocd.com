@@ -205,14 +205,7 @@
   <button class="btn-signout" onclick="doSignout()">Sign out</button>
 </div>
 
-<div class="tabs">
-  <a class="tab" href="customer.html">New Order</a>
-  <a class="tab" href="templates.html">Templates</a>
-  <a class="tab" href="tracking.html#processing">Processing</a>
-  <a class="tab" href="tracking.html#history">History</a>
-  <a class="tab" href="recurring.html">Recurring</a>
-  <a class="tab active" href="profile.html">Profile</a>
-</div>
+<div id="gsNav"></div>
 
 <div class="addr-wrap">
   <h2>Profile</h2>
@@ -257,12 +250,21 @@
 <div class="toast" id="toast"></div>
 
 <script src="shared.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.20.1/nav-premium/nav-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.1.10/date-time-picker/date-time-picker.js"></script>
 <script>
 const client = GS.requireSession();
 if (client) {
 
   const $ = id => document.getElementById(id);
+  GSNavPremium.init('gsNav', [
+    { label: 'New Order', href: 'customer.html' },
+    { label: 'Templates', href: 'templates.html' },
+    { label: 'Processing', href: 'tracking.html#processing' },
+    { label: 'History', href: 'tracking.html#history' },
+    { label: 'Recurring', href: 'recurring.html' },
+    { label: 'Profile', href: 'profile.html', active: true }
+  ]);
 
   /* Un solo cliente (el que hizo login), asi que no hace falta el
      mecanismo de pin/multiples-tarjetas-abiertas que usa admin.html

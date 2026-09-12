@@ -138,14 +138,7 @@
   <button class="btn-signout" onclick="doSignout()">Sign out</button>
 </div>
 
-<div class="tabs">
-  <a class="tab" href="customer.html">New Order</a>
-  <a class="tab" href="templates.html">Templates</a>
-  <a class="tab" href="tracking.html#processing">Processing</a>
-  <a class="tab" href="tracking.html#history">History</a>
-  <a class="tab active" href="recurring.html">Recurring</a>
-  <a class="tab" href="profile.html">Profile</a>
-</div>
+<div id="gsNav"></div>
 
 <div class="main-view" id="main-view">
   <div class="wrap">
@@ -164,6 +157,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="shared.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.20.1/nav-premium/nav-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.0.0/lightbox/lightbox.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.6.0/order-history/order-history.js"></script>
 
@@ -172,6 +166,14 @@ const client = GS.requireSession();
 if (client) {
 
   GS.applyLogo();
+  GSNavPremium.init('gsNav', [
+    { label: 'New Order', href: 'customer.html' },
+    { label: 'Templates', href: 'templates.html' },
+    { label: 'Processing', href: 'tracking.html#processing' },
+    { label: 'History', href: 'tracking.html#history' },
+    { label: 'Recurring', href: 'recurring.html', active: true },
+    { label: 'Profile', href: 'profile.html' }
+  ]);
   document.getElementById('client-name').textContent = client.businessName || client.clientId || 'Client';
 
   function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }

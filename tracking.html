@@ -302,14 +302,7 @@
   <button class="btn-signout" onclick="doSignout()">Sign out</button>
 </div>
 
-<div class="tabs">
-  <a class="tab" href="customer.html">New Order</a>
-  <a class="tab" href="templates.html">Templates</a>
-  <a class="tab" id="tab-processing" href="#processing" onclick="showSection('processing'); return false;">Processing</a>
-  <a class="tab" id="tab-history" href="#history" onclick="showSection('history'); return false;">History</a>
-  <a class="tab" href="recurring.html">Recurring</a>
-  <a class="tab" href="profile.html">Profile</a>
-</div>
+<div id="gsNav"></div>
 
 <div id="processing" class="tab-panel active">
   <div class="history-wrap">
@@ -424,6 +417,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="shared.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.20.1/nav-premium/nav-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.1.10/date-time-picker/date-time-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.14.0/order-history/order-history.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.8.0/order-badges/order-badges.js"></script>
@@ -504,7 +498,16 @@ if (client) {
   GS.applyLogo();
 
   const hash = (location.hash || '').replace('#', '');
-  showSection(hash === 'history' ? 'history' : 'processing');
+  const initialSection = hash === 'history' ? 'history' : 'processing';
+  GSNavPremium.init('gsNav', [
+    { label: 'New Order', href: 'customer.html' },
+    { label: 'Templates', href: 'templates.html' },
+    { label: 'Processing', id: 'tab-processing', onclick: "showSection('processing')", active: initialSection === 'processing' },
+    { label: 'History', id: 'tab-history', onclick: "showSection('history')", active: initialSection === 'history' },
+    { label: 'Recurring', href: 'recurring.html' },
+    { label: 'Profile', href: 'profile.html' }
+  ]);
+  showSection(initialSection);
   loadOrders();
 
   function showSection(which) {

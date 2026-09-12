@@ -122,14 +122,7 @@
   <button class="btn-signout" onclick="doSignout()">Sign out</button>
 </div>
 
-<div class="tabs">
-  <a class="tab" href="customer.html">New Order</a>
-  <a class="tab active" href="templates.html">Templates</a>
-  <a class="tab" href="tracking.html#processing">Processing</a>
-  <a class="tab" href="tracking.html#history">History</a>
-  <a class="tab" href="recurring.html">Recurring</a>
-  <a class="tab" href="profile.html">Profile</a>
-</div>
+<div id="gsNav"></div>
 
 <div class="wrap">
   <h2>Templates</h2>
@@ -199,6 +192,7 @@
 
 <script src="shared.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.18.0/service-picker/service-picker.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.20.1/nav-premium/nav-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.19.0/order-form-premium/order-form-premium.js"></script>
 <script>
 const client = GS.requireSession();
@@ -451,6 +445,14 @@ if (client) {
   window.sendContact = sendContact;
 
   /* ===== Carga inicial ===== */
+  GSNavPremium.init('gsNav', [
+    { label: 'New Order', href: 'customer.html' },
+    { label: 'Templates', href: 'templates.html', active: true },
+    { label: 'Processing', href: 'tracking.html#processing' },
+    { label: 'History', href: 'tracking.html#history' },
+    { label: 'Recurring', href: 'recurring.html' },
+    { label: 'Profile', href: 'profile.html' }
+  ]);
   GSOrderFormPremium.styleTag();
   GSOrderFormPremium.renderDivDecos('Janitorial', 'tpl-div-card');
   loadTemplates();
