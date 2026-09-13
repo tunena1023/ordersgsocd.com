@@ -102,6 +102,15 @@
     .tpl-card { flex-direction: column; align-items: flex-start; }
     .svc-chip-grid, .jan-row-grid { grid-template-columns: 1fr; }
   }
+
+  /* Separador entre secciones -- mismo estilo exacto que .step-divider
+     en customer.html/New Order (linea dorada con destello). Reusa la
+     animacion gs-ofp-shimmer que ya inyecta gsocd-shared. */
+  .step-divider { position: relative; height: 2px; margin: 32px 0; overflow: hidden;
+    background: linear-gradient(90deg,transparent 0%,#8C6F2A 15%,#E8CE85 50%,#8C6F2A 85%,transparent 100%); }
+  .step-divider::after { content:''; position:absolute; top:0; left:-35%; width:35%; height:100%;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.85) 50%, transparent 100%);
+    animation: gs-ofp-shimmer 7s ease-in-out infinite; }
 </style>
 </head>
 <body>
@@ -145,6 +154,8 @@
       <label>Template name</label>
       <input type="text" id="tpl-name" placeholder="e.g. Monthly common area clean">
     </div>
+
+    <div class="step-divider"></div>
 
     <div class="gs-ofp-card gs-ofp-card-3" id="tpl-div-card">
       <svg class="gs-ofp-tri" style="top:calc(50% - 199px);right:-60px;width:450px;height:426px;opacity:.55" viewBox="0 0 900 851">
