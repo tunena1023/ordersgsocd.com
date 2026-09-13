@@ -1427,7 +1427,6 @@ if (client) {
     $('create-panel-mount').innerHTML = GSOrderFormPremium.unitDetailPanelHtml('create', {
       showTime: true,
       showButtons: true,
-      showCancel: false,
       submitLabel: 'Submit Order →',
       submitOnclick: 'submitOrder()',
       cancelLabel: 'Cancel',
@@ -2144,7 +2143,6 @@ if (client) {
       $('edit-banner').style.display = 'block';
       $('edit-order-id').textContent = orderId;
       GSOrderFormPremium.setUnitDetailSubmitLabel('create', 'Save Changes');
-      GSOrderFormPremium.showUnitDetailCancel('create', true);
       $('submit-note-text').textContent = 'Your changes will be sent to our office for review. You will receive a confirmation email.';
 
       currentDiv = o.Division || 'Janitorial';
@@ -2183,7 +2181,6 @@ if (client) {
        pegado en "Save Changes" de la edicion anterior. */
     editOrderId = null;
     $('edit-banner').style.display = 'none';
-    GSOrderFormPremium.showUnitDetailCancel('create', false);
     GSOrderFormPremium.setUnitDetailSubmitLabel('create', 'Submit Order →');
     $('submit-note-text').textContent = 'Your order will be reviewed by our team. You\'ll receive confirmation with full details.';
     loadOrders();
