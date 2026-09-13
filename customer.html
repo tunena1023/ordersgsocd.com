@@ -1889,6 +1889,7 @@ if (client) {
       }
       $('unit-cards').innerHTML = '';
       unitCardCounter = 0;
+      Object.keys(unitCustomizeState).forEach(k => delete unitCustomizeState[k]);
       setOrderMode('single');
       scheduleDraftSave();
       return;
