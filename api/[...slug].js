@@ -40,7 +40,8 @@ const handlers = {
   'get-my-recurring':   require('../get-my-recurring').handler,
   'get-recurring-gallery': require('../get-recurring-gallery').handler,
   'request-recurring-change': require('../request-recurring-change').handler,
-  'upload-client-recurring-photo': require('../upload-client-recurring-photo').handler
+  'upload-client-recurring-photo': require('../upload-client-recurring-photo').handler,
+  'redeem-promo-code':  require('../redeem-promo-code').handler
 };
 
 module.exports = async (req, res) => {
