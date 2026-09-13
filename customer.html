@@ -1335,7 +1335,7 @@
      (componente nuevo, todavia solo vive en local). Ajustar cuando se suba. -->
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.16.0/estimated-time/estimated-time.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.6/nav-premium/nav-premium.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.15/order-form-premium/order-form-premium.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.16/order-form-premium/order-form-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.14.0/order-history/order-history.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.0.0/lightbox/lightbox.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.8.0/order-badges/order-badges.js"></script>
@@ -3128,21 +3128,15 @@ if (client) {
       const archivedCount = contacts.filter(c => c.archived).length;
 
       control.innerHTML = '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin-bottom:12px">Edit primary address</div>' +
-        '<div class="control-grid">' +
-          field('bname', 'Business Name', profileFields.businessName) +
-          field('cperson', 'Contact Person', profileFields.contactPerson) +
-          field('email', 'Contact Email', profileFields.contact) +
-          field('phone', 'Phone', profileFields.phone) +
-          field('address', 'Address', profileFields.address) +
-          field('suite', 'Suite', profileFields.suite) +
-          field('city', 'City', profileFields.city) +
-          field('zip', 'Zip', profileFields.zip) +
-        '</div>' +
+        '<div class="gs-ofp-unitrow">' + field('bname', 'Business Name', profileFields.businessName) + field('cperson', 'Contact Person', profileFields.contactPerson) + '</div>' +
+        '<div class="gs-ofp-unitrow">' + field('email', 'Contact Email', profileFields.contact) + field('phone', 'Phone', profileFields.phone) + '</div>' +
+        '<div class="gs-ofp-unitrow">' + field('address', 'Address', profileFields.address) + field('suite', 'Suite', profileFields.suite) + '</div>' +
+        '<div class="gs-ofp-unitrow">' + field('city', 'City', profileFields.city) + field('zip', 'Zip', profileFields.zip) + '</div>' +
         '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:20px 0 10px;padding-top:16px;border-top:1px solid var(--border)">Office hours at this address</div>' +
         '<p style="font-size:11px;color:var(--gray);margin-bottom:10px">So our crew knows when someone will be there to let them in.</p>' +
         officeHoursFieldsHtml(profileFields) +
         holidaysSectionHtml('') +
-        '<button class="btn-gold" style="width:100%;margin-top:6px" onclick="savePrimaryEdit()">Save</button>' +
+        '<button class="gs-ofp-btn-primary" style="width:100%;margin-top:6px" onclick="savePrimaryEdit()">Save</button>' +
         '<p class="dialog-error" id="ctl-error"></p>' +
         '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:20px 0 8px;padding-top:16px;border-top:1px solid var(--border)">Contacts</div>' +
         '<div id="ctl-contacts">' + contactsHtml + '</div>' +
@@ -3154,19 +3148,15 @@ if (client) {
     } else {
       const b = addresses.find(x => x.id === profileSelected) || {};
       control.innerHTML = '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin-bottom:12px">Edit ' + esc(b.label || 'building') + '</div>' +
-        '<div class="control-grid">' +
-          field('label', 'Label', b.label) +
-          field('building', 'Building #', b.buildingNumber) +
-          field('address', 'Address', b.address, true) +
-          field('suite', 'Suite', b.suite) +
-          field('city', 'City', b.city) +
-          field('zip', 'Zip', b.zip) +
-        '</div>' +
+        '<div class="gs-ofp-unitrow">' + field('label', 'Label', b.label) + field('building', 'Building #', b.buildingNumber) + '</div>' +
+        field('address', 'Address', b.address, true) +
+        '<div class="gs-ofp-unitrow">' + field('suite', 'Suite', b.suite) + field('city', 'City', b.city) + '</div>' +
+        '<div class="gs-ofp-unitrow">' + field('zip', 'Zip', b.zip) + '</div>' +
         '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:20px 0 10px;padding-top:16px;border-top:1px solid var(--border)">Office hours at this building</div>' +
         '<p style="font-size:11px;color:var(--gray);margin-bottom:10px">So our crew knows when someone will be there to let them in.</p>' +
         officeHoursFieldsHtml(b) +
         holidaysSectionHtml(b.id) +
-        '<button class="btn-gold" style="width:100%;margin-top:6px" onclick="saveBuildingEdit(\'' + esc(b.id) + '\')">Save</button>' +
+        '<button class="gs-ofp-btn-primary" style="width:100%;margin-top:6px" onclick="saveBuildingEdit(\'' + esc(b.id) + '\')">Save</button>' +
         '<p class="dialog-error" id="ctl-error"></p>';
       loadHolidaysInto(client.clientId, b.id);
     }
@@ -3183,8 +3173,21 @@ if (client) {
     return html;
   }
 
+  const FIELD_ICONS = {
+    bname: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 21V5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v16"/><path d="M12 21V9a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v12"/><path d="M8 8h1M8 12h1M8 16h1M16 12h1M16 16h1"/></svg>',
+    cperson: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>',
+    email: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>',
+    phone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 3a2 2 0 0 1-.5 2.1L8 10a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c1 .3 2 .5 3 .7a2 2 0 0 1 1.7 2Z"/></svg>',
+    address: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0Z"/><circle cx="12" cy="10" r="3"/></svg>',
+    suite: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 10h16"/></svg>',
+    city: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 21h18M6 21V8l6-4 6 4v13M10 21v-6h4v6"/></svg>',
+    zip: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0Z"/><circle cx="12" cy="10" r="3"/></svg>',
+    label: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m20.6 13.4-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1"/></svg>',
+    building: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 21V5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v16"/><path d="M12 21V9a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v12"/><path d="M8 8h1M8 12h1M8 16h1M16 12h1M16 16h1"/></svg>'
+  };
   function field(key, label, value, fullWidth) {
-    return '<div class="field-small"' + (fullWidth ? ' style="grid-column:1/-1"' : '') + '><label>' + label + '</label><input type="text" id="ctl-' + key + '" value="' + esc(value || '') + '"></div>';
+    const html = GSOrderFormPremium.textFieldHtml('ctl-' + key, value || '', FIELD_ICONS[key] || '', label);
+    return fullWidth ? '<div class="gs-ofp-unitrow">' + html + '</div>' : html;
   }
 
   const DAY_FIELDS = ['monOpen', 'tueOpen', 'wedOpen', 'thuOpen', 'friOpen', 'satOpen', 'sunOpen'];
@@ -3659,7 +3662,7 @@ if (client) {
       '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:20px 0 10px;padding-top:16px;border-top:1px solid var(--border)">Office hours at this building</div>' +
       '<p style="font-size:11px;color:var(--gray);margin-bottom:10px">So our crew knows when someone will be there to let them in. You can also set this later.</p>' +
       officeHoursFieldsHtml({}) +
-      '<button class="btn-gold" style="width:100%;margin-top:6px" onclick="saveBuildingEdit(\'new\')">Save</button>' +
+      '<button class="gs-ofp-btn-primary" style="width:100%;margin-top:6px" onclick="saveBuildingEdit(\'new\')">Save</button>' +
       '<p class="dialog-error" id="ctl-error"></p>';
   }
 
@@ -4992,31 +4995,23 @@ return html;
       .concat(SERVICE_WINDOWS.map(w => '<option value="' + escAttr(w) + '"' +
         (w === current ? ' selected' : '') + '>' + esc(w) + '</option>')).join('');
 
+    const icoEdit = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+    const icoCal = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>';
+    const icoClock = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+
     panel.innerHTML = `
       <p class="detail-label" style="margin-bottom:4px">Request a change</p>
       <p style="font-size:12px;color:var(--gray);margin-bottom:18px;line-height:1.6">Tell us what you'd like to change about order ${esc(orderId)}. Our office will review your request and contact you.</p>
-      <div class="field">
-        <label>Describe the change</label>
-        <textarea id="panel-change-text" placeholder="e.g. I need to reschedule the entry date..."></textarea>
+      ${GSOrderFormPremium.textFieldHtml('panel-change-text', '', icoEdit, 'Describe the change', { textarea: true, placeholder: 'e.g. I need to reschedule the entry date...' })}
+      <div class="gs-ofp-unitrow" style="margin-top:20px">
+        ${GSOrderFormPremium.textFieldHtml('panel-change-entry', '', icoCal, 'New entry date', { raw: GSDateTimePicker.dateHtml('panel-change-entry', entryVal) })}
+        ${GSOrderFormPremium.textFieldHtml('panel-change-due', '', icoCal, 'New due date', { raw: GSDateTimePicker.dateHtml('panel-change-due', dueVal) })}
       </div>
-      <div class="field-row">
-        <div class="field">
-          <label>New entry date (optional)</label>
-          ${GSDateTimePicker.dateHtml('panel-change-entry', entryVal)}
-        </div>
-        <div class="field">
-          <label>New due date (optional)</label>
-          ${GSDateTimePicker.dateHtml('panel-change-due', dueVal)}
-        </div>
-      </div>
-      <div class="field">
-        <label>Preferred service window (optional)</label>
-        <select id="panel-change-window">${windowOptions}</select>
-      </div>
-      <p style="font-size:11px;color:var(--gray);line-height:1.6;margin-bottom:16px">Dates and service windows are a request only. Nothing changes until our office approves it, and you will receive the confirmed dates by email.</p>
+      ${GSOrderFormPremium.textFieldHtml('panel-change-window', '', icoClock, 'Preferred service window', { selectOptionsHtml: windowOptions })}
+      <p style="font-size:11px;color:var(--gray);line-height:1.6;margin:16px 0">Dates and service windows are a request only. Nothing changes until our office approves it, and you will receive the confirmed dates by email.</p>
       <div class="dialog-btns">
-        <button type="button" class="btn-ghost" onclick="closeOpenPanel()">Cancel</button>
-        <button type="button" class="btn-gold" id="panel-change-submit-btn" onclick="submitChangePanel('${escAttr(orderId)}')">Send Request</button>
+        <button type="button" class="gs-ofp-btn-secondary" onclick="closeOpenPanel()">Cancel</button>
+        <button type="button" class="gs-ofp-btn-primary" id="panel-change-submit-btn" onclick="submitChangePanel('${escAttr(orderId)}')">Send Request</button>
       </div>
       <p class="dialog-error" id="panel-change-error"></p>`;
 
