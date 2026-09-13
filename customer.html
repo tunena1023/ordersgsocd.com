@@ -5198,10 +5198,6 @@ return html;
 
         <div id="${dom}-panel-mount"></div>
 
-        <div class="dialog-btns" style="margin-top:18px">
-          <button type="button" class="btn-gold" onclick="submitAddBatchUnit('${escAttr(batchId)}','${dom}')">Add Unit</button>
-          <button type="button" class="btn-ghost" onclick="event.stopPropagation(); toggleAddUnitForm('${escAttr(batchId)}')">Cancel</button>
-        </div>
         <p class="dialog-error" id="${dom}-error"></p>
       </div>`;
   }
@@ -5224,7 +5220,11 @@ return html;
       $(dom + '-error').textContent = '';
       if (!$(dom + '-panel-mount').dataset.mounted) {
         try {
-          $(dom + '-panel-mount').innerHTML = GSOrderFormPremium.unitDetailPanelHtml(dom, { showTime: false, showButtons: false, compact: true });
+          $(dom + '-panel-mount').innerHTML = GSOrderFormPremium.unitDetailPanelHtml(dom, {
+            showTime: false, showButtons: true, compact: true,
+            submitLabel: 'Add Unit', submitOnclick: "submitAddBatchUnit('" + batchId.replace(/'/g,"\\'") + "','" + dom + "')",
+            cancelLabel: 'Cancel', cancelOnclick: "event.stopPropagation(); toggleAddUnitForm('" + batchId.replace(/'/g,"\\'") + "')"
+          });
           $(dom + '-entry-mount').innerHTML = GSDateTimePicker.dateHtml(dom + '-entry', '');
           $(dom + '-due-mount').innerHTML = GSDateTimePicker.dateHtml(dom + '-due', '');
           $(dom + '-panel-mount').dataset.mounted = '1';
@@ -5271,7 +5271,7 @@ return html;
       officeNeedNotes: officeNeedNotes
     };
 
-    const saveBtn = $(dom + '-form').querySelector('.btn-gold');
+    const saveBtn = $(dom + '-submit-btn');
     saveBtn.disabled = true;
     try {
       await GS.api('/add-batch-unit', { method: 'POST', body });
