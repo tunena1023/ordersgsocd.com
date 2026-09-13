@@ -44,6 +44,7 @@
   .portal-header {
     background: var(--off); border-bottom: 1px solid var(--border);
     padding: 16px 48px; display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: var(--gs-nav-stack-height, 0px); z-index: 98;
   }
   .portal-header p { font-size: 12px; color: var(--gray); }
   .portal-header strong { color: var(--black); }
@@ -274,7 +275,7 @@
 
   
   footer { background: var(--black); padding: 24px 48px; display: flex; align-items: center; justify-content: space-between; }
-  footer p { font-size: 11px; color: #555; letter-spacing: .06em; }
+  footer p { font-size: 13px; color: var(--white); letter-spacing: .06em; }
   footer span { color: var(--gold); }
 
   .contact-overlay {
@@ -762,7 +763,7 @@
   #panel-profile .toast.show { display: block; }
   #panel-profile @keyframes toastIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
   #panel-profile footer { background: var(--black); padding: 24px 48px; display: flex; align-items: center; justify-content: space-between; }
-  #panel-profile footer p { font-size: 11px; color: #555; letter-spacing: .06em; }
+  #panel-profile footer p { font-size: 13px; color: var(--white); letter-spacing: .06em; }
   #panel-profile footer span { color: var(--gold); }
   #panel-profile .contact-overlay {
     display: none; position: fixed; inset: 0; background: rgba(17,17,17,.55);
@@ -898,7 +899,7 @@
   #panel-processing .h-cancelled-banner, #panel-history .h-cancelled-banner { font-size: 13px; color: #B33A3A; background: #FBEAEA; border-left: 3px solid #B33A3A; padding: 10px 14px; border-radius: 4px; margin-bottom: 10px; }
   #panel-processing .empty-note, #panel-history .empty-note { font-size: 12px; color: #bbb; font-style: italic; padding: 12px 0; }
   #panel-processing footer, #panel-history footer { background: var(--black); padding: 24px 48px; display: flex; align-items: center; justify-content: space-between; }
-  #panel-processing footer p, #panel-history footer p { font-size: 11px; color: #555; letter-spacing: .06em; }
+  #panel-processing footer p, #panel-history footer p { font-size: 13px; color: var(--white); letter-spacing: .06em; }
   #panel-processing footer span, #panel-history footer span { color: var(--gold); }
   #panel-processing .contact-close:hover, #panel-history .contact-close:hover { color: var(--black); }
   #panel-processing .contact-logo-slot img, #panel-history .contact-logo-slot img { width: 72px; height: 72px; object-fit: contain; }
@@ -1310,7 +1311,7 @@
 <!-- Pendiente: gsocd-shared va en v1.15.0, el siguiente tag real seria v1.16.0
      (componente nuevo, todavia solo vive en local). Ajustar cuando se suba. -->
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.16.0/estimated-time/estimated-time.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.24.0/nav-premium/nav-premium.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.6/nav-premium/nav-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.5/order-form-premium/order-form-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.14.0/order-history/order-history.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.0.0/lightbox/lightbox.js"></script>
