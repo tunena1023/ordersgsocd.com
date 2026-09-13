@@ -35,17 +35,7 @@ exports.handler = async (event) => {
        un campo separado llamado Code. */
     const allCodes = await queryList(PROMO_CODES_LIST, '$expand=fields');
     const match = allCodes.find(it => it.fields && String(it.fields.Title || '').trim().toUpperCase() === codeUpper);
-    if (!match) {
-      /* DIAGNOSTICO TEMPORAL -- quitar en cuanto se resuelva el bug
-         real de por que no encuentra un codigo que si existe. Regresa
-         que trajo la consulta de verdad, para ver si es un problema
-         de nombre de lista, de nombre de columna, o de que el
-         renglon no esta llegando por alguna otra razon. */
-      return jsonResponse(404, {
-        error: 'That code is not valid.',
-        debug: { totalCodesFound: allCodes.length, rawItems: allCodes.map(it => it.fields) }
-      });
-    }
+    if (!match) return jsonResponse(404, { error: 'That code is not valid.' });
 
     const f = match.fields;
     const isActive = !(f.Active === false || f.Active === 'false' || f.Active === 0 || f.Active === '0');

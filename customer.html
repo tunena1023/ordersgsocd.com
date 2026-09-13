@@ -1130,7 +1130,14 @@
         <h4>Your Account</h4>
         <div class="summary-item">Client # <span id="sidebar-client-num">—</span></div>
         <div class="summary-item">Orders placed <span id="sidebar-orders-count">0</span></div>
-        <div class="summary-item" style="border-bottom:none;flex-direction:column;align-items:stretch;gap:8px;padding-top:14px">
+        <!-- Codigo de promo: escondido a proposito por ahora -- el
+             backend y las 2 listas de SharePoint ya funcionan (probado
+             en vivo con TEST10), pero falta definir como el canje se
+             liga a una orden real en Processing antes de mostrarselo
+             al cliente. Todo el codigo se deja tal cual, listo para
+             solo quitar este comentario/display:none cuando este
+             definido. -->
+        <div class="summary-item" style="border-bottom:none;flex-direction:column;align-items:stretch;gap:8px;padding-top:14px;display:none">
           <span>Have a promo code?</span>
           <div style="display:flex;gap:8px">
             <input type="text" id="promo-code-input" placeholder="Enter code" style="flex:1;min-width:0;border:1.5px solid var(--border);padding:8px 10px;font-size:12px;font-family:'Inter',sans-serif;outline:none;text-transform:uppercase;background:var(--white);color:var(--black)">
