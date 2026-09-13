@@ -952,6 +952,25 @@
   .field-sub { font-size: 11px; color: var(--gray); margin: 3px 0 8px; line-height: 1.5; }
   .field label { display: block; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--gray); font-weight: 600; margin-bottom: 8px; }
   .field { margin-bottom: 18px; }
+
+  /* ===== Notifications (Opcion B aprobada con mini) -- tarjeta con
+     icono + switch de 3 posiciones (Off / Default / On), en vez del
+     <select> plano de antes. El switch sigue siendo 3 estados reales
+     (no se perdio nada), solo se ve como un toggle: izquierda=Off
+     (rojo), en medio=Default (gris, neutral, sigue lo que diga la
+     cuenta), derecha=On (dorado). Un clic gira entre los 3. */
+  .notif-card { border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; margin-bottom: 10px; display: flex; align-items: flex-start; gap: 12px; }
+  .notif-icon { width: 34px; height: 34px; border-radius: 50%; background: var(--off); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 15px; }
+  .notif-name { font-size: 13px; font-weight: 600; }
+  .notif-desc { font-size: 11px; color: var(--gray); margin-top: 2px; line-height: 1.4; }
+  .notif-default-pill { font-size: 9px; text-transform: uppercase; letter-spacing: .05em; color: var(--gold-dk); background: #FDF3E0; padding: 2px 8px; border-radius: 10px; margin-left: 8px; }
+  .notif-toggle-btn { position: relative; width: 44px; height: 24px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--off); cursor: pointer; flex-shrink: 0; margin-left: auto; padding: 0; }
+  .notif-toggle-btn::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--white); box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .2s, background .2s; }
+  .notif-toggle-btn.on { background: var(--gold); border-color: var(--gold); }
+  .notif-toggle-btn.on::after { transform: translateX(20px); }
+  .notif-toggle-btn.off { background: var(--white); border-color: #B33A3A; }
+  .notif-toggle-btn.off::after { background: #B33A3A; }
+  .notif-toggle-btn.inherit::after { transform: translateX(10px); background: var(--gray); }
   .field select { width: 100%; border: 1.5px solid var(--border); padding: 13px 14px; font-size: 14px;
   .field select:focus { border-color: var(--gold); }
   .field input, .field textarea { width: 100%; border: 1.5px solid var(--border); padding: 13px 14px; font-size: 14px; font-family: 'Inter', sans-serif; outline: none; transition: border-color .2s; }
@@ -5080,13 +5099,31 @@ return html;
     renderNotifPanel(o);
   }
 
-  function notifSelectHtml(id, value) {
+  function notifCardHtml(id, value, icon, name, desc, extraNote) {
     const v = orderToggleUiValue(value);
-    return '<select id="' + id + '">' +
-      '<option value="inherit"' + (v === 'inherit' ? ' selected' : '') + '>Account default</option>' +
-      '<option value="on"' + (v === 'on' ? ' selected' : '') + '>On</option>' +
-      '<option value="off"' + (v === 'off' ? ' selected' : '') + '>Off</option>' +
-      '</select>';
+    return '<div class="notif-card" data-field="' + id + '">' +
+        '<div class="notif-icon">' + icon + '</div>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div class="notif-name" id="' + id + '-label">' + name + (v === 'inherit' ? '<span class="notif-default-pill">Default</span>' : '') + '</div>' +
+          '<div class="notif-desc">' + desc + '</div>' +
+          (extraNote || '') +
+        '</div>' +
+        '<button type="button" class="notif-toggle-btn ' + v + '" id="' + id + '-btn" onclick="cycleNotifToggle(\'' + id + '\',\'' + esc(name) + '\')" aria-label="' + esc(name) + '"></button>' +
+      '</div>' +
+      '<input type="hidden" id="' + id + '" value="' + v + '">';
+  }
+
+  /* Un clic gira entre los 3 estados reales (Off -> Default -> On ->
+     Off...) -- el switch de 3 posiciones es solo la representacion
+     visual, el valor real que se manda al guardar sigue siendo
+     'off'/'inherit'/'on' exactamente como antes. */
+  function cycleNotifToggle(id, name) {
+    const input = $(id);
+    const order = ['off', 'inherit', 'on'];
+    const next = order[(order.indexOf(input.value) + 1) % 3];
+    input.value = next;
+    $(id + '-btn').className = 'notif-toggle-btn ' + next;
+    $(id + '-label').innerHTML = name + (next === 'inherit' ? '<span class="notif-default-pill">Default</span>' : '');
   }
 
   async function renderNotifPanel(o) {
@@ -5105,7 +5142,7 @@ return html;
        lo que el usuario ya esta viendo. */
     if (openPanelOrderId !== o.OrderID || openPanelType !== 'notif') return;
 
-    let contactOptHtml = '<option value="">Account default</option>';
+    let contactOptHtml = '<option value="">Account default' + (client.contact ? ' (' + esc(client.contact) + ')' : '') + '</option>';
     contacts.forEach(c => {
       contactOptHtml += '<option value="' + escAttr(c.id) + '"' + (o.OrderContactId === c.id ? ' selected' : '') + '>' + esc(c.name) + ' (' + esc(c.type) + ')</option>';
     });
@@ -5114,25 +5151,14 @@ return html;
 
     panel.innerHTML = `
       <p class="detail-label" style="margin-bottom:4px">Notifications for ${esc(o.OrderID)}</p>
-      <p style="font-size:12px;color:var(--gray);margin-bottom:18px;line-height:1.6">These settings apply only to this order. Leave as "Account default" to use your regular Profile settings.</p>
-      <div class="field">
-        <label>Notifications for this order</label>
-        ${notifSelectHtml('panel-notif-enabled', o.OrderNotificationsEnabled)}
-      </div>
-      <div class="field">
-        <label>Confirmations</label>
-        ${notifSelectHtml('panel-notif-confirmations', o.OrderNotifyConfirmations)}
-        ${needsConfirmation ? '<p style="font-size:11px;color:var(--gold-dk);margin-top:6px">This order currently needs your confirmation — you\'ll still be notified about that specific request even if this is off.</p>' : ''}
-      </div>
-      <div class="field">
-        <label>Changes</label>
-        ${notifSelectHtml('panel-notif-changes', o.OrderNotifyChanges)}
-      </div>
-      <div class="field">
-        <label>Updates</label>
-        ${notifSelectHtml('panel-notif-updates', o.OrderNotifyUpdates)}
-      </div>
-      <div class="field">
+      <p style="font-size:12px;color:var(--gray);margin-bottom:18px;line-height:1.6">These settings apply only to this order. "Default" follows your regular Profile settings.</p>
+      ${notifCardHtml('panel-notif-enabled', o.OrderNotificationsEnabled, '🔔', 'Notifications for this order', 'Turn off to silence everything for this order specifically.')}
+      ${notifCardHtml('panel-notif-confirmations', o.OrderNotifyConfirmations, '✓', 'Confirmations',
+          'When we need you to confirm something.',
+          needsConfirmation ? '<p style="font-size:11px;color:var(--gold-dk);margin-top:6px">This order currently needs your confirmation — you\'ll still be notified about that specific request even if this is off.</p>' : '')}
+      ${notifCardHtml('panel-notif-changes', o.OrderNotifyChanges, '✎', 'Changes', 'Date, window, or service changes.')}
+      ${notifCardHtml('panel-notif-updates', o.OrderNotifyUpdates, '↻', 'Updates', 'Status changes as the order moves along.')}
+      <div class="field" style="margin-top:16px">
         <label>Who receives notifications for this order</label>
         <select id="panel-notif-contact">${contactOptHtml}</select>
       </div>
@@ -5434,6 +5460,7 @@ return html;
   window.submitAddBatchUnit = submitAddBatchUnit;
   window.toggleNotifPanel = toggleNotifPanel;
   window.submitNotifPanel = submitNotifPanel;
+  window.cycleNotifToggle = cycleNotifToggle;
   window.undoRequest = undoRequest;
   window.printOrder = printOrder;
   window.openOrderDocument = openOrderDocument;
