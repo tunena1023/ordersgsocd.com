@@ -1738,53 +1738,20 @@ if (client) {
 
   /* ===== Single / Multiple Units ===== */
   async function setOrderMode(mode) {
-    const goingToMulti = mode === 'multi';
-
-    if (goingToMulti && !multiUnitsOn) {
-      /* Single -> Multi: lo que ya estaba escrito en Single se pasa
-         a la primera unidad (la bloqueada) de Multi, en vez de
-         perderse. Siempre se reconstruyen las tarjetas desde cero
-         (nunca se reusan las que hubiera de antes), para que el
-         resultado sea el mismo sin importar si esto se dispara por
-         el toggle manual o por cualquier otro camino. */
-      const singleData = {
-        buildingNumber: $('building-number').value,
-        unitNumber: $('unit-number').value,
-        bedrooms: $('bedrooms').value,
-        bathrooms: $('bathrooms').value
-      };
-      $('unit-cards').innerHTML = '';
-      unitCardCounter = 0;
-      Object.keys(unitCustomizeState).forEach(k => delete unitCustomizeState[k]);
-      addUnitCard(singleData);
-      addUnitCard();
-      addUnitCard();
-    } else if (!goingToMulti && multiUnitsOn) {
-      /* Multi -> Single: lo que estaba en la primera unidad (la
-         unica que realmente representa "la propiedad principal") se
-         pasa a los campos de Single. Las demas unidades (2, 3...) se
-         descartan -- Single es una sola propiedad, no tiene donde
-         guardarlas. */
-      const firstCard = document.querySelector('.gs-ofp-unitline');
-      if (firstCard) {
-        const idx = firstCard.dataset.unit;
-        $('building-number').value = $('unit-' + idx + '-building-number')?.value || '';
-        $('unit-number').value    = $('unit-' + idx + '-unit-number')?.value    || '';
-        $('bedrooms').value       = $('unit-' + idx + '-bedrooms')?.value       || '';
-        $('bathrooms').value      = $('unit-' + idx + '-bathrooms')?.value      || '';
-      }
-      $('unit-cards').innerHTML = '';
-      unitCardCounter = 0;
-      Object.keys(unitCustomizeState).forEach(k => delete unitCustomizeState[k]);
-    }
-
-    multiUnitsOn = goingToMulti;
+    multiUnitsOn = mode === 'multi';
     $('unit-mode-toggle').classList.toggle('on', multiUnitsOn);
     $('unit-mode-thumb').textContent = multiUnitsOn ? 'Multi' : 'Single';
     $('single-unit-fields').style.display    = multiUnitsOn ? 'none'  : '';
     $('multi-units-container').style.display = multiUnitsOn ? 'block' : 'none';
     $('add-unit-btn').style.display          = multiUnitsOn ? 'block' : 'none';
 
+    if (multiUnitsOn) {
+      if (!$('unit-cards').children.length) {
+        addUnitCard();
+        addUnitCard();
+        addUnitCard();
+      }
+    }
     scheduleDraftSave();
   }
   function toggleUnitMode() {
@@ -1911,13 +1878,22 @@ if (client) {
     if (cards.length <= 2) {
       /* Multi siempre debe tener minimo 2 -- si al quitar esta se
          quedaria en 1, ya no se bloquea con un alert (como antes):
-         se regresa a Single solo. setOrderMode('single') ya se
-         encarga de tomar los datos de la unidad que queda (la
-         bloqueada, que sigue siendo la primera en el DOM en este
-         punto, la que se esta quitando todavia no se ha borrado) y
-         de limpiar/resetear todo -- misma logica sin importar si el
-         cambio de modo lo dispara este boton o el toggle manual. */
+         se regresa a Single solo, cargando ahi los datos de la unica
+         unidad que queda, para no perder lo que el cliente ya
+         escribio. */
+      const remaining = [...cards].find(c => c.dataset.unit !== String(idx));
+      if (remaining) {
+        const rIdx = remaining.dataset.unit;
+        $('building-number').value = $('unit-' + rIdx + '-building-number')?.value || '';
+        $('unit-number').value = $('unit-' + rIdx + '-unit-number')?.value || '';
+        $('bedrooms').value    = $('unit-' + rIdx + '-bedrooms')?.value    || '';
+        $('bathrooms').value   = $('unit-' + rIdx + '-bathrooms')?.value   || '';
+      }
+      $('unit-cards').innerHTML = '';
+      unitCardCounter = 0;
+      Object.keys(unitCustomizeState).forEach(k => delete unitCustomizeState[k]);
       setOrderMode('single');
+      scheduleDraftSave();
       return;
     }
     const wrap = document.querySelector('.gs-ofp-unit-wrap[data-unit-wrap="' + idx + '"]');
