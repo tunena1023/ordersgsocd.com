@@ -27,8 +27,14 @@ exports.handler = async (event) => {
     /* Comparacion en JS, no via filtro OData -- SharePoint/Graph no
        soporta bien comparaciones de texto sin distinguir mayusculas/
        minusculas, y la lista de codigos activos deberia ser chica. */
+    /* IMPORTANTE: SharePoint deja renombrar el campo por defecto
+       "Title" para que se VEA como "Code" en la interfaz -- pero por
+       dentro (via la API de Graph) siempre sigue llamandose "Title"
+       para siempre, sin importar el nombre visible. Confirmado en
+       vivo el 13/09: el renglon de prueba trae Title="TEST10", nunca
+       un campo separado llamado Code. */
     const allCodes = await queryList(PROMO_CODES_LIST, '$expand=fields');
-    const match = allCodes.find(it => it.fields && String(it.fields.Code || '').trim().toUpperCase() === codeUpper);
+    const match = allCodes.find(it => it.fields && String(it.fields.Title || '').trim().toUpperCase() === codeUpper);
     if (!match) {
       /* DIAGNOSTICO TEMPORAL -- quitar en cuanto se resuelva el bug
          real de por que no encuentra un codigo que si existe. Regresa
