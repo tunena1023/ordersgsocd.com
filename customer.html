@@ -1900,7 +1900,31 @@ if (client) {
     if (wrap) wrap.remove();
     delete unitCustomizeState[idx];
     renumberUnitCards();
+    ensureMultiMinimum();
     scheduleDraftSave();
+  }
+
+  /* Red de seguridad: sin importar POR QUE camino se llego aqui
+     (remove normal, un draft restaurado con menos unidades de las
+     esperadas, o cualquier otra cosa), si en algun momento Multi
+     esta prendido pero quedan 0 o 1 tarjetas, se autocorrige a
+     Single -- nunca debe poder quedar "Multi" prendido sin al menos
+     2 unidades reales mostrando sus campos. */
+  function ensureMultiMinimum() {
+    if (!multiUnitsOn) return;
+    const cards = document.querySelectorAll('.gs-ofp-unitline');
+    if (cards.length > 1) return;
+    if (cards.length === 1) {
+      const idx = cards[0].dataset.unit;
+      $('building-number').value = $('unit-' + idx + '-building-number')?.value || '';
+      $('unit-number').value = $('unit-' + idx + '-unit-number')?.value || '';
+      $('bedrooms').value    = $('unit-' + idx + '-bedrooms')?.value    || '';
+      $('bathrooms').value   = $('unit-' + idx + '-bathrooms')?.value   || '';
+    }
+    $('unit-cards').innerHTML = '';
+    unitCardCounter = 0;
+    Object.keys(unitCustomizeState).forEach(k => delete unitCustomizeState[k]);
+    setOrderMode('single');
   }
 
   function renumberUnitCards() {
@@ -1918,6 +1942,8 @@ if (client) {
     await setOrderMode('multi');
     $('unit-cards').innerHTML = '';
     unitsRaw.forEach(u => addUnitCard(u));
+    renumberUnitCards();
+    ensureMultiMinimum();
   }
 
   function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
