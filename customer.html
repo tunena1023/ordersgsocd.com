@@ -5196,12 +5196,7 @@ return html;
           </div>
         </div>
 
-        <div id="${dom}-office-mount">${GSOrderFormPremium.officeAccessHtml(dom, { compact: true })}</div>
-
-        <div class="addunit-dates-grid">
-          <div class="field-wrap"><label>Entry Date</label><div id="${dom}-entry-mount"></div></div>
-          <div class="field-wrap"><label>Due Date</label><div id="${dom}-due-mount"></div></div>
-        </div>
+        <div id="${dom}-panel-mount"></div>
 
         <div class="dialog-btns" style="margin-top:18px">
           <button type="button" class="btn-gold" onclick="submitAddBatchUnit('${escAttr(batchId)}','${dom}')">Add Unit</button>
@@ -5227,8 +5222,16 @@ return html;
 
     if (opening) {
       $(dom + '-error').textContent = '';
-      $(dom + '-entry-mount').innerHTML = GSDateTimePicker.dateHtml(dom + '-entry', '');
-      $(dom + '-due-mount').innerHTML = GSDateTimePicker.dateHtml(dom + '-due', '');
+      if (!$(dom + '-panel-mount').dataset.mounted) {
+        try {
+          $(dom + '-panel-mount').innerHTML = GSOrderFormPremium.unitDetailPanelHtml(dom, { showTime: false, showButtons: false, compact: true });
+          $(dom + '-entry-mount').innerHTML = GSDateTimePicker.dateHtml(dom + '-entry', '');
+          $(dom + '-due-mount').innerHTML = GSDateTimePicker.dateHtml(dom + '-due', '');
+          $(dom + '-panel-mount').dataset.mounted = '1';
+        } catch (e) {
+          console.error('No se pudo montar el panel de Add Unit:', e);
+        }
+      }
     } else {
       GSDateTimePicker.closeAllPopovers();
     }

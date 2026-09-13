@@ -164,21 +164,23 @@ exports.handler = async (event) => {
        bug del draft desviando el lote nuevo) para que nunca se
        confunda con una orden normal. Copia Division/Servicios/
        BusinessName/Requester del resto del lote -- solo pide
-       Building, Unit#, Bed/Bath y fechas de la unidad nueva. */
+       Unit#, Bed/Bath y fechas de la unidad nueva. Building # es
+       texto libre y opcional (igual que en add-batch-unit.js): esta
+       rama vivia desincronizada de esa conversion -- el frontend de
+       Admin (submitAddBatchUnitAdmin) ya mandaba buildingNumber desde
+       antes de hoy, pero esta rama seguia pidiendo buildingId de un
+       building real guardado, bloqueando SIEMPRE con "Please choose
+       a building." Corregido 13/09/2026. */
     if (b.AddUnitToBatch) {
       const add = b.AddUnitToBatch;
       if (!add.batchId)    return jsonResponse(400, { error: 'batchId is required' });
-      if (!add.buildingId) return jsonResponse(400, { error: 'Please choose a building.' });
       if (!add.unitNumber) return jsonResponse(400, { error: 'Please enter the Unit Number.' });
       if (!add.bedrooms)   return jsonResponse(400, { error: 'Please enter Bedrooms.' });
       if (!add.bathrooms)  return jsonResponse(400, { error: 'Please enter Bathrooms.' });
       if (!add.entryDate)  return jsonResponse(400, { error: 'Please enter the entry date.' });
       if (!add.dueDate)    return jsonResponse(400, { error: 'Please enter the due date.' });
 
-      const [allOrders, allBuildings] = await Promise.all([
-        fetchAll(ORDERS_LIST),
-        fetchAll(CLIENT_ADDRESSES_LIST)
-      ]);
+      const allOrders = await fetchAll(ORDERS_LIST);
 
       const clientOrders = allOrders.filter(it =>
         it.fields && String(it.fields.ClientID || '').trim().toLowerCase() === String(b.ClientID).trim().toLowerCase()
@@ -186,14 +188,18 @@ exports.handler = async (event) => {
       const siblings = clientOrders.filter(it => it.fields.BatchId === add.batchId);
       if (!siblings.length) return jsonResponse(404, { error: 'That order was not found.' });
 
-      const building = allBuildings.find(it =>
-        it.id === String(add.buildingId) &&
-        it.fields && String(it.fields.ClientID || '').trim().toLowerCase() === String(b.ClientID).trim().toLowerCase()
-      );
-      if (!building) return jsonResponse(403, { error: 'That building does not belong to this client.' });
-      const bf = building.fields;
-
       const template = siblings[0].fields;
+      /* Igual que add-batch-unit.js: siempre la direccion del resto
+         del lote (todas las unidades de un mismo PO comparten
+         direccion); si no viene buildingNumber, se autorellena con
+         los digitos iniciales de esa direccion. */
+      let buildingNumber = String(add.buildingNumber || '').trim();
+      if (!buildingNumber) {
+        const m = String(template.Address || '').match(/^\s*(\d+)/);
+        buildingNumber = m ? m[1] : '';
+      }
+      const bf = { BuildingNumber: buildingNumber, Address: template.Address || '', Suite: template.Suite || '', City: template.City || '', Zip: template.Zip || '' };
+
       const actor = (b.changedBy && String(b.changedBy).trim()) || 'Admin';
       const suffix = nextGlobalSuffix(allOrders);
       const orderId = String(b.ClientID).trim() + '-' + suffix + '-' + add.batchId;
@@ -221,10 +227,12 @@ exports.handler = async (event) => {
         DueDate:        add.dueDate,
         DraftData:      '',
         BatchId:        add.batchId,
-        BuildingId:     String(add.buildingId),
-        /* El Building ya se geocodifico solo (admin-update-client.js) --
-           se copian sus coordenadas, sin volver a preguntarle a Nominatim. */
-        ...(bf.Latitude != null && bf.Longitude != null ? { Latitude: bf.Latitude, Longitude: bf.Longitude } : {})
+        NeedsOfficeAccess: add.needsOfficeAccess === true || add.needsOfficeAccess === 'true',
+        OfficeNeedNotes:   add.officeNeedNotes || '',
+        /* Misma direccion que el resto del lote -- ya se geocodifico
+           antes (esta orden ya existia), se copian sus coordenadas
+           en vez de volver a preguntarle a Nominatim. */
+        ...(template.Latitude != null && template.Longitude != null ? { Latitude: template.Latitude, Longitude: template.Longitude } : {})
       });
 
       try {
