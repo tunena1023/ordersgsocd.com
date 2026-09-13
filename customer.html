@@ -1130,6 +1130,14 @@
         <h4>Your Account</h4>
         <div class="summary-item">Client # <span id="sidebar-client-num">—</span></div>
         <div class="summary-item">Orders placed <span id="sidebar-orders-count">0</span></div>
+        <div class="summary-item" style="border-bottom:none;flex-direction:column;align-items:stretch;gap:8px;padding-top:14px">
+          <span>Have a promo code?</span>
+          <div style="display:flex;gap:8px">
+            <input type="text" id="promo-code-input" placeholder="Enter code" style="flex:1;min-width:0;border:1.5px solid var(--border);padding:8px 10px;font-size:12px;font-family:'Inter',sans-serif;outline:none;text-transform:uppercase;background:var(--white);color:var(--black)">
+            <button type="button" id="promo-code-btn" onclick="redeemPromoCode()" style="background:var(--gold);border:none;color:var(--black);padding:8px 14px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;white-space:nowrap;font-family:'Inter',sans-serif">Redeem</button>
+          </div>
+          <div id="promo-code-msg" style="font-size:11px;display:none"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -2518,6 +2526,41 @@ if (client) {
       box.innerHTML = '<p class="empty-note">Could not load: ' + esc(e.message) + '</p>';
     }
   }
+
+  /* Codigo de promo -- valida contra PROMO_CODES_LIST en SharePoint.
+     No hay precio visible en este formulario, asi que el "premio" no
+     es un descuento en dolares aqui: desbloquea una orden de regalo
+     que despues aparece para reclamar (como un Template), con
+     servicios/habitaciones/banos ya puestos por la oficina -- el
+     cliente solo llena unidad y fechas. Esa parte de "aparecer para
+     reclamar" todavia esta pendiente de definir con el dueno; por
+     ahora esto solo valida el codigo y lo marca canjeado. */
+  async function redeemPromoCode() {
+    const input = $('promo-code-input');
+    const btn = $('promo-code-btn');
+    const msg = $('promo-code-msg');
+    const code = input.value.trim();
+    if (!code) return;
+    btn.disabled = true;
+    const original = btn.textContent;
+    btn.textContent = 'Checking…';
+    msg.style.display = 'none';
+    try {
+      const data = await GS.api('/redeem-promo-code', { body: { clientId: client.clientId, code: code } });
+      msg.textContent = data.message || 'Code applied! Your free order will show up soon.';
+      msg.style.color = '#27ae60';
+      msg.style.display = 'block';
+      input.value = '';
+    } catch (e) {
+      msg.textContent = e.message || 'That code is not valid.';
+      msg.style.color = '#c0392b';
+      msg.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = original;
+    }
+  }
+  window.redeemPromoCode = redeemPromoCode;
 
   function toggleCard(id) {
     openId = (openId === id) ? null : id;
