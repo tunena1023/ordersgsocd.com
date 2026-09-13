@@ -29,7 +29,17 @@ exports.handler = async (event) => {
        minusculas, y la lista de codigos activos deberia ser chica. */
     const allCodes = await queryList(PROMO_CODES_LIST, '$expand=fields');
     const match = allCodes.find(it => it.fields && String(it.fields.Code || '').trim().toUpperCase() === codeUpper);
-    if (!match) return jsonResponse(404, { error: 'That code is not valid.' });
+    if (!match) {
+      /* DIAGNOSTICO TEMPORAL -- quitar en cuanto se resuelva el bug
+         real de por que no encuentra un codigo que si existe. Regresa
+         que trajo la consulta de verdad, para ver si es un problema
+         de nombre de lista, de nombre de columna, o de que el
+         renglon no esta llegando por alguna otra razon. */
+      return jsonResponse(404, {
+        error: 'That code is not valid.',
+        debug: { totalCodesFound: allCodes.length, rawItems: allCodes.map(it => it.fields) }
+      });
+    }
 
     const f = match.fields;
     const isActive = !(f.Active === false || f.Active === 'false' || f.Active === 0 || f.Active === '0');
