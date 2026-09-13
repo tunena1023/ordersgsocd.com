@@ -1047,7 +1047,16 @@
         <div class="step-label" style="margin-top:36px">Step 3 of 3</div>
         <div class="step-title">Access &amp; scheduling</div>
 
-        <div id="create-panel-mount"></div>
+        <div id="access-scheduling-mount"></div>
+        <script>
+          document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('access-scheduling-mount').innerHTML = GSOrderFormPremium.officeAccessHtml('create');
+            GSOrderFormPremium.onOfficeNeedChange('create', function(yes) {
+              var lbl = document.getElementById('entry-time-label');
+              if (lbl) lbl.textContent = yes ? 'Office availability time' : 'Entry time';
+            });
+          });
+        </script>
 
         <div class="field-wrap gs-mobile-only" id="client-photos-block" style="margin:20px 0">
           <label>Photos <span style="text-transform:none;font-weight:400;color:var(--gray)">(optional)</span></label>
@@ -1056,11 +1065,20 @@
           <button type="button" class="btn-add-client-photo" onclick="document.getElementById('client-camera-input').click()">📷 Add Photo</button>
         </div>
 
+        <div class="dates-grid" id="dates-grid-container" style="margin-top:20px">
+        </div>
+
         <div class="due-warning" id="due-warning">
           Heads-up: this order is due the same day or the day after entry. A rush fee may apply, and the office will need to confirm availability.
         </div>
 
-        <p class="submit-note" id="submit-note-text" style="margin-top:16px">Your order will be reviewed by our team. You'll receive confirmation with full details.</p>
+        <div class="submit-row">
+          <p class="submit-note" id="submit-note-text">Your order will be reviewed by our team. You'll receive confirmation with full details.</p>
+          <div class="edit-actions" id="edit-actions" style="display:none">
+            <button class="btn-cancel-edit" onclick="cancelEdit()">Cancel</button>
+          </div>
+          <button class="btn-submit" id="submit-btn" onclick="submitOrder()">Submit Order →</button>
+        </div>
       </div>
 
       <div id="order-confirmation">
@@ -1291,13 +1309,13 @@
 <div class="toast" id="toast"></div>
 
 <script src="shared.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.2/date-time-picker/date-time-picker.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.1.10/date-time-picker/date-time-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.18.0/service-picker/service-picker.js"></script>
 <!-- Pendiente: gsocd-shared va en v1.15.0, el siguiente tag real seria v1.16.0
      (componente nuevo, todavia solo vive en local). Ajustar cuando se suba. -->
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.16.0/estimated-time/estimated-time.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.24.0/nav-premium/nav-premium.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.3/order-form-premium/order-form-premium.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.1/order-form-premium/order-form-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.14.0/order-history/order-history.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.0.0/lightbox/lightbox.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.8.0/order-badges/order-badges.js"></script>
@@ -1383,7 +1401,9 @@ if (client) {
      plantilla -- las 3 divisiones por igual, ya no es exclusivo de
      Exteriors. */
   function restoreOfficeNeed(o) {
-    GSOrderFormPremium.setOfficeNeedText('create', o.OfficeNeedNotes || '');
+    const txtEl = $('create-office-text');
+    if (txtEl) txtEl.value = o.OfficeNeedNotes || '';
+    GSOrderFormPremium.setOfficeNeed('create', !!o.NeedsOfficeAccess);
   }
   let propertyType = 'Commercial';
   let selected = {};
@@ -1405,44 +1425,10 @@ if (client) {
 
   const $ = id => document.getElementById(id);
 
-  /* Panel unificado (Office Access + fechas/hora + Submit/Cancel) --
-     mismo punto exacto donde antes vivia el fill de dates-grid-container,
-     A PROPOSITO: sincrono, sin esperar DOMContentLoaded, porque
-     loadForEdit()/loadForContinue() corren mas abajo en este MISMO
-     script y necesitan que 'entry-date'/'entry-time'/'delivery-date'
-     ya existan quando se llame. Los IDs de los campos reales se
-     quedan igual que siempre -- todo el resto del archivo
-     (gatherUnitsRaw, submitOrder, loadForEdit, etc.) ya los lee por
-     esos nombres, no hay que tocarlos.
-
-     ENVUELTO EN TRY/CATCH A PROPOSITO (13/09/2026): la primera vez que
-     se subio esto se cayo TODA la pagina (tabs, Single/Multi, todo) --
-     sospecha fuerte: el CDN (jsdelivr) todavia no tenia indexado el
-     tag nuevo de gsocd-shared en el momento exacto en que esto corrio,
-     GSOrderFormPremium vino undefined, esta linea trono, y como esto
-     esta ANTES de GSNavPremium.init() en el mismo script, se llevo
-     entre las patas la inicializacion de los tabs tambien. Un fallo
-     aqui (razon la que sea) ya NO puede tumbar el resto de la pagina. */
-  try {
-    $('create-panel-mount').innerHTML = GSOrderFormPremium.unitDetailPanelHtml('create', {
-      showTime: true,
-      showButtons: true,
-      showCancel: false,
-      submitLabel: 'Submit Order →',
-      submitOnclick: 'submitOrder()',
-      cancelLabel: 'Cancel',
-      cancelOnclick: 'cancelEdit()'
-    });
-    $('create-entry-mount').innerHTML = GSDateTimePicker.dateHtml('entry-date', null);
-    $('create-entry-time-mount').innerHTML = GSDateTimePicker.timeHtml('entry-time', '08:00');
-    $('create-due-mount').innerHTML = GSDateTimePicker.dateHtml('delivery-date', null);
-    GSOrderFormPremium.onOfficeNeedChange('create', function(yes) {
-      const lbl = $('create-entry-time-label');
-      if (lbl) lbl.textContent = yes ? 'Office availability time' : 'Entry time';
-    });
-  } catch (e) {
-    console.error('No se pudo montar el panel de Access & scheduling:', e);
-  }
+  $('dates-grid-container').innerHTML =
+    '<div class="field-wrap"><label>Entry available from</label>' + GSDateTimePicker.dateHtml('entry-date', null) + '</div>' +
+    '<div class="field-wrap"><label id="entry-time-label">Entry time</label>' + GSDateTimePicker.timeHtml('entry-time', '08:00') + '</div>' +
+    '<div class="field-wrap"><label>Service due date</label>' + GSDateTimePicker.dateHtml('delivery-date', null) + '</div>';
 
   fillAccount(client);
   refreshOrdersCount();
@@ -1456,7 +1442,7 @@ if (client) {
   GSNavPremium.init('gsNav', [
     { label: 'New Order', dataView: 'new-order', onclick: "showTab('new-order')", active: true },
     { label: 'Templates', dataView: 'templates', onclick: "showTab('templates')" },
-    { label: 'Processing', dataView: 'processing', onclick: "showSection('processing')" },
+    { label: 'Processing', dataView: 'processing', onclick: "showSection('processing')", active: true },
     { label: 'History', dataView: 'history', onclick: "showSection('history')" },
     { label: 'Recurring', dataView: 'recurring', onclick: "showTab('recurring')" },
     { label: 'Profile', dataView: 'profile', onclick: "showTab('profile')" }
@@ -1473,29 +1459,16 @@ if (client) {
 
   loadRecurring();
 
-  try {
-    GSOrderFormPremium.styleTag();
-    GSOrderFormPremium.renderDivDecos('Janitorial', 'div-card');
-  } catch (e) {
-    console.error('No se pudo aplicar el estilo/decoracion de division:', e);
-  }
+  GSOrderFormPremium.styleTag();
+  GSOrderFormPremium.renderDivDecos('Janitorial', 'div-card');
 
   GS.api('/get-services', { method: 'GET' }).then(data => {
     serviceData = data;
     catalogCache = data.catalog || [];
     serviceTimesCache = data.serviceTimes || {};
     if (editParam) {
-      /* BUG REAL arreglado (12/09/2026): "New Order" y "Processing"
-         estaban AMBOS marcados como active:true en GSNavPremium.init
-         (arriba) -- eso hacia que los 2 paneles se mostraran a la vez
-         apilados uno debajo del otro. Se corrigio ahi, pero se refuerza
-         aqui tambien por si acaso: al entrar a editar una orden (o
-         continuar un borrador) via URL, se asegura explicitamente que
-         SOLO se vea el panel de New Order. */
-      showTab('new-order');
       loadForEdit(editParam);
     } else if (continueParam) {
-      showTab('new-order');
       loadForContinue(continueParam);
     } else if (templateParam) {
       loadFromTemplate(templateParam);
@@ -2143,8 +2116,8 @@ if (client) {
       editOrderAddress = { address: o.Address || '', suite: o.Suite || '', city: o.City || '', zip: o.Zip || '' };
       $('edit-banner').style.display = 'block';
       $('edit-order-id').textContent = orderId;
-      GSOrderFormPremium.setUnitDetailSubmitLabel('create', 'Save Changes');
-      GSOrderFormPremium.showUnitDetailCancel('create', true);
+      $('submit-btn').textContent = 'Save Changes';
+      $('edit-actions').style.display = 'flex';
       $('submit-note-text').textContent = 'Your changes will be sent to our office for review. You will receive a confirmation email.';
 
       currentDiv = o.Division || 'Janitorial';
@@ -2175,19 +2148,7 @@ if (client) {
   }
 
   function cancelEdit() {
-    /* BUG REAL arreglado (12/09/2026): mandaba a tracking.html (pagina
-       aparte, "Order Tracker") -- Processing vive DENTRO de esta misma
-       pagina (customer.html), como cualquier otro tab, sin necesidad
-       de recargar nada. Se resetea el banner/boton de edicion para
-       que si el cliente vuelve a "New Order" despues, no se quede
-       pegado en "Save Changes" de la edicion anterior. */
-    editOrderId = null;
-    $('edit-banner').style.display = 'none';
-    GSOrderFormPremium.showUnitDetailCancel('create', false);
-    GSOrderFormPremium.setUnitDetailSubmitLabel('create', 'Submit Order →');
-    $('submit-note-text').textContent = 'Your order will be reviewed by our team. You\'ll receive confirmation with full details.';
-    loadOrders();
-    showSection('processing');
+    location.href = 'tracking.html';
   }
 
   /* ===== Submit / Save ===== */
@@ -2302,7 +2263,7 @@ if (client) {
       order.OrderID = draftOrderId;
     }
 
-    const btn = $('create-submit-btn');
+    const btn = $('submit-btn');
     const originalText = btn.textContent;
     btn.disabled = true; btn.textContent = editOrderId ? 'Saving…' : 'Submitting…';
 
@@ -5072,13 +5033,12 @@ return html;
       </div>`;
   }
 
-  /* La caja "Do we need anything from you?" del formulario de Add
+  /* El toggle "Do we need anything from you?" del formulario de Add
      Unit ahora vive completo en gsocd-shared/order-form-premium --
-     GSOrderFormPremium.getOfficeNeedValue(dom)/getOfficeNeedNotes(dom)
-     (se derivan solo de si hay texto, ya no hay toggle Yes/No).
-     Sigue trayendo una entrada por dom (batchId) internamente, asi
-     que varios formularios de distintos PO pueden estar abiertos sin
-     pisarse, igual que antes. */
+     GSOrderFormPremium.setOfficeNeed(dom, yes)/getOfficeNeedValue(dom)/
+     getOfficeNeedNotes(dom). El estado ya trae una entrada por dom
+     (batchId) internamente, asi que varios formularios de distintos
+     PO pueden estar abiertos sin pisarse, igual que antes. */
 
   function toggleAddUnitForm(batchId) {
     const dom = 'addunit-' + batchId.replace(/[^a-z0-9]/gi,'_');
