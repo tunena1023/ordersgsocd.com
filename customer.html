@@ -2316,24 +2316,14 @@ if (client) {
          sigue validando completa -- ahi lo mas probable es que se le
          haya olvidado algo, no que la dejo vacia a proposito. */
       const gathered = gatherUnitsRaw();
-      unitsPayload = gathered.filter(u => u.buildingId || u.unitNumber || u.bedrooms || u.bathrooms);
+      unitsPayload = gathered.filter(u => u.buildingNumber || u.unitNumber || u.bedrooms || u.bathrooms);
       if (!unitsPayload.length) { alert('Please fill in at least one unit.'); return; }
       for (const u of unitsPayload) {
-        if (!u.buildingId) { alert('Please choose a building for every unit.'); return; }
         if (!u.unitNumber) { alert('Please enter the Unit Number for every unit.'); return; }
         if (!u.bedrooms || parseInt(u.bedrooms) < 1) { alert('Please enter a valid number of Bedrooms (1-5) for every unit.'); return; }
         if (!u.bathrooms || parseInt(u.bathrooms) < 1) { alert('Please enter a valid number of Bathrooms (1-3) for every unit.'); return; }
       }
       order.Units = unitsPayload;
-      /* 'Use my address' (CLIENT_ADDRESS) no es un building real de
-         CLIENT_ADDRESSES_LIST -- el backend necesita la direccion del
-         cliente aparte para poder usarla en esas unidades. */
-      order.ClientAddress = {
-        address: client.address || '',
-        suite:   client.suite   || '',
-        city:    client.city    || '',
-        zip:     client.zip     || ''
-      };
     } else {
       const buildingNumber = $('building-number').value.trim();
       const unitNumber = $('unit-number').value.trim();
