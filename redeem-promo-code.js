@@ -58,24 +58,31 @@ exports.handler = async (event) => {
     }
 
     /* Un mismo cliente no puede repetir el mismo codigo -- se busca
-       en el registro de canjes, no en el catalogo de codigos. */
-    const filter = encodeURIComponent(`fields/ClientID eq '${clientId}' and fields/Code eq '${codeUpper}'`);
+       en el registro de canjes, no en el catalogo de codigos.
+       Mismo caso que con PromoCodes: 'ClientID' que se ve en la
+       interfaz es el campo "Title" renombrado -- confirmado en vivo
+       el 13/09 con el error real "Field 'ClientID' is not
+       recognized". Se usa Title para ClientID; Code y RedeemedDate
+       si se crearon como columnas nuevas de verdad (el error de
+       Graph se detiene en el primer campo invalido que encuentra,
+       por eso solo señalo ClientID). */
+    const filter = encodeURIComponent(`fields/Title eq '${clientId}' and fields/Code eq '${codeUpper}'`);
     let alreadyRedeemed = [];
     try {
       alreadyRedeemed = await queryList(REDEEMED_PROMO_CODES_LIST, `$expand=fields&$filter=${filter}`);
     } catch (e) {
-      /* Si ClientID/Code no estan indexados todavia en SharePoint,
-         el filtro puede fallar -- se cae a traer todo y filtrar en
-         JS, igual que el patron ya usado en get-my-recurring.js. */
+      /* Si Title/Code no estan indexados todavia en SharePoint, el
+         filtro puede fallar -- se cae a traer todo y filtrar en JS,
+         igual que el patron ya usado en get-my-recurring.js. */
       const all = await queryList(REDEEMED_PROMO_CODES_LIST, '$expand=fields');
       alreadyRedeemed = all.filter(it => it.fields &&
-        String(it.fields.ClientID || '').trim() === clientId &&
+        String(it.fields.Title || '').trim() === clientId &&
         String(it.fields.Code || '').trim().toUpperCase() === codeUpper);
     }
     if (alreadyRedeemed.length) return jsonResponse(400, { error: "You've already redeemed this code." });
 
     await createListItem(REDEEMED_PROMO_CODES_LIST, {
-      ClientID: clientId,
+      Title: clientId,
       Code: codeUpper,
       RedeemedDate: new Date().toISOString()
     });
