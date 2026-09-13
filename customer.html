@@ -188,12 +188,11 @@
   
   
   
-  @media (max-width: 720px) {
-    .gs-ofp-unitrow { flex-wrap: wrap; }
-    .gs-ofp-unitfield { flex: 1 1 calc(50% - 13px); }
-    
-    .gs-ofp-unitline .gs-ofp-unitfield { flex: 1 1 calc(50% - 9px); }
-  }
+  /* El bloque de mobile para .gs-ofp-unitfield/.gs-ofp-unitline-num/
+     .gs-ofp-unit-customize-inline/.gs-ofp-unit-remove ahora vive en
+     gsocd-shared/order-form-premium (v1.25.10) -- antes vivia solo
+     aqui (720px, sin cubrir el numero de unidad ni Customize/quitar),
+     por eso Admin nunca se vio igual: nunca tuvo esta copia. */
 
   /* Solo mobile -- confirmado con el usuario: fotos del cliente NUNCA
      existen en desktop, ni ocultas, no existen. */
@@ -1335,7 +1334,7 @@
      (componente nuevo, todavia solo vive en local). Ajustar cuando se suba. -->
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.16.0/estimated-time/estimated-time.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.6/nav-premium/nav-premium.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.8/order-form-premium/order-form-premium.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.10/order-form-premium/order-form-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.14.0/order-history/order-history.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.0.0/lightbox/lightbox.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.8.0/order-badges/order-badges.js"></script>
