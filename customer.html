@@ -1054,12 +1054,7 @@
           <svg class="gs-ofp-tri" style="top:calc(50% - 199px);right:-60px;width:450px;height:426px;opacity:.55;animation:gs-ofp-spin 65s linear infinite" viewBox="0 0 900 851">
             <path d="M141.77,6.05 L209.78,829.96 L892.14,356.10 Z" fill="none" stroke="#FFF3D6" stroke-width="6"/>
           </svg>
-          <div class="gs-ofp-tabsrow" id="div-tabs">
-            <div class="gs-ofp-tab active" data-div="Janitorial" onclick="selectDiv('Janitorial', this)">Janitorial</div>
-            <div class="gs-ofp-tab" data-div="Renovations" onclick="selectDiv('Renovations', this)">Renovations</div>
-            <div class="gs-ofp-tab" data-div="Exteriors" onclick="selectDiv('Exteriors', this)">Exteriors</div>
-            <div class="gs-ofp-tab" data-div="Mixed" onclick="selectDiv('Mixed', this)">Mixed</div>
-          </div>
+          <div class="gs-ofp-tabsrow" id="div-tabs"></div>
           <div class="gs-ofp-uline-track">
             <div class="gs-ofp-uline-active" id="div-underline" style="left:0;width:76px"></div>
           </div>
@@ -1235,11 +1230,7 @@
       <svg class="gs-ofp-tri" style="top:calc(50% - 199px);right:-60px;width:450px;height:426px;opacity:.55" viewBox="0 0 900 851">
         <path d="M141.77,6.05 L209.78,829.96 L892.14,356.10 Z" fill="none" stroke="#FFF3D6" stroke-width="6"/>
       </svg>
-      <div class="gs-ofp-tabsrow" id="tpl-div-tabs">
-        <div class="gs-ofp-tab active" data-div="Janitorial" onclick="tplSelectDiv('Janitorial', this)">Janitorial</div>
-        <div class="gs-ofp-tab" data-div="Renovations" onclick="tplSelectDiv('Renovations', this)">Renovations</div>
-        <div class="gs-ofp-tab" data-div="Exteriors" onclick="tplSelectDiv('Exteriors', this)">Exteriors</div>
-      </div>
+      <div class="gs-ofp-tabsrow" id="tpl-div-tabs"></div>
       <div class="gs-ofp-uline-track">
         <div class="gs-ofp-uline-active" id="tpl-div-underline" style="left:0;width:76px"></div>
       </div>
@@ -1337,12 +1328,12 @@
 
 <script src="shared.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.5/date-time-picker/date-time-picker.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.7/service-picker/service-picker.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.8/service-picker/service-picker.js"></script>
 <!-- Pendiente: gsocd-shared va en v1.15.0, el siguiente tag real seria v1.16.0
      (componente nuevo, todavia solo vive en local). Ajustar cuando se suba. -->
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.16.0/estimated-time/estimated-time.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.6/nav-premium/nav-premium.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.5/order-form-premium/order-form-premium.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.8/order-form-premium/order-form-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.14.0/order-history/order-history.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.0.0/lightbox/lightbox.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.8.0/order-badges/order-badges.js"></script>
@@ -1518,6 +1509,8 @@ if (client) {
 
   try {
     GSOrderFormPremium.styleTag();
+    $('div-tabs').innerHTML = GSOrderFormPremium.divTabsHtml('selectDiv');
+    $('tpl-div-tabs').innerHTML = GSOrderFormPremium.divTabsHtml('tplSelectDiv');
     GSOrderFormPremium.renderDivDecos('Janitorial', 'div-card');
   } catch (e) {
     console.error('No se pudo aplicar el estilo/decoracion de division:', e);
@@ -1930,20 +1923,11 @@ if (client) {
     const out = [];
     Object.entries(selected).forEach(([propType, svcs]) => {
       Object.entries(svcs).forEach(([svcName, sku]) => {
-        /* La division real de CADA servicio viene del catalogo (por
-           SKU), no de la pestana activa -- critico para Mixed: ahi
-           currentDiv literalmente es "Mixed", y sin esto CADA
-           servicio se hubiera guardado con Division:"Mixed" en vez
-           de su division real (Janitorial/Renovations/Exteriors),
-           perdiendo ese dato para siempre. Fuera de Mixed esto da
-           exactamente el mismo resultado que antes (el picker ya
-           solo muestra servicios de esa division). */
-        const catalogEntry = (catalogCache || []).find(c => String(c.sku) === String(sku));
         out.push({
           Category:    propType,
           ServiceName: svcName,
           SubOption:   sku,
-          Division:    (catalogEntry && catalogEntry.division) || currentDiv,
+          Division:    GSOrderFormPremium.realDivisionForSku(catalogCache, sku, currentDiv),
           Level:       svcLevel[svcKey(propType, svcName)] || ''
         });
       });
@@ -2881,11 +2865,13 @@ if (client) {
     const container = $('tpl-picker');
     if (!tplCatalogCache.length) { container.innerHTML = '<p class="flash-empty">No services available right now — please check back shortly.</p>'; return; }
     const isJan = tplCurrentDiv === 'Janitorial';
+    const isMixed = tplCurrentDiv === 'Mixed';
 
     tplPicker = GSServicePicker.mount('template-editor', container, {
       catalog: tplCatalogCache,
       division: tplCurrentDiv,
-      mode: isJan ? 'levels' : 'toggle',
+      crossDivision: isMixed,
+      mode: (isJan || isMixed) ? 'levels' : 'toggle',
       showSelectAll: isJan,
       groupByCategory: true,
       tplPropertyType: tplPropertyType,
@@ -2907,7 +2893,7 @@ if (client) {
           Category:    propType,
           ServiceName: svcName,
           SubOption:   sku,
-          Division:    tplCurrentDiv,
+          Division:    GSOrderFormPremium.realDivisionForSku(tplCatalogCache, sku, tplCurrentDiv),
           Level:       tplSvcLevel[svcKey(propType, svcName)] || ''
         });
       });

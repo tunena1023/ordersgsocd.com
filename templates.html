@@ -150,11 +150,7 @@
       <svg class="gs-ofp-tri" style="top:calc(50% - 199px);right:-60px;width:450px;height:426px;opacity:.55" viewBox="0 0 900 851">
         <path d="M141.77,6.05 L209.78,829.96 L892.14,356.10 Z" fill="none" stroke="#FFF3D6" stroke-width="6"/>
       </svg>
-      <div class="gs-ofp-tabsrow" id="tpl-div-tabs">
-        <div class="gs-ofp-tab active" data-div="Janitorial" onclick="selectDiv('Janitorial', this)">Janitorial</div>
-        <div class="gs-ofp-tab" data-div="Renovations" onclick="selectDiv('Renovations', this)">Renovations</div>
-        <div class="gs-ofp-tab" data-div="Exteriors" onclick="selectDiv('Exteriors', this)">Exteriors</div>
-      </div>
+      <div class="gs-ofp-tabsrow" id="tpl-div-tabs"></div>
       <div class="gs-ofp-uline-track">
         <div class="gs-ofp-uline-active" id="tpl-div-underline" style="left:0;width:76px"></div>
       </div>
@@ -191,9 +187,9 @@
 <div class="toast" id="toast" style="position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--black);color:var(--white);padding:12px 22px;border-radius:4px;font-size:13px;opacity:0;pointer-events:none;transition:all .3s;z-index:500"></div>
 
 <script src="shared.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.18.0/service-picker/service-picker.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.8/service-picker/service-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.20.4/nav-premium/nav-premium.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.19.0/order-form-premium/order-form-premium.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.8/order-form-premium/order-form-premium.js"></script>
 <script>
 const client = GS.requireSession();
 if (client) {
@@ -357,11 +353,13 @@ if (client) {
     const container = $('tpl-picker');
     if (!catalogCache.length) { container.innerHTML = '<p class="flash-empty">No services available right now — please check back shortly.</p>'; return; }
     const isJan = currentDiv === 'Janitorial';
+    const isMixed = currentDiv === 'Mixed';
 
     tplPicker = GSServicePicker.mount('template-editor', container, {
       catalog: catalogCache,
       division: currentDiv,
-      mode: isJan ? 'levels' : 'toggle',
+      crossDivision: isMixed,
+      mode: (isJan || isMixed) ? 'levels' : 'toggle',
       showSelectAll: isJan,
       groupByCategory: true,
       propertyType: propertyType,
@@ -383,7 +381,7 @@ if (client) {
           Category:    propType,
           ServiceName: svcName,
           SubOption:   sku,
-          Division:    currentDiv,
+          Division:    GSOrderFormPremium.realDivisionForSku(catalogCache, sku, currentDiv),
           Level:       svcLevel[svcKey(propType, svcName)] || ''
         });
       });
@@ -454,6 +452,7 @@ if (client) {
     { label: 'Profile', href: 'profile.html' }
   ]);
   GSOrderFormPremium.styleTag();
+  $('tpl-div-tabs').innerHTML = GSOrderFormPremium.divTabsHtml('selectDiv');
   GSOrderFormPremium.renderDivDecos('Janitorial', 'tpl-div-card');
   loadTemplates();
   GS.api('/get-services', { method: 'GET' }).then(data => {
