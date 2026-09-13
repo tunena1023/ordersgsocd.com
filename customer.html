@@ -1871,10 +1871,10 @@ if (client) {
   function removeUnitCard(idx) {
     /* Defensivo -- la primera unidad no tiene boton de quitar, pero
        por si acaso algo mas la llegara a llamar con su idx. */
-    const targetWrap = document.querySelector('.gs-ofp-unit-wrap[data-unit-wrap="' + idx + '"]');
+    const targetWrap = document.querySelector('#unit-cards .gs-ofp-unit-wrap[data-unit-wrap="' + idx + '"]');
     if (targetWrap && targetWrap.dataset.unitLocked === '1') return;
 
-    const cards = document.querySelectorAll('.gs-ofp-unitline');
+    const cards = document.querySelectorAll('#unit-cards .gs-ofp-unitline');
     if (cards.length <= 2) {
       /* Multi siempre debe tener minimo 2 -- si al quitar esta se
          quedaria en 1, ya no se bloquea con un alert (como antes):
@@ -1896,7 +1896,7 @@ if (client) {
       scheduleDraftSave();
       return;
     }
-    const wrap = document.querySelector('.gs-ofp-unit-wrap[data-unit-wrap="' + idx + '"]');
+    const wrap = document.querySelector('#unit-cards .gs-ofp-unit-wrap[data-unit-wrap="' + idx + '"]');
     if (wrap) wrap.remove();
     delete unitCustomizeState[idx];
     renumberUnitCards();
@@ -1904,7 +1904,7 @@ if (client) {
   }
 
   function renumberUnitCards() {
-    document.querySelectorAll('.gs-ofp-unitline').forEach((card, i) => {
+    document.querySelectorAll('#unit-cards .gs-ofp-unitline').forEach((card, i) => {
       const num = card.querySelector('.gs-ofp-unitline-num');
       if (num) num.textContent = (i + 1);
     });
@@ -2291,7 +2291,7 @@ if (client) {
 
   /* ===== Submit / Save ===== */
   function gatherUnitsRaw() {
-    const cards = document.querySelectorAll('.gs-ofp-unitline');
+    const cards = document.querySelectorAll('#unit-cards .gs-ofp-unitline');
     const out = [];
     cards.forEach(card => {
       const idx = card.dataset.unit;
