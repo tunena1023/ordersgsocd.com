@@ -513,6 +513,25 @@ exports.handler = async (event) => {
         const suffix = String(nextSuffixNum++).padStart(4, '0');
         const orderId = String(b.ClientID).trim() + '-' + suffix + '-' + poTag;
 
+        /* "Customize" por unidad (Multiple Units) -- si el frontend
+           mando fechas/office access propios para ESTA unidad (el
+           toggle estaba prendido), se usan esos en vez de heredar los
+           del Paso 3 (que ya vienen en orderFields). Mismo formato de
+           fecha+hora que ya arma el frontend para el batch completo
+           (EntryDate = fecha+hora ISO, DueDate = fecha a las 23:59:59
+           ISO) para que quede identico sea cual sea el origen. */
+        const unitOverrides = {};
+        if (unit.entryDate) {
+          unitOverrides.EntryDate = new Date(unit.entryDate + 'T' + (unit.entryTime || '08:00')).toISOString();
+        }
+        if (unit.dueDate) {
+          unitOverrides.DueDate = new Date(unit.dueDate + 'T23:59:59').toISOString();
+        }
+        if (unit.needsOfficeAccess !== undefined) {
+          unitOverrides.NeedsOfficeAccess = !!unit.needsOfficeAccess;
+          unitOverrides.OfficeNeedNotes = unit.officeNeedNotes || '';
+        }
+
         const unitFields = Object.assign({}, orderFields, {
           OrderID:        orderId,
           Status:         b.Status || 'Received',
@@ -532,7 +551,7 @@ exports.handler = async (event) => {
              correctas de este building especifico. */
           Latitude:  bf.Latitude  != null ? bf.Latitude  : null,
           Longitude: bf.Longitude != null ? bf.Longitude : null
-        });
+        }, unitOverrides);
 
         try {
           await createListItem(ORDERS_LIST, unitFields);

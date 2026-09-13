@@ -98,6 +98,16 @@
   .toggle-b.on { background: var(--gold); }
   .toggle-b.on .toggle-b-thumb { transform: translateX(27px); color: var(--black); }
 
+  /* Variante compacta -- para el switch de "Customize" dentro de la
+     fila de una unidad en Multiple Units, donde no cabe el tamano
+     grande de arriba (ese es para Single/Multi, siempre visible solo
+     una vez por pagina). */
+  .toggle-b.small { width: 40px; height: 20px; border-radius: 10px; }
+  .toggle-b.small .toggle-b-thumb { width: 16px; height: 16px; border-radius: 50%; font-size: 0; }
+  .toggle-b.small.on .toggle-b-thumb { transform: translateX(20px); }
+  .gs-ofp-unit-customize-inline { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; padding-bottom: 8px; }
+  .gs-ofp-unit-customize-inline-label { font-size: 9px; letter-spacing: .06em; text-transform: uppercase; color: var(--gray); font-weight: 600; white-space: nowrap; }
+
   /* ===== Las 3 tarjetas premium del flujo (aprobadas en mini):
      profundidad real (sombras en capas), el triangulo real del logo
      por su CENTRO (verificado con render, no un vertice al azar),
@@ -1760,8 +1770,45 @@ if (client) {
         '<div class="gs-ofp-unitfield-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12h16M4 12a2 2 0 0 0-2 2v1a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-1a2 2 0 0 0-2-2M4 12V7a2 2 0 0 1 2-2h1"/><circle cx="7" cy="8" r="1"/><path d="M6 18l-1 3M18 18l1 3"/></svg>Bathrooms</div>' +
         '<input type="number" id="unit-' + idx + '-bathrooms" min="1" max="3" placeholder="e.g. 1">' +
       '</div>' +
+      '<div class="gs-ofp-unit-customize-inline" title="Give this unit its own dates and office access notes, instead of using the ones above">' +
+        '<span class="gs-ofp-unit-customize-inline-label">Customize</span>' +
+        '<div class="toggle-b small" id="unit-' + idx + '-customize-toggle" onclick="toggleUnitCustomize(' + idx + ')">' +
+          '<div class="toggle-b-thumb" id="unit-' + idx + '-customize-thumb"></div>' +
+        '</div>' +
+      '</div>' +
       '<button type="button" class="gs-ofp-unit-remove" onclick="removeUnitCard(' + idx + ')" title="Remove unit">×</button>';
   }
+
+  const unitCustomizeState = {};
+
+  /* Prende/apaga "Customize" para UNA unidad de Multiple Units -- si
+     esta prendido, esa unidad manda sus propias fechas/hora/office
+     access en vez de heredar las del Paso 3 (confirmado con el
+     dueno: el mismo mecanismo de Add Unit, unitDetailPanelHtml, sin
+     botones porque todo se manda junto hasta Submit Order). */
+  function toggleUnitCustomize(idx) {
+    const isOn = !!unitCustomizeState[idx];
+    const next = !isOn;
+    unitCustomizeState[idx] = next;
+    $('unit-' + idx + '-customize-toggle').classList.toggle('on', next);
+    const reveal = $('unit-' + idx + '-customize-reveal');
+    reveal.style.display = next ? 'block' : 'none';
+
+    if (next && !reveal.dataset.mounted) {
+      const dom = 'unit-' + idx;
+      try {
+        reveal.innerHTML = GSOrderFormPremium.unitDetailPanelHtml(dom, { showTime: true, showButtons: false });
+        $(dom + '-entry-mount').innerHTML = GSDateTimePicker.dateHtml(dom + '-entry', '');
+        $(dom + '-entry-time-mount').innerHTML = GSDateTimePicker.timeHtml(dom + '-entry-time', '08:00');
+        $(dom + '-due-mount').innerHTML = GSDateTimePicker.dateHtml(dom + '-due', '');
+        reveal.dataset.mounted = '1';
+      } catch (e) {
+        console.error('No se pudo montar el panel de Customize para la unidad ' + idx + ':', e);
+      }
+    }
+    scheduleDraftSave();
+  }
+  window.toggleUnitCustomize = toggleUnitCustomize;
 
   /* Autoguardado tambien para las filas de unidad -- se crean dinamico,
      asi que no las agarra el .forEach de addEventListener de arriba. */
@@ -1776,11 +1823,22 @@ if (client) {
 
   function addUnitCard(prefill) {
     const idx = ++unitCardCounter;
+    const wrap = document.createElement('div');
+    wrap.className = 'gs-ofp-unit-wrap';
+    wrap.dataset.unitWrap = idx;
+
     const div = document.createElement('div');
     div.className = 'gs-ofp-unitline';
     div.dataset.unit = idx;
     div.innerHTML = unitCardHtml(idx);
-    $('unit-cards').appendChild(div);
+    wrap.appendChild(div);
+
+    const reveal = document.createElement('div');
+    reveal.id = 'unit-' + idx + '-customize-reveal';
+    reveal.style.display = 'none';
+    wrap.appendChild(reveal);
+
+    $('unit-cards').appendChild(wrap);
     renumberUnitCards();
     wireUnitCardAutosave(idx);
     if (prefill) {
@@ -1798,8 +1856,9 @@ if (client) {
       alert('A multi-unit order needs at least 2 units. Switch to "Single Unit" above if you only need one.');
       return;
     }
-    const el = document.querySelector('.gs-ofp-unitline[data-unit="' + idx + '"]');
-    if (el) el.remove();
+    const wrap = document.querySelector('.gs-ofp-unit-wrap[data-unit-wrap="' + idx + '"]');
+    if (wrap) wrap.remove();
+    delete unitCustomizeState[idx];
     renumberUnitCards();
     scheduleDraftSave();
   }
@@ -2196,12 +2255,25 @@ if (client) {
     const out = [];
     cards.forEach(card => {
       const idx = card.dataset.unit;
-      out.push({
+      const unit = {
         buildingId: $('unit-' + idx + '-building-select')?.value || '',
         unitNumber: $('unit-' + idx + '-unit-number')?.value.trim() || '',
         bedrooms:   $('unit-' + idx + '-bedrooms')?.value.trim() || '',
         bathrooms:  $('unit-' + idx + '-bathrooms')?.value.trim() || ''
-      });
+      };
+      /* "Customize" (confirmado con el dueno): si esta prendido para
+         esta unidad, manda sus propias fechas/hora/office access en
+         vez de heredar las del Paso 3 -- si esta apagado, no se manda
+         nada de esto y el backend usa las del Paso 3 como siempre. */
+      if (unitCustomizeState[idx]) {
+        const dom = 'unit-' + idx;
+        unit.entryDate = $(dom + '-entry')?.value || '';
+        unit.entryTime = $(dom + '-entry-time')?.value || '';
+        unit.dueDate = $(dom + '-due')?.value || '';
+        unit.needsOfficeAccess = GSOrderFormPremium.getOfficeNeedValue(dom);
+        unit.officeNeedNotes = GSOrderFormPremium.getOfficeNeedNotes(dom);
+      }
+      out.push(unit);
     });
     return out;
   }
