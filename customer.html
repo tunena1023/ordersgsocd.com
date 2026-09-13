@@ -1109,12 +1109,8 @@
   </div>
 </div>
 
-<footer>
-  <p>© 2026 <span>GS Solutions Inc.</span> — Des Moines, Iowa</p>
-  <p>orders@gsocd.com · (515) 473-5990</p>
-</footer>
 
-<!-- FIX: diálogo de draft con botón de cerrar (✕) y wiring por addEventListener -->
+
 <div class="dialog-overlay" id="draft-dialog">
   <div class="dialog-panel" style="position:relative">
     <button class="contact-close" id="draft-close-btn" title="Close — draft stays saved">✕</button>
@@ -1230,10 +1226,6 @@
   </div>
 </div>
 
-<footer>
-  <p>© 2026 <span>GS Solutions Inc.</span> — Des Moines, Iowa</p>
-  <p>orders@gsocd.com · (515) 473-5990</p>
-</footer>
 </div>
 
 <!-- PROCESSING -->
@@ -1253,6 +1245,17 @@
     <div id="history-container"><p class="empty-note">Loading…</p></div>
   </div>
 </div>
+
+<!-- Footer UNICO, fuera de cualquier .panel -- asi aparece siempre
+     en el mismo lugar del documento sin importar cual tab este
+     activo (antes habia 2: uno fuera de todo panel entre New Order y
+     Recurring que siempre se veia sin importar el tab, y otro metido
+     DENTRO de Profile que solo aparecia con ese tab -- ninguno de los
+     2 quedaba realmente al final de verdad). -->
+<footer>
+  <p>© 2026 <span>GS Solutions Inc.</span> — Des Moines, Iowa</p>
+  <p>orders@gsocd.com · (515) 473-5990</p>
+</footer>
 
 <!-- Input de camara de Tracking (renombrado, chocaba con el de New Order) -->
 <input type="file" id="tracking-client-camera-input" accept="image/*" capture="environment" style="display:none">
