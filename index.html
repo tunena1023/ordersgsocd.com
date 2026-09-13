@@ -287,7 +287,7 @@ async function submitRecovery() {
   errorEl.textContent = ''; okEl.style.display = 'none';
   if (!email) { errorEl.textContent = 'Please enter your email.'; return; }
 
-  const btn = document.querySelector('#recover-gate .btn-gold');
+  const btn = document.querySelector('#recover-gate .gs-ofp-btn-primary');
   btn.disabled = true; btn.textContent = 'Checking…';
   try {
     const res = await GS.api('/recover-client-id', { method: 'POST', body: { email: email } });
@@ -309,7 +309,7 @@ async function doLogin() {
   const errorEl = document.getElementById('login-error');
   if (!val) { errorEl.textContent = 'Please enter your client number.'; return; }
 
-  const btn = document.querySelector('#login-gate .btn-gold');
+  const btn = document.querySelector('#login-gate .gs-ofp-btn-primary');
   btn.disabled = true; btn.textContent = 'Checking…'; errorEl.textContent = '';
   try {
     const result = await GS.api('/validate-client', { method: 'POST', body: { clientId: val } });
@@ -344,7 +344,7 @@ async function submitRegistration() {
     return;
   }
 
-  const btn = document.querySelector('#register-gate .btn-gold');
+  const btn = document.querySelector('#register-gate .gs-ofp-btn-primary');
   btn.disabled = true; btn.textContent = 'Registering…'; errorEl.textContent = ''; recoverBtn.style.display = 'none';
   try {
     const result = await GS.api('/register-client', {
