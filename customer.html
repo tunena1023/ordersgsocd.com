@@ -840,21 +840,23 @@
   #panel-processing .status-incomplete, #panel-history .status-incomplete { background: #F0EFEA; color: #6B6B6B; }
   #panel-processing .status-confirmed, #panel-history .status-confirmed { background: #F0FAF0; color: #2A7A2A; }
   #panel-processing .order-card-body, #panel-history .order-card-body { padding: 20px; display: none; }
-  #panel-processing .order-2col, #panel-history .order-2col {display:grid;grid-template-columns:1fr}
-  #panel-processing .order-2col.open, #panel-history .order-2col.open {grid-template-columns:1fr 1fr;gap:20px}
-  #panel-processing .col-left, #panel-history .col-left {min-width:0}
-  #panel-processing .col-right, #panel-history .col-right {display:none;min-width:0;padding:18px;background:var(--off)}
+  #panel-processing .order-2col, #panel-history .order-2col {display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  #panel-processing .order-2col.open, #panel-history .order-2col.open {grid-template-columns:1fr 1fr 1fr}
+  #panel-processing .col-tracker-actions, #panel-history .col-tracker-actions {grid-column:1 / span 2;min-width:0}
+  #panel-processing .col-right, #panel-history .col-right {display:none;min-width:0;padding:18px;background:var(--off);grid-row:1}
   #panel-processing .order-2col.open .col-right, #panel-history .order-2col.open .col-right {display:block}
   @media (min-width:701px) {
     #panel-processing .order-2col.open .col-right, #panel-history .order-2col.open .col-right {border-left:1px solid var(--border)}
   }
-  @media (max-width:700px) {
+  @media (max-width:860px) {
+    #panel-processing .order-2col, #panel-history .order-2col {grid-template-columns:1fr}
     #panel-processing .order-2col.open, #panel-history .order-2col.open {grid-template-columns:1fr}
+    #panel-processing .col-tracker-actions, #panel-history .col-tracker-actions {grid-column:1}
+    #panel-processing .col-right, #panel-history .col-right {grid-row:auto}
     #panel-processing .order-2col.open .col-right, #panel-history .order-2col.open .col-right {border-top:1px solid var(--border)}
   }
   #panel-processing .order-card-body.open, #panel-history .order-card-body.open { display: block; animation: bodyIn .3s ease both; }
   #panel-processing @keyframes bodyIn, #panel-history @keyframes bodyIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
-  #panel-processing .detail-grid, #panel-history .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 20px; }
   #panel-processing .detail-label, #panel-history .detail-label { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--gray); margin-bottom: 10px; }
   #panel-processing .svc-line, #panel-history .svc-line { font-size: 12px; color: var(--black); line-height: 1.9; }
   #panel-processing .svc-line b, #panel-history .svc-line b { color: var(--gold-dk); }
@@ -934,7 +936,6 @@
   #panel-processing .client-photos-sub, #panel-history .client-photos-sub { font-size: 11px; color: var(--gray); margin-bottom: 10px; }
   @media (max-width: 860px) {
     #panel-processing .history-wrap, #panel-history .history-wrap { padding: 28px 20px; }
-    #panel-processing .detail-grid, #panel-history .detail-grid { grid-template-columns: 1fr; }
     #panel-processing footer, #panel-history footer { flex-direction: column; gap: 8px; padding: 20px; }
   }
 
@@ -4199,9 +4200,7 @@ if (client) {
 
       body.innerHTML = `
         <div class="order-2col" id="ord2col-${escAttr(orderId)}">
-        <div class="col-left">
-        <div class="detail-grid">
-          <div>
+        <div>
             <p class="detail-label">Order Details</p>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px 16px;margin-bottom:14px">
               <div><div class="field-caption">Entry</div><div class="field-value">${fmtDateTime(o.EntryDate)}</div></div>
@@ -4228,13 +4227,11 @@ if (client) {
             <p class="detail-label">History</p>
             ${histHtml}
           </div>
-        </div>
-        <div style="margin-top:8px">
+        <div class="col-tracker-actions">
           <p class="detail-label">Order Tracker</p>
           ${cancelledBannerHtml(o)}
           <div id="tracker-mount-${escAttr(orderId)}"></div>
-        </div>
-        <div class="order-actions">${actionButtonsFor(o, history, data.document || null)}</div>
+          <div class="order-actions">${actionButtonsFor(o, history, data.document || null)}</div>
         </div>
         <div class="col-right" id="sidepanel-${escAttr(orderId)}"></div>
         </div>`;

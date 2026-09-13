@@ -86,22 +86,24 @@
   /* ===== Request Change / Notifications: panel inline de 2 columnas,
      no ventana emergente -- mismo patron ya usado en Update Services
      del portal de Supervisor (tech.gsocd.com). ===== */
-  .order-2col{display:grid;grid-template-columns:1fr}
-  .order-2col.open{grid-template-columns:1fr 1fr;gap:20px}
-  .col-left{min-width:0}
-  .col-right{display:none;min-width:0;padding:18px;background:var(--off)}
+  .order-2col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .order-2col.open{grid-template-columns:1fr 1fr 1fr}
+  .col-tracker-actions{grid-column:1 / span 2;min-width:0}
+  .col-right{display:none;min-width:0;padding:18px;background:var(--off);grid-row:1}
   .order-2col.open .col-right{display:block}
   @media (min-width:701px){
     .order-2col.open .col-right{border-left:1px solid var(--border)}
   }
-  @media (max-width:700px){
+  @media (max-width:860px){
+    .order-2col{grid-template-columns:1fr}
     .order-2col.open{grid-template-columns:1fr}
+    .col-tracker-actions{grid-column:1}
+    .col-right{grid-row:auto}
     .order-2col.open .col-right{border-top:1px solid var(--border)}
   }
   .order-card-body.open { display: block; animation: bodyIn .3s ease both; }
   @keyframes bodyIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 
-  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 20px; }
   .detail-label { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--gray); margin-bottom: 10px; }
   .svc-line { font-size: 12px; color: var(--black); line-height: 1.9; }
   .svc-line b { color: var(--gold-dk); }
@@ -276,7 +278,6 @@
     .portal-header { padding: 14px 20px; }
     .tabs { padding: 0 20px; }
     .history-wrap { padding: 28px 20px; }
-    .detail-grid { grid-template-columns: 1fr; }
     footer { flex-direction: column; gap: 8px; padding: 20px; }
     .toast { left: 20px; right: 20px; bottom: 20px; max-width: none; }
   }
@@ -895,9 +896,7 @@ if (client) {
 
       body.innerHTML = `
         <div class="order-2col" id="ord2col-${escAttr(orderId)}">
-        <div class="col-left">
-        <div class="detail-grid">
-          <div>
+        <div>
             <p class="detail-label">Order Details</p>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px 16px;margin-bottom:14px">
               <div><div class="field-caption">Entry</div><div class="field-value">${fmtDateTime(o.EntryDate)}</div></div>
@@ -924,13 +923,11 @@ if (client) {
             <p class="detail-label">History</p>
             ${histHtml}
           </div>
-        </div>
-        <div style="margin-top:8px">
+        <div class="col-tracker-actions">
           <p class="detail-label">Order Tracker</p>
           ${cancelledBannerHtml(o)}
           <div id="tracker-mount-${escAttr(orderId)}"></div>
-        </div>
-        <div class="order-actions">${actionButtonsFor(o, history, data.document || null)}</div>
+          <div class="order-actions">${actionButtonsFor(o, history, data.document || null)}</div>
         </div>
         <div class="col-right" id="sidepanel-${escAttr(orderId)}"></div>
         </div>`;
