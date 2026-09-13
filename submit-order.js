@@ -473,28 +473,7 @@ exports.handler = async (event) => {
     if (Array.isArray(b.Units) && b.Units.length >= 2) {
       if (!b.Services) return jsonResponse(400, { error: 'Services are required' });
 
-      const buildingIds = b.Units.map(u => String(u.buildingId || '').trim());
-      if (buildingIds.some(id => !id)) {
-        return jsonResponse(400, { error: 'Every unit needs a building selected.' });
-      }
-
-      const [allOrderRows, allBuildingRows] = await Promise.all([
-        fetchAll(ORDERS_LIST),
-        fetchAll(CLIENT_ADDRESSES_LIST)
-      ]);
-      const buildingRows = allBuildingRows.filter(it =>
-        it.fields && String(it.fields.ClientID || '').trim().toLowerCase() === String(b.ClientID).trim().toLowerCase()
-      );
-
-      const buildingsById = {};
-      buildingRows.forEach(it => { if (it.fields) buildingsById[it.id] = it.fields; });
-      /* 'CLIENT_ADDRESS' es un id especial (no es un renglon real de
-         CLIENT_ADDRESSES_LIST) -- significa "esta unidad no tiene
-         building guardado, usa la direccion del cliente". Se salta la
-         validacion de pertenencia para ese caso unicamente. */
-      for (const id of buildingIds) {
-        if (id !== 'CLIENT_ADDRESS' && !buildingsById[id]) return jsonResponse(403, { error: 'One of the selected buildings does not belong to this client.' });
-      }
+      const allOrderRows = await fetchAll(ORDERS_LIST);
 
       const actor = (b.changedBy && String(b.changedBy).trim()) || 'Admin';
       const poTag = nextGlobalPO(allOrderRows);
@@ -503,13 +482,19 @@ exports.handler = async (event) => {
 
       const createdOrderIds = [];
       for (const unit of b.Units) {
-        const bId = String(unit.buildingId).trim();
-        /* Sin building guardado -- usar la direccion del cliente
-           (ya geocodificada arriba, en orderFields) en vez de un
-           renglon real de CLIENT_ADDRESSES_LIST. */
-        const bf = bId === 'CLIENT_ADDRESS'
-          ? { BuildingNumber: '', Address: orderFields.Address, Suite: orderFields.Suite, City: orderFields.City, Zip: orderFields.Zip, Latitude: orderFields.Latitude, Longitude: orderFields.Longitude }
-          : buildingsById[bId];
+        /* Building # es texto libre y opcional, igual que en Single y
+           en Add Unit (confirmado con el dueño 12/09/2026) -- ya no
+           es un building guardado de CLIENT_ADDRESSES_LIST. Todas las
+           unidades del batch usan SIEMPRE la direccion del cliente
+           (ya geocodificada arriba, en orderFields); si el campo viene
+           vacio, se autorellena con los digitos iniciales de esa
+           direccion. */
+        let buildingNumber = String(unit.buildingNumber || '').trim();
+        if (!buildingNumber) {
+          const m = String(orderFields.Address || '').match(/^\s*(\d+)/);
+          buildingNumber = m ? m[1] : '';
+        }
+        const bf = { BuildingNumber: buildingNumber, Address: orderFields.Address, Suite: orderFields.Suite, City: orderFields.City, Zip: orderFields.Zip, Latitude: orderFields.Latitude, Longitude: orderFields.Longitude };
         const suffix = String(nextSuffixNum++).padStart(4, '0');
         const orderId = String(b.ClientID).trim() + '-' + suffix + '-' + poTag;
 
@@ -544,11 +529,10 @@ exports.handler = async (event) => {
           City:           bf.City    || '',
           Zip:            bf.Zip     || '',
           BatchId:        poTag,
-          BuildingId:     bId,
-          /* Cada unidad tiene su PROPIO building, distinto a la
-             direccion de facturacion que ya se geocodifico en
-             orderFields -- se sobreescribe con las coordenadas
-             correctas de este building especifico. */
+          /* Cada unidad tiene su PROPIA direccion (siempre la del
+             cliente, ya geocodificada arriba en orderFields) -- se
+             repite aqui explicitamente por claridad, aunque ya venga
+             heredada del spread de orderFields. */
           Latitude:  bf.Latitude  != null ? bf.Latitude  : null,
           Longitude: bf.Longitude != null ? bf.Longitude : null
         }, unitOverrides);

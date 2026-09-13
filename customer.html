@@ -60,7 +60,7 @@
   .order-main { padding: 48px; border-right: 1px solid var(--border); }
   .order-sidebar { background: var(--off); padding: 40px 28px; }
 
-  .step-label { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--gold); font-weight: 600; margin-bottom: 6px; }
+  .step-label { font-size: 16px; letter-spacing: .18em; text-transform: uppercase; color: var(--gold); font-weight: 600; margin-bottom: 6px; }
   .step-title { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 600; margin-bottom: 28px; }
 
   .services-section { margin-bottom: 36px; }
@@ -1054,7 +1054,7 @@
         <div class="step-title" style="margin-top:28px;font-size:20px">Select your services</div>
         <div class="services-section" id="services-container"><p class="flash-empty">Loading services…</p></div>
 
-        <div class="step-label" style="margin-top:36px">Step 3 of 3</div>
+        <div class="step-label" style="margin-top:36px;font-size:14px">Step 3 of 3</div>
         <div class="step-title">Access &amp; scheduling</div>
 
         <div id="create-panel-mount"></div>
@@ -1413,7 +1413,6 @@ if (client) {
   let draftPendingData = null;
   let saveTimer = null;
   let multiUnitsOn = false;
-  let clientBuildings = [];
   let unitCardCounter = 0;
 
   const $ = id => document.getElementById(id);
@@ -1718,7 +1717,6 @@ if (client) {
     $('add-unit-btn').style.display          = multiUnitsOn ? 'block' : 'none';
 
     if (multiUnitsOn) {
-      if (!clientBuildings.length) await loadClientBuildingsForUnits();
       if (!$('unit-cards').children.length) {
         addUnitCard();
         addUnitCard();
@@ -1731,32 +1729,12 @@ if (client) {
     setOrderMode(multiUnitsOn ? 'single' : 'multi');
   }
 
-  async function loadClientBuildingsForUnits() {
-    try {
-      const data = await GS.api('/get-client-addresses', { method: 'POST', body: { clientId: client.clientId, includeArchived: false } });
-      clientBuildings = data.addresses || [];
-    } catch (e) {
-      clientBuildings = [];
-    }
-  }
-
-  function buildingOptionsHtml() {
-    /* 'Use my address' siempre esta disponible y va primero -- por
-       default, sin nada mas que elegir, ya usa la direccion del
-       cliente sin que tenga que guardar ningun building primero. */
-    let html = '<option value="CLIENT_ADDRESS">Use my address (' + esc(client.address || client.businessName || 'on file') + ')</option>';
-    clientBuildings.forEach(b => {
-      html += '<option value="' + esc(b.id) + '">' + esc(b.label || 'Building') + (b.buildingNumber ? ' #' + esc(b.buildingNumber) : '') + '</option>';
-    });
-    return html;
-  }
-
   function unitCardHtml(idx) {
     return '' +
       '<div class="gs-ofp-unitline-num">' + idx + '</div>' +
       '<div class="gs-ofp-unitfield">' +
-        '<div class="gs-ofp-unitfield-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 21V5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v16"/><path d="M12 21V9a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v12"/><path d="M8 8h1M8 12h1M8 16h1M16 12h1M16 16h1"/></svg>Building</div>' +
-        '<select id="unit-' + idx + '-building-select" class="gs-ofp-unitselect">' + buildingOptionsHtml() + '</select>' +
+        '<div class="gs-ofp-unitfield-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 21V5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v16"/><path d="M12 21V9a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v12"/><path d="M8 8h1M8 12h1M8 16h1M16 12h1M16 16h1"/></svg>Building # (optional)</div>' +
+        '<input type="text" id="unit-' + idx + '-building-number" placeholder="e.g. 1215">' +
       '</div>' +
       '<div class="gs-ofp-unitfield">' +
         '<div class="gs-ofp-unitfield-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 10h16"/></svg>Unit #</div>' +
@@ -1813,7 +1791,7 @@ if (client) {
   /* Autoguardado tambien para las filas de unidad -- se crean dinamico,
      asi que no las agarra el .forEach de addEventListener de arriba. */
   function wireUnitCardAutosave(idx) {
-    ['building-select', 'unit-number', 'bedrooms', 'bathrooms'].forEach(suffix => {
+    ['building-number', 'unit-number', 'bedrooms', 'bathrooms'].forEach(suffix => {
       const el = $('unit-' + idx + '-' + suffix);
       if (!el) return;
       el.addEventListener('input', scheduleDraftSave);
@@ -1842,8 +1820,7 @@ if (client) {
     renumberUnitCards();
     wireUnitCardAutosave(idx);
     if (prefill) {
-      const sel = $('unit-' + idx + '-building-select');
-      if (sel && prefill.buildingId) sel.value = prefill.buildingId;
+      if ($('unit-' + idx + '-building-number')) $('unit-' + idx + '-building-number').value = prefill.buildingNumber || '';
       if ($('unit-' + idx + '-unit-number')) $('unit-' + idx + '-unit-number').value = prefill.unitNumber || '';
       if ($('unit-' + idx + '-bedrooms'))    $('unit-' + idx + '-bedrooms').value    = prefill.bedrooms || '';
       if ($('unit-' + idx + '-bathrooms'))   $('unit-' + idx + '-bathrooms').value   = prefill.bathrooms || '';
@@ -1853,7 +1830,23 @@ if (client) {
   function removeUnitCard(idx) {
     const cards = document.querySelectorAll('.gs-ofp-unitline');
     if (cards.length <= 2) {
-      alert('A multi-unit order needs at least 2 units. Switch to "Single Unit" above if you only need one.');
+      /* Multi siempre debe tener minimo 2 -- si al quitar esta se
+         quedaria en 1, ya no se bloquea con un alert (como antes):
+         se regresa a Single solo, cargando ahi los datos de la unica
+         unidad que queda, para no perder lo que el cliente ya
+         escribio. */
+      const remaining = [...cards].find(c => c.dataset.unit !== String(idx));
+      if (remaining) {
+        const rIdx = remaining.dataset.unit;
+        $('building-number').value = $('unit-' + rIdx + '-building-number')?.value || '';
+        $('unit-number').value = $('unit-' + rIdx + '-unit-number')?.value || '';
+        $('bedrooms').value    = $('unit-' + rIdx + '-bedrooms')?.value    || '';
+        $('bathrooms').value   = $('unit-' + rIdx + '-bathrooms')?.value   || '';
+      }
+      $('unit-cards').innerHTML = '';
+      unitCardCounter = 0;
+      setOrderMode('single');
+      scheduleDraftSave();
       return;
     }
     const wrap = document.querySelector('.gs-ofp-unit-wrap[data-unit-wrap="' + idx + '"]');
@@ -2256,7 +2249,7 @@ if (client) {
     cards.forEach(card => {
       const idx = card.dataset.unit;
       const unit = {
-        buildingId: $('unit-' + idx + '-building-select')?.value || '',
+        buildingNumber: $('unit-' + idx + '-building-number')?.value.trim() || '',
         unitNumber: $('unit-' + idx + '-unit-number')?.value.trim() || '',
         bedrooms:   $('unit-' + idx + '-bedrooms')?.value.trim() || '',
         bathrooms:  $('unit-' + idx + '-bathrooms')?.value.trim() || ''
