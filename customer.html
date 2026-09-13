@@ -107,6 +107,7 @@
   .toggle-b.small.on .toggle-b-thumb { transform: translateX(20px); }
   .gs-ofp-unit-customize-inline { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; padding-bottom: 8px; }
   .gs-ofp-unit-customize-inline-label { font-size: 9px; letter-spacing: .06em; text-transform: uppercase; color: var(--gray); font-weight: 600; white-space: nowrap; }
+  .gs-ofp-unit-locked-label { font-style: italic; }
 
   /* ===== Las 3 tarjetas premium del flujo (aprobadas en mini):
      profundidad real (sombras en capas), el triangulo real del logo
@@ -1729,7 +1730,7 @@ if (client) {
     setOrderMode(multiUnitsOn ? 'single' : 'multi');
   }
 
-  function unitCardHtml(idx) {
+  function unitCardHtml(idx, isFirst) {
     return '' +
       '<div class="gs-ofp-unitline-num">' + idx + '</div>' +
       '<div class="gs-ofp-unitfield">' +
@@ -1748,13 +1749,21 @@ if (client) {
         '<div class="gs-ofp-unitfield-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12h16M4 12a2 2 0 0 0-2 2v1a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-1a2 2 0 0 0-2-2M4 12V7a2 2 0 0 1 2-2h1"/><circle cx="7" cy="8" r="1"/><path d="M6 18l-1 3M18 18l1 3"/></svg>Bathrooms</div>' +
         '<input type="number" id="unit-' + idx + '-bathrooms" min="1" max="3" placeholder="e.g. 1">' +
       '</div>' +
-      '<div class="gs-ofp-unit-customize-inline" title="Give this unit its own dates and office access notes, instead of using the ones above">' +
-        '<span class="gs-ofp-unit-customize-inline-label">Customize</span>' +
-        '<div class="toggle-b small" id="unit-' + idx + '-customize-toggle" onclick="toggleUnitCustomize(' + idx + ')">' +
-          '<div class="toggle-b-thumb" id="unit-' + idx + '-customize-thumb"></div>' +
-        '</div>' +
-      '</div>' +
-      '<button type="button" class="gs-ofp-unit-remove" onclick="removeUnitCard(' + idx + ')" title="Remove unit">×</button>';
+      (isFirst
+        ? '<div class="gs-ofp-unit-customize-inline" title="This unit always uses the entry/due dates and office access notes from Step 3 below -- it can\'t be customized or removed, so Step 3\'s details always apply to at least one unit.">' +
+            '<span class="gs-ofp-unit-customize-inline-label gs-ofp-unit-locked-label">Uses Step 3</span>' +
+          '</div>'
+        : '<div class="gs-ofp-unit-customize-inline" title="Off by default: this unit uses the entry/due dates and office access notes from Step 3 below. Turn this on to give this unit its own instead.">' +
+            '<span class="gs-ofp-unit-customize-inline-label">Customize</span>' +
+            '<div class="toggle-b small" id="unit-' + idx + '-customize-toggle" onclick="toggleUnitCustomize(' + idx + ')">' +
+              '<div class="toggle-b-thumb" id="unit-' + idx + '-customize-thumb"></div>' +
+            '</div>' +
+          '</div>'
+      ) +
+      (isFirst
+        ? ''
+        : '<button type="button" class="gs-ofp-unit-remove" onclick="removeUnitCard(' + idx + ')" title="Remove unit">×</button>'
+      );
   }
 
   const unitCustomizeState = {};
@@ -1801,20 +1810,24 @@ if (client) {
 
   function addUnitCard(prefill) {
     const idx = ++unitCardCounter;
+    const isFirst = $('unit-cards').children.length === 0;
     const wrap = document.createElement('div');
     wrap.className = 'gs-ofp-unit-wrap';
     wrap.dataset.unitWrap = idx;
+    if (isFirst) wrap.dataset.unitLocked = '1';
 
     const div = document.createElement('div');
     div.className = 'gs-ofp-unitline';
     div.dataset.unit = idx;
-    div.innerHTML = unitCardHtml(idx);
+    div.innerHTML = unitCardHtml(idx, isFirst);
     wrap.appendChild(div);
 
-    const reveal = document.createElement('div');
-    reveal.id = 'unit-' + idx + '-customize-reveal';
-    reveal.style.display = 'none';
-    wrap.appendChild(reveal);
+    if (!isFirst) {
+      const reveal = document.createElement('div');
+      reveal.id = 'unit-' + idx + '-customize-reveal';
+      reveal.style.display = 'none';
+      wrap.appendChild(reveal);
+    }
 
     $('unit-cards').appendChild(wrap);
     renumberUnitCards();
@@ -1828,6 +1841,11 @@ if (client) {
   }
 
   function removeUnitCard(idx) {
+    /* Defensivo -- la primera unidad no tiene boton de quitar, pero
+       por si acaso algo mas la llegara a llamar con su idx. */
+    const targetWrap = document.querySelector('.gs-ofp-unit-wrap[data-unit-wrap="' + idx + '"]');
+    if (targetWrap && targetWrap.dataset.unitLocked === '1') return;
+
     const cards = document.querySelectorAll('.gs-ofp-unitline');
     if (cards.length <= 2) {
       /* Multi siempre debe tener minimo 2 -- si al quitar esta se
