@@ -344,7 +344,7 @@
       <label>Message</label>
       <textarea id="contact-message" placeholder="How can we help?"></textarea>
     </div>
-    <button class="btn-gold" onclick="sendContact()">Send Message</button>
+    <button class="gs-ofp-btn-primary" onclick="sendContact()">Send Message</button>
     <p id="contact-error" style="font-size:11px;color:#B33A3A;margin-top:10px;text-align:center"></p>
     <p id="contact-ok" style="font-size:12px;color:#2A7A2A;margin-top:10px;text-align:center;display:none">Message sent. We'll be in touch shortly.</p>
   </div>
@@ -356,8 +356,8 @@
     <p>Requesting cancellation of order <strong id="cancel-order-id"></strong>.<br><br>
        <strong style="color:#B33A3A">A cancelled order cannot be recovered.</strong> Our office will review your request and confirm the cancellation.</p>
     <div class="dialog-btns">
-      <button class="btn-ghost" onclick="closeCancelDialog()">Go Back</button>
-      <button class="btn-danger" id="cancel-confirm-btn" onclick="confirmCancel()">Request Cancellation</button>
+      <button class="gs-ofp-btn-secondary" onclick="closeCancelDialog()">Go Back</button>
+      <button class="gs-ofp-btn-danger" id="cancel-confirm-btn" onclick="confirmCancel()">Request Cancellation</button>
     </div>
     <p class="dialog-error" id="cancel-error"></p>
   </div>
@@ -397,8 +397,8 @@
       <textarea id="notready-note" rows="3" placeholder="e.g. delivery got pushed back"></textarea>
     </div>
     <div class="dialog-btns">
-      <button class="btn-ghost" onclick="closeNotReadyDialog(false)">Go Back</button>
-      <button class="btn-gold" id="notready-confirm-btn" onclick="confirmNotReady()">Turn Off</button>
+      <button class="gs-ofp-btn-secondary" onclick="closeNotReadyDialog(false)">Go Back</button>
+      <button class="gs-ofp-btn-primary" id="notready-confirm-btn" onclick="confirmNotReady()">Turn Off</button>
     </div>
     <p class="dialog-error" id="notready-error"></p>
   </div>
@@ -1799,8 +1799,8 @@ return html;
         <select id="panel-notif-contact">${contactOptHtml}</select>
       </div>
       <div class="dialog-btns">
-        <button type="button" class="btn-ghost" onclick="closeOpenPanel()">Cancel</button>
-        <button type="button" class="btn-gold" id="panel-notif-save-btn" onclick="submitNotifPanel('${escAttr(o.OrderID)}')">Save</button>
+        <button type="button" class="gs-ofp-btn-secondary" onclick="closeOpenPanel()">Cancel</button>
+        <button type="button" class="gs-ofp-btn-primary" id="panel-notif-save-btn" onclick="submitNotifPanel('${escAttr(o.OrderID)}')">Save</button>
       </div>
       <p class="dialog-error" id="panel-notif-error"></p>`;
     if (!o.OrderContactId) $('panel-notif-contact').value = '';

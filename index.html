@@ -164,7 +164,7 @@ style="object-fit:contain">
     <label>Client Number</label>
     <input type="text" id="client-input" placeholder="e.g. GS-1042" onkeydown="if(event.key==='Enter') doLogin()" />
   </div>
-  <button class="btn-gold" onclick="doLogin()">Access Portal</button>
+  <button class="gs-ofp-btn-primary" onclick="doLogin()">Access Portal</button>
   <p id="login-error" style="font-size:11px;color:#B33A3A;margin-top:10px"></p>
   <button class="link-btn" onclick="showRegister(true)">First Time? Register</button>
   <button class="link-btn" onclick="showRecover(true)">Forgot your client number?</button>
@@ -206,7 +206,7 @@ style="object-fit:contain">
     <label>Phone</label>
     <input type="text" id="reg-phone" placeholder="Phone number" />
   </div>
-  <button class="btn-gold" onclick="submitRegistration()">Complete Registration</button>
+  <button class="gs-ofp-btn-primary" onclick="submitRegistration()">Complete Registration</button>
   <p id="register-error" style="font-size:11px;color:#B33A3A;margin-top:10px"></p>
   <button class="link-btn" id="register-recover-btn" style="display:none" onclick="goRecoverFromRegister()">Recover my Client ID</button>
   <button class="link-btn" onclick="showRegister(false)">Back to Login</button>
@@ -219,7 +219,7 @@ style="object-fit:contain">
     <label>Email</label>
     <input type="text" id="recover-email" placeholder="client@email.com" onkeydown="if(event.key==='Enter') submitRecovery()" />
   </div>
-  <button class="btn-gold" onclick="submitRecovery()">Send My Client Number</button>
+  <button class="gs-ofp-btn-primary" onclick="submitRecovery()">Send My Client Number</button>
   <p id="recover-error" style="font-size:11px;color:#B33A3A;margin-top:10px"></p>
   <p id="recover-ok" style="font-size:12px;color:#2A7A2A;margin-top:10px;display:none">We found your account. Check your inbox — your client number is on its way.</p>
   <button class="link-btn" onclick="showRecover(false)">Back to Login</button>
@@ -249,15 +249,17 @@ style="object-fit:contain">
       <label>Message</label>
       <input type="text" id="contact-message" placeholder="How can we help?" />
     </div>
-    <button class="btn-gold" onclick="sendContact()">Send Message</button>
+    <button class="gs-ofp-btn-primary" onclick="sendContact()">Send Message</button>
     <p id="contact-error" style="font-size:11px;color:#B33A3A;margin-top:10px;text-align:center"></p>
     <p id="contact-ok" style="font-size:12px;color:#2A7A2A;margin-top:10px;text-align:center;display:none">Message sent. We'll be in touch shortly.</p>
   </div>
 </div>
 
 <script src="shared.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.22/order-form-premium/order-form-premium.js"></script>
 <script>
 /* index.html — login + registro. Logo EMBEBIDO (el completo que sí funciona). */
+GSOrderFormPremium.styleTag();
 
 // Si ya hay sesión activa, no pedimos el ClientID de nuevo
 if (GS.session.get()) {

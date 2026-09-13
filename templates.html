@@ -171,7 +171,7 @@
     <div id="tpl-picker"><p class="flash-empty">Loading services…</p></div>
 
     <div class="save-row">
-      <button type="button" class="btn-gold" style="padding:14px 28px;width:100%" onclick="saveTemplate()">Save Template</button>
+      <button type="button" class="gs-ofp-btn-primary" style="padding:14px 28px;width:100%" onclick="saveTemplate()">Save Template</button>
     </div>
   </div>
 </div>
@@ -189,7 +189,7 @@
     <div style="margin-bottom:14px"><label style="font-size:11px;color:var(--gray);display:block;margin-bottom:4px">Your Name</label><input type="text" id="contact-name" style="width:100%;padding:10px;border:1px solid var(--border)"></div>
     <div style="margin-bottom:14px"><label style="font-size:11px;color:var(--gray);display:block;margin-bottom:4px">Email</label><input type="text" id="contact-email" style="width:100%;padding:10px;border:1px solid var(--border)"></div>
     <div style="margin-bottom:14px"><label style="font-size:11px;color:var(--gray);display:block;margin-bottom:4px">Message</label><textarea id="contact-message" style="width:100%;padding:10px;border:1px solid var(--border);min-height:80px"></textarea></div>
-    <button class="btn-gold" onclick="sendContact()">Send Message</button>
+    <button class="gs-ofp-btn-primary" onclick="sendContact()">Send Message</button>
     <p id="contact-error" style="font-size:11px;color:#B33A3A;margin-top:10px;text-align:center"></p>
     <p id="contact-ok" style="font-size:12px;color:#2A7A2A;margin-top:10px;text-align:center;display:none">Message sent. We'll be in touch shortly.</p>
   </div>
@@ -262,12 +262,12 @@ if (client) {
           </div>
           <div class="tpl-actions">
             ${t.mine ? '<button class="btn-text-danger" onclick="event.stopPropagation(); deleteTemplate(\'' + t.id + '\')">Delete</button>' : ''}
-            <button class="btn-gold" onclick="event.stopPropagation(); useTemplate('${t.id}')">Use This Template</button>
+            <button class="gs-ofp-btn-primary" onclick="event.stopPropagation(); useTemplate('${t.id}')">Use This Template</button>
           </div>
         </div>
         <div class="tpl-detail" id="tpl-detail-${t.id}">
           ${tplServiceListHtml(t.services)}
-          ${t.mine ? '<button type="button" class="btn-outline" onclick="editTemplate(\'' + t.id + '\')">Edit</button>' : ''}
+          ${t.mine ? '<button type="button" class="gs-ofp-btn-secondary" onclick="editTemplate(\'' + t.id + '\')">Edit</button>' : ''}
         </div>
       </div>`).join('');
   }

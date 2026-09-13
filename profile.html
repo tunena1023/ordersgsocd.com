@@ -241,7 +241,7 @@
       <label>Message</label>
       <textarea id="contact-message" placeholder="How can we help?"></textarea>
     </div>
-    <button class="btn-gold" onclick="sendContact()">Send Message</button>
+    <button class="gs-ofp-btn-primary" onclick="sendContact()">Send Message</button>
     <p id="contact-error" style="font-size:11px;color:#B33A3A;margin-top:10px;text-align:center"></p>
     <p id="contact-ok" style="font-size:12px;color:#2A7A2A;margin-top:10px;text-align:center;display:none">Message sent. We'll be in touch shortly.</p>
   </div>
@@ -318,7 +318,7 @@ if (client) {
     const archivedCount = addresses.filter(a => a.archived).length;
     html += '<div class="client-addr-list-foot">' +
       (archivedCount ? '<a onclick="toggleShowArchivedBuildings()">' + (showArchivedBuildings ? 'Hide' : 'Show') + ' archived buildings (' + archivedCount + ')</a>' : '') +
-      '<button class="btn-gold" style="font-size:10px;padding:10px 14px" onclick="startAddBuilding()">+ Add Building</button>' +
+      '<button class="gs-ofp-btn-primary" style="font-size:10px;padding:10px 14px" onclick="startAddBuilding()">+ Add Building</button>' +
       '</div>';
 
     $('addr-list').innerHTML = html;
@@ -360,8 +360,8 @@ if (client) {
       }
 
       html += '<div style="display:flex;gap:8px;margin-top:20px;max-width:280px">' +
-        '<button class="btn-ghost" style="flex:1;font-size:10px;padding:10px" onclick="openEdit()">Edit</button>' +
-        '<button class="btn-ghost" style="flex:1;font-size:10px;padding:10px" onclick="openNotifications()">Notifications</button>' +
+        '<button class="gs-ofp-btn-secondary" style="flex:1;font-size:10px;padding:10px" onclick="openEdit()">Edit</button>' +
+        '<button class="gs-ofp-btn-secondary" style="flex:1;font-size:10px;padding:10px" onclick="openNotifications()">Notifications</button>' +
         '</div>';
       detail.innerHTML = html;
     } else {
@@ -380,11 +380,11 @@ if (client) {
         '<div style="margin-top:18px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray)">Contact for this building</div>' +
         '<div style="font-size:13px;margin-top:6px">' + contactLine + '</div>' +
         '<div style="display:flex;gap:8px;margin-top:20px;max-width:280px">' +
-          '<button class="btn-ghost" style="flex:1;font-size:10px;padding:10px" onclick="openEdit()">Edit</button>' +
-          '<button class="btn-ghost" style="flex:1;font-size:10px;padding:10px" onclick="openBuildingNotifications()">Notifications</button>' +
+          '<button class="gs-ofp-btn-secondary" style="flex:1;font-size:10px;padding:10px" onclick="openEdit()">Edit</button>' +
+          '<button class="gs-ofp-btn-secondary" style="flex:1;font-size:10px;padding:10px" onclick="openBuildingNotifications()">Notifications</button>' +
         '</div>' +
         '<div style="margin-top:8px;max-width:280px">' +
-          '<button class="btn-ghost" style="width:100%;font-size:10px;padding:10px" onclick="' + (b.archived ? 'unarchiveBuilding' : 'archiveBuilding') + '(\'' + esc(b.id) + '\')">' + (b.archived ? 'Unarchive' : 'Archive') + '</button>' +
+          '<button class="gs-ofp-btn-secondary" style="width:100%;font-size:10px;padding:10px" onclick="' + (b.archived ? 'unarchiveBuilding' : 'archiveBuilding') + '(\'' + esc(b.id) + '\')">' + (b.archived ? 'Unarchive' : 'Archive') + '</button>' +
         '</div>';
     }
   }
@@ -545,7 +545,7 @@ if (client) {
     if (addEl) {
       if (!remaining.length) { addEl.innerHTML = ''; return; }
       addEl.innerHTML = '<div id="hol-add-picker-' + safe + '" style="display:none;margin-bottom:8px">' +
-          remaining.map(h => '<button type="button" class="btn-ghost" style="font-size:11px;margin:0 6px 6px 0;padding:6px 12px" ' +
+          remaining.map(h => '<button type="button" class="gs-ofp-btn-secondary" style="font-size:11px;margin:0 6px 6px 0;padding:6px 12px" ' +
             'onclick="addHolidayChoice(\'' + esc(safe) + '\',\'' + esc(h.name) + '\')">+ ' + esc(h.name) + '</button>').join('') +
         '</div>' +
         '<a onclick="toggleHolidayAddPicker(\'' + esc(safe) + '\')" style="font-size:11px;color:var(--gray);text-decoration:underline;cursor:pointer">+ Add a day</a>';
@@ -671,7 +671,7 @@ if (client) {
       '<div id="ctl-contacts">' + html + '</div>' +
       '<div id="ctl-newcontacts"></div>' +
       '<a onclick="addContactRow(true)" style="font-size:11px;color:var(--gray);text-decoration:underline;cursor:pointer;display:block;margin:4px 0 14px">+ Add another contact</a>' +
-      '<button class="btn-gold" style="width:100%" onclick="saveNotifications()">Save</button>' +
+      '<button class="gs-ofp-btn-primary" style="width:100%" onclick="saveNotifications()">Save</button>' +
       '<p class="dialog-error" id="ctl-error"></p>';
     $('ctl-notif-master').addEventListener('change', toggleNotifSubgroup);
   }
@@ -699,7 +699,7 @@ if (client) {
       '<div id="ctl-contacts">' + html + '</div>' +
       '<div id="ctl-newcontacts"></div>' +
       '<a onclick="addContactRow(true)" style="font-size:11px;color:var(--gray);text-decoration:underline;cursor:pointer;display:block;margin:4px 0 14px">+ Add another contact</a>' +
-      '<button class="btn-gold" style="width:100%" onclick="saveBuildingNotifications()">Save</button>' +
+      '<button class="gs-ofp-btn-primary" style="width:100%" onclick="saveBuildingNotifications()">Save</button>' +
       '<p class="dialog-error" id="ctl-error"></p>';
   }
 

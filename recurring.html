@@ -160,11 +160,13 @@
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.20.4/nav-premium/nav-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.0.0/lightbox/lightbox.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.6.0/order-history/order-history.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.22/order-form-premium/order-form-premium.js"></script>
 
 <script>
 const client = GS.requireSession();
 if (client) {
 
+  GSOrderFormPremium.styleTag();
   GS.applyLogo();
   GSNavPremium.init('gsNav', [
     { label: 'New Order', href: 'customer.html' },
@@ -245,13 +247,13 @@ if (client) {
               '</div>' +
               '<p class="detail-label">Your Photos</p>' +
               '<div class="client-photo-thumbs">' + clientPhotosHtml + '</div>' +
-              '<button class="btn btn-outline" onclick="addClientPhoto(\'' + c.id + '\')">+ Add Photo</button><br>' +
+              '<button class="gs-ofp-btn-secondary" onclick="addClientPhoto(\'' + c.id + '\')">+ Add Photo</button><br>' +
               '<span class="gallery-link" onclick="openGallery(\'' + c.id + '\')">📷 View Gallery (photos from staff)</span>' +
-              '<div class="btn-actions"><button class="btn btn-outline" onclick="toggleChangeBox(\'' + c.id + '\')">Request a Change</button></div>' +
+              '<div class="btn-actions"><button class="gs-ofp-btn-secondary" onclick="toggleChangeBox(\'' + c.id + '\')">Request a Change</button></div>' +
               '<div class="change-box" id="change-box-' + c.id + '" style="display:none">' +
                 '<p style="font-size:11.5px;color:var(--gray);margin-bottom:8px">Let us know and we\'ll follow up directly.</p>' +
                 '<textarea id="change-text-' + c.id + '" placeholder="What do you need changed or have a question about?"></textarea>' +
-                '<button class="btn btn-gold" onclick="sendChangeRequest(\'' + c.id + '\')">Send</button>' +
+                '<button class="gs-ofp-btn-primary" onclick="sendChangeRequest(\'' + c.id + '\')">Send</button>' +
               '</div>' +
               '<p class="change-sent" id="change-sent-' + c.id + '">✓ Sent — our office will follow up with you directly.</p>' +
             '</div>' +
