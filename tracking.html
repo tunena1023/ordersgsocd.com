@@ -409,7 +409,7 @@
 <script src="shared.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.20.4/nav-premium/nav-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.1.10/date-time-picker/date-time-picker.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.19/order-form-premium/order-form-premium.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.20/order-form-premium/order-form-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.14.0/order-history/order-history.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.8.0/order-badges/order-badges.js"></script>
 <!-- Pendiente: gsocd-shared tagea TODO el repo junto (no por componente), y ya va
@@ -1701,8 +1701,8 @@ return html;
       <div class="gs-ofp-unitrow" style="margin-top:20px">
         ${GSOrderFormPremium.textFieldHtml('panel-change-entry', '', icoCal, 'New entry date', { raw: GSDateTimePicker.dateHtml('panel-change-entry', entryVal) })}
         ${GSOrderFormPremium.textFieldHtml('panel-change-due', '', icoCal, 'New due date', { raw: GSDateTimePicker.dateHtml('panel-change-due', dueVal) })}
+        ${GSOrderFormPremium.textFieldHtml('panel-change-window', '', icoClock, 'Preferred service window', { selectOptionsHtml: windowOptions })}
       </div>
-      ${GSOrderFormPremium.textFieldHtml('panel-change-window', '', icoClock, 'Preferred service window', { selectOptionsHtml: windowOptions })}
       <p style="font-size:11px;color:var(--gray);line-height:1.6;margin:16px 0">Dates and service windows are a request only. Nothing changes until our office approves it, and you will receive the confirmed dates by email.</p>
       <div class="dialog-btns">
         <button type="button" class="gs-ofp-btn-secondary" onclick="closeOpenPanel()">Cancel</button>
