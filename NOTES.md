@@ -160,10 +160,13 @@ habían quedado en una versión vieja del componente sin el acordeón.
   es Vercel, NO Netlify, aunque haya un `netlify.toml` suelto sin usar)
   filtrando por `/api/site-image` muestra el codigo de respuesta real
   (200/404/500) sin necesidad de pedirle a nadie que abra devtools.
-- Bug sin resolver: banner "File downloaded... sharepoint.com" en Tech
-  (portal de empleados, celular) — el fondo o logo se descarga como archivo
-  en vez de solo mostrarse. No tocar hasta que el dueño lo pida
-  explícitamente.
+- **RESUELTO (confirmado por el dueño, 13/09/2026):** banner "File
+  downloaded... sharepoint.com" en Tech (portal de empleados, celular) —
+  el fondo o logo se descargaba como archivo en vez de solo mostrarse.
+  `site-image.js` de Tech ya sirve el buffer con `Content-Type` correcto
+  por extensión y sin `Content-Disposition: attachment`. No quedó
+  registrado en un commit con ese nombre específico — probablemente se
+  arregló junto con otro cambio a `site-image.js`/`lib/graph.js`.
 
 ## Cómo conectarse (para que una sesión nueva no tenga que preguntar)
 
@@ -205,7 +208,7 @@ cambios en local sin subir que cambian por completo cual es la forma
 correcta de resolver algo.
 
 
-## En local, sin subir (12/09/2026): "+ Add a Unit" portado desde Admin
+## SUBIDO Y DESPLEGADO (confirmado 13/09/2026): "+ Add a Unit" portado desde Admin
 
 Mismo rediseño ya aprobado en `Admingsocd.com/admin.html` (tab Approvals),
 portado aquí. El modal (`#addunit-dialog`, `openAddBatchUnit`/
@@ -219,15 +222,17 @@ Admin — decisión tomada sola por ser "solo estético", sin pedirlo, avisado
 en el chat. `add-batch-unit.js` ahora acepta y guarda `NeedsOfficeAccess`/
 `OfficeNeedNotes` (antes no lo hacía, igual que en Admin).
 
-Diferencia real con Admin (no solo estética): aquí los buildings del
-cliente se piden a `/get-client-addresses` la primera vez que se abre el
-formulario (async), no vienen precargados como en Admin (`allClients`) --
-por eso `toggleAddUnitForm` es `async` y muestra "Loading buildings…"
-brevemente. Probado con un arnés de jsdom simulando `GS.api` (15/15).
+Diferencia real con Admin descrita originalmente aquí (buildings pedidos a
+`/get-client-addresses` de forma async, con "Loading buildings…") quedó
+SUPERADA por el cambio de la sección siguiente — Building # pasó a texto
+libre y ya no se piden direcciones guardadas del cliente en absoluto.
 
-Vive en el sandbox de esta sesión, no en GitHub.
+Confirmado en el repo real (13/09/2026): `customer.html` en `main` ya usa
+`addUnitFormHtml`/`toggleAddUnitForm`/`submitAddBatchUnit` con look
+`gs-ofp-*` (vía `GSOrderFormPremium.unitDetailPanelHtml`), sin rastro del
+modal viejo `#addunit-dialog`. Referencia `gsocd-shared@v1.25.19`.
 
-## En local, sin subir (12/09/2026): Building # pasó de select a texto libre
+## SUBIDO Y DESPLEGADO (confirmado 13/09/2026): Building # pasó de select a texto libre
 
 Mismo cambio que en Admin (ver su NOTES.md): el "+ Add a Unit" portado hoy
 usaba un `<select>` de direcciones guardadas del cliente
@@ -238,9 +243,16 @@ dirección del cliente (`Clients` list), regex `/^\s*(\d+)/`. Ya no se
 importa `CLIENT_ADDRESSES_LIST` en ese archivo (quedó sin uso). `BuildingId`
 tampoco se guarda ya en la unidad nueva (no aplica sin building ligado).
 
-Mismo aviso que en Admin: clientes con varias propiedades guardadas
+Mismo criterio que en Admin: clientes con varias propiedades guardadas
 siempre van a la dirección default del cliente al usar este formulario,
-nunca a una distinta. Instrucción explícita del dueño, no bloqueante.
+nunca a una distinta. Esto NO es una limitación pendiente — es la
+instrucción explícita y confirmada del dueño (12/09/2026, ver comentario
+en `add-batch-unit.js`), ya implementada y desplegada tal cual.
+
+Confirmado en el repo real (13/09/2026): `add-batch-unit.js` en `main`
+solo lee `cf.Address` del cliente (`Clients` list) para autorellenar
+Building #, sin ningún selector de propiedades — coincide con la
+decisión documentada arriba.
 
 ## SUBIDO Y DESPLEGADO (12/09/2026): Office Access unificado en gsocd-shared
 
