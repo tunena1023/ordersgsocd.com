@@ -510,10 +510,12 @@ if (client) {
     const parsed = parseOfficeHoursRange(b.officeHours);
     const openHHMM = parsed.open ? String(parsed.open.h).padStart(2, '0') + ':' + String(parsed.open.m).padStart(2, '0') : '09:00';
     const closeHHMM = parsed.close ? String(parsed.close.h).padStart(2, '0') + ':' + String(parsed.close.m).padStart(2, '0') : '17:00';
-    return '<div style="display:flex;gap:10px;justify-content:space-between;margin-bottom:14px;max-width:320px">' + dayCells + '</div>' +
-      '<div style="display:flex;gap:14px;margin-bottom:14px">' +
-        '<div class="field-small" style="max-width:150px"><label>Opens at</label>' + GSDateTimePicker.timeHtml('ctl-officeOpen', openHHMM) + '</div>' +
-        '<div class="field-small" style="max-width:150px"><label>Closes at</label>' + GSDateTimePicker.timeHtml('ctl-officeClose', closeHHMM) + '</div>' +
+    return '<div style="display:flex;align-items:flex-end;flex-wrap:wrap;gap:24px;margin-bottom:14px">' +
+        '<div style="display:flex;gap:10px;max-width:320px">' + dayCells + '</div>' +
+        '<div style="display:flex;gap:14px">' +
+          '<div class="field-small" style="max-width:150px;margin-bottom:0"><label>Opens at</label>' + GSDateTimePicker.timeHtml('ctl-officeOpen', openHHMM) + '</div>' +
+          '<div class="field-small" style="max-width:150px;margin-bottom:0"><label>Closes at</label>' + GSDateTimePicker.timeHtml('ctl-officeClose', closeHHMM) + '</div>' +
+        '</div>' +
       '</div>';
   }
 
