@@ -23,6 +23,8 @@
     --off:     #F7F6F3;
     --gray:    #6B6B6B;
     --border:  #E0D9CC;
+    --green:   #2E7D4F;
+    --red:     #c0392b;
   }
 
   body { font-family: 'Inter', sans-serif; background: var(--white); color: var(--black); min-height: 100vh; }
@@ -588,9 +590,15 @@
   #panel-recurring .status-pill { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; padding: 5px 12px; font-weight: 600; border-radius: 3px; background: #E6F4FB; color: #1F6E96; white-space: nowrap; flex-shrink: 0; }
   #panel-recurring .order-card-body { padding: 20px; display: none; }
   #panel-recurring .order-card-body.open { display: block; }
-  #panel-recurring .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin: 4px 0 0; }
+  /* order-2col: mismo mecanismo de 2->3 columnas que ya usa Orders en
+     Processing/History (#panel-processing/#panel-history .order-2col). */
+  #panel-recurring .order-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin: 4px 0 0; }
+  #panel-recurring .order-2col.open { grid-template-columns: 1fr 1fr 1fr; }
+  #panel-recurring .col-right { display: none; min-width: 0; padding: 18px; background: var(--off); }
+  #panel-recurring .order-2col.open .col-right { display: block; border-left: 1px solid var(--border); }
   @media (max-width: 700px) {
-    #panel-recurring .detail-grid { grid-template-columns: 1fr; }
+    #panel-recurring .order-2col, #panel-recurring .order-2col.open { grid-template-columns: 1fr; }
+    #panel-recurring .order-2col.open .col-right { border-left: none; border-top: 1px solid var(--border); }
   }
   #panel-recurring .detail-label { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--gray); margin-bottom: 10px; }
   #panel-recurring .field-caption { font-size: 11px; color: var(--gray); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 3px; }
@@ -613,9 +621,48 @@
   #panel-recurring .client-photo-thumbs { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
   #panel-recurring .client-photo-thumb { width: 52px; height: 52px; border-radius: 3px; object-fit: cover; border: 1px solid var(--border); cursor: pointer; background: var(--off); }
   #panel-recurring .gallery-link { font-size: 12px; color: var(--gold-dk); text-decoration: underline; cursor: pointer; display: inline-block; margin-top: 10px; }
-  #panel-recurring .change-box { background: var(--off); border: 1px solid var(--border); padding: 14px; margin-top: 12px; border-radius: 4px; }
-  #panel-recurring .change-box textarea { width: 100%; padding: 10px; border: 1px solid var(--border); font-size: 13px; font-family: inherit; resize: vertical; min-height: 60px; margin-bottom: 10px; }
-  #panel-recurring .change-sent { font-size: 12px; color: var(--green); margin-top: 10px; display: none; }
+  /* .change-box/.change-sent (cuadro viejo debajo del boton) se
+     quitaron -- reemplazados por el panel de 3a columna arriba. */
+
+  /* Fila de servicio con nota + camara -- copiado exacto de admin.html
+     (buildAdminSelectedListHtml, ver Active > Edit), reusado aqui para
+     "Currently on this contract" dentro del panel de Request a Change.
+     La nota y la foto de estas filas NO se ligan a un servicio
+     especifico en el backend (confirmado con el dueno) -- la nota se
+     junta al mensaje general, la camara reusa addClientPhoto() tal
+     cual. */
+  #panel-recurring .svc-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  #panel-recurring .svc-row:last-child { border-bottom: none; }
+  #panel-recurring .svc-row-name { flex: 0 0 auto; max-width: 240px; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #panel-recurring .svc-row-notewrap { flex: 1; min-width: 0; }
+  #panel-recurring .svc-row-note { width: 100%; border: 1.5px solid var(--border); border-radius: 5px; padding: 7px 10px;
+    font-size: 12.5px; font-family: inherit; color: var(--black); background: var(--off); outline: none;
+    box-sizing: border-box; transition: border-color .15s, background .15s; }
+  #panel-recurring .svc-row-note:focus { border-color: var(--gold); background: var(--white); }
+  #panel-recurring .svc-row-note::placeholder { color: #A9A49A; }
+  #panel-recurring .svc-row-cam { flex-shrink: 0; width: 32px; height: 32px; border-radius: 6px; border: 1.5px solid var(--border);
+    background: var(--white); color: var(--gray); cursor: pointer; display: flex; align-items: center;
+    justify-content: center; transition: border-color .15s, color .15s; position: relative; }
+  #panel-recurring .svc-row-cam:hover { border-color: var(--gold); color: var(--gold-dk); }
+  #panel-recurring .svc-row-cam svg { width: 14px; height: 14px; }
+  /* Dentro de col-right (1/3 de columna, tan angosto como un celular),
+     se apila igual que ya hace admin.html en su propio breakpoint
+     movil -- en vez de inventar una proporcion de columnas nueva. */
+  #panel-recurring .col-right .svc-row { flex-wrap: wrap; }
+  #panel-recurring .col-right .svc-row-name { max-width: none; flex-basis: 100%; white-space: normal; }
+
+  /* Diff de servicios agregados/quitados -- mismo patron ya usado por
+     Supervisor (tech.gsocd.com) en su propio "Update Services". */
+  #panel-recurring .diff-box { background: var(--white); border: 1px solid var(--border); padding: 12px 14px; margin: 14px 0; border-radius: 4px; }
+  #panel-recurring .diff-line { font-size: 12px; margin-bottom: 4px; }
+  #panel-recurring .diff-line.removed { color: var(--red); }
+  #panel-recurring .diff-line.added { color: var(--green); }
+  #panel-recurring .diff-empty { font-size: 12px; color: var(--gray); }
+  #panel-recurring .um-note-box { background: var(--off); border: 1px solid var(--border); padding: 12px; margin: 6px 0 10px; }
+  #panel-recurring .um-note-box label { font-size: 10px; text-transform: uppercase; color: var(--gray); font-weight: 700; display: block; margin-bottom: 6px; }
+  #panel-recurring .um-note-box textarea { width: 100%; padding: 10px; border: 1px solid var(--border); font-size: 12px; font-family: inherit; resize: vertical; min-height: 56px; box-sizing: border-box; }
+  #panel-recurring .um-note-error { font-size: 11px; color: var(--red); margin-top: 6px; display: none; }
+  #panel-recurring .um-note-error.show { display: block; }
   #panel-recurring .gallery-view { display: none; padding: 32px 48px 60px; }
   #panel-recurring .gallery-view.active { display: block; }
   #panel-recurring .gallery-back { font-size: 12px; color: var(--gold-dk); cursor: pointer; margin-bottom: 14px; display: inline-block; }
@@ -2632,6 +2679,11 @@ if (client) {
 
   function toggleCard(id) {
     openId = (openId === id) ? null : id;
+    /* renderContracts() reconstruye TODO el HTML de nuevo -- cualquier
+       referencia viva a un panel de Request a Change abierto quedaria
+       apuntando a DOM que ya no existe. */
+    rcChangeOpenFor = null;
+    rcChangePicker = null;
     renderContracts();
   }
 
@@ -2650,7 +2702,7 @@ if (client) {
       let bodyHtml = '';
       if (isOpen) {
         bodyHtml = '<div class="order-card-body open">' +
-          '<div class="detail-grid">' +
+          '<div class="order-2col" id="ord2col-' + c.id + '">' +
             '<div>' +
               '<p class="detail-label">Contract Details</p>' +
               '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px 16px;margin-bottom:18px">' +
@@ -2670,15 +2722,10 @@ if (client) {
               '<div class="client-photo-thumbs">' + clientPhotosHtml + '</div>' +
               '<button class="gs-ofp-btn-secondary" onclick="addClientPhoto(\'' + c.id + '\')">+ Add Photo</button><br>' +
               '<span class="gallery-link" onclick="openGallery(\'' + c.id + '\')">📷 View Gallery (photos from staff)</span>' +
-              '<div class="btn-actions"><button class="gs-ofp-btn-secondary" onclick="toggleChangeBox(\'' + c.id + '\')">Request a Change</button></div>' +
-              '<div class="change-box" id="change-box-' + c.id + '" style="display:none">' +
-                '<p style="font-size:11.5px;color:var(--gray);margin-bottom:8px">Let us know and we\'ll follow up directly.</p>' +
-                '<textarea id="change-text-' + c.id + '" placeholder="What do you need changed or have a question about?"></textarea>' +
-                '<button class="gs-ofp-btn-primary" onclick="sendChangeRequest(\'' + c.id + '\')">Send</button>' +
-              '</div>' +
-              '<p class="change-sent" id="change-sent-' + c.id + '">✓ Sent — our office will follow up with you directly.</p>' +
+              '<div class="btn-actions"><button class="gs-ofp-btn-secondary" id="rc-change-btn-' + c.id + '" onclick="rcToggleChangePanel(\'' + c.id + '\')">Request a Change</button></div>' +
             '</div>' +
             '<div><p class="detail-label">History</p>' + historyHtml + '</div>' +
+            '<div class="col-right" id="sidepanel-' + c.id + '"></div>' +
           '</div>' +
         '</div>';
       }
@@ -2748,25 +2795,214 @@ if (client) {
     reader.readAsDataURL(file);
   });
 
-  /* ===== Request a Change -- se manda igual que una sugerencia de
-     supervisor (mismo mecanismo, Pending Review), cae en el mismo
-     Review que ya usa la oficina. ===== */
-  function toggleChangeBox(id) {
-    const box = document.getElementById('change-box-' + id);
-    box.style.display = box.style.display === 'block' ? 'none' : 'block';
+  /* ===== Request a Change -- panel de 3a columna a la derecha, mismo
+     mecanismo de 2->3 columnas que ya usa Orders en Processing/History
+     (order-2col/col-right), con el selector real de servicios + diff
+     ya usado por Supervisor (tech.gsocd.com) para "Update Services".
+     Se manda igual que una sugerencia de supervisor (mismo mecanismo,
+     Pending Review), cae en el mismo Review que ya usa la oficina.
+     Solo un panel abierto a la vez -- abrir uno nuevo cierra
+     cualquier otro que estuviera abierto. ===== */
+  const RC_CAM_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>';
+  let rcChangeOpenFor = null;
+  let rcChangePicker = null;
+  let rcChangeBaseNames = [];
+
+  function rcToggleChangePanel(id) {
+    const wrap = document.getElementById('ord2col-' + id);
+    const btn = document.getElementById('rc-change-btn-' + id);
+    if (!wrap) return;
+
+    if (rcChangeOpenFor === id) {
+      wrap.classList.remove('open');
+      const slot = document.getElementById('sidepanel-' + id);
+      if (slot) slot.innerHTML = '';
+      if (btn) btn.textContent = 'Request a Change';
+      rcChangeOpenFor = null;
+      rcChangePicker = null;
+      return;
+    }
+    if (rcChangeOpenFor) {
+      const prevWrap = document.getElementById('ord2col-' + rcChangeOpenFor);
+      const prevBtn = document.getElementById('rc-change-btn-' + rcChangeOpenFor);
+      const prevSlot = document.getElementById('sidepanel-' + rcChangeOpenFor);
+      if (prevWrap) prevWrap.classList.remove('open');
+      if (prevSlot) prevSlot.innerHTML = '';
+      if (prevBtn) prevBtn.textContent = 'Request a Change';
+    }
+
+    rcChangeOpenFor = id;
+    if (btn) btn.textContent = 'Cancel';
+    wrap.classList.add('open');
+    rcRenderChangePanel(id);
   }
-  async function sendChangeRequest(id) {
-    const input = document.getElementById('change-text-' + id);
-    if (!input.value.trim()) { input.focus(); return; }
+
+  function rcRenderChangePanel(id) {
+    const slot = document.getElementById('sidepanel-' + id);
+    if (!slot) return;
+    const c = contracts.find(x => x.id === id);
+    if (!c) return;
+
+    /* "Currently on this contract" -- mismo look que
+       buildAdminSelectedListHtml() en admin.html (Active > Edit), pero
+       la nota y la foto de estas filas NO se ligan a un servicio
+       especifico en el backend (confirmado con el dueno) -- la nota
+       se junta al mensaje general de la solicitud, y la camara reusa
+       addClientPhoto() tal cual (misma carpeta de fotos del contrato). */
+    const currentRowsHtml = (c.Services || []).map((s, i) => {
+      const label = esc(s.ServiceName) + (s.Level ? ' — ' + esc(s.Level) : '');
+      return '<div class="svc-row">' +
+        '<b class="svc-row-name">' + label + '</b>' +
+        '<div class="svc-row-notewrap"><input type="text" id="rc-svc-note-' + id + '-' + i + '" class="svc-row-note" placeholder="Note about this service (optional)"></div>' +
+        '<button type="button" class="svc-row-cam" title="Add a photo" onclick="addClientPhoto(\'' + id + '\')">' + RC_CAM_ICON + '</button>' +
+      '</div>';
+    }).join('');
+
+    slot.innerHTML =
+      '<p class="detail-label" style="margin-bottom:4px">Request a Change</p>' +
+      '<p style="font-size:12px;color:var(--gray);margin-bottom:14px;line-height:1.6">Add or remove services below. Our office reviews every request before it takes effect.</p>' +
+      (currentRowsHtml ? '<p class="field-caption" style="margin-bottom:6px">Currently on this contract</p><div style="margin-bottom:16px">' + currentRowsHtml + '</div>' : '') +
+      '<div id="rc-picker-mount-' + id + '"></div>' +
+      '<div id="rc-diff-mount-' + id + '"></div>' +
+      '<div style="margin-top:14px">' +
+        '<textarea id="rc-general-note-' + id + '" placeholder="Anything else we should know? (optional)" style="width:100%;min-height:56px;padding:10px;border:1.5px solid var(--border);border-radius:5px;font-family:inherit;font-size:12.5px;box-sizing:border-box;resize:vertical"></textarea>' +
+      '</div>' +
+      '<div class="btn-actions" style="margin-top:14px">' +
+        '<button class="gs-ofp-btn-primary" onclick="rcSendChangeRequest(\'' + id + '\')">Send to Office</button>' +
+        '<button class="gs-ofp-btn-secondary" onclick="rcToggleChangePanel(\'' + id + '\')">Cancel</button>' +
+      '</div>';
+
+    rcMountChangePicker(id, c);
+  }
+
+  async function rcMountChangePicker(id, c) {
+    /* customer.html ya trae el catalogo cargado de forma eager para
+       "New Order" (catalogCache) -- se reusa tal cual en vez de
+       pedirlo de nuevo. Fallback a un fetch propio solo por si el
+       cliente abre este panel antes de que esa carga eager termine. */
+    let catalog = catalogCache;
+    if (!catalog || !catalog.length) {
+      try {
+        const data = await GS.api('/get-services', { method: 'GET' });
+        catalog = data.catalog || [];
+      } catch (e) {
+        catalog = [];
+      }
+    }
+    const mountEl = document.getElementById('rc-picker-mount-' + id);
+    if (!mountEl || rcChangeOpenFor !== id) return;
+
+    const initialSelected = { Commercial: {} };
+    const initialLevels = {};
+    rcChangeBaseNames = [];
+    (c.Services || []).forEach(s => {
+      initialSelected.Commercial[s.ServiceName] = s.ServiceName; // sin sku real disponible aqui, se usa el nombre como llave
+      if (s.Level) initialLevels['Commercial|' + s.ServiceName] = s.Level;
+      rcChangeBaseNames.push(s.ServiceName);
+    });
+    rcChangePicker = GSServicePicker.mount('rc-change-' + id, mountEl, {
+      catalog: catalog,
+      division: 'Janitorial', mode: 'levels', showSelectAll: false,
+      groupByCategory: true, propertyType: 'Commercial',
+      initialSelected: initialSelected, initialLevels: initialLevels,
+      onChange: function () { rcRenderChangeDiff(id); }
+    });
+    rcRenderChangeDiff(id);
+  }
+
+  function rcRenderChangeDiff(id) {
+    const slot = document.getElementById('rc-diff-mount-' + id);
+    if (!slot || !rcChangePicker) return;
+    const selected = rcChangePicker.getSelected();
+    const nowNames = new Set();
+    Object.values(selected).forEach(m => Object.keys(m).forEach(n => nowNames.add(n)));
+    const base = new Set(rcChangeBaseNames);
+    const removed = [...base].filter(n => !nowNames.has(n));
+    const added = [...nowNames].filter(n => !base.has(n));
+
+    if (!removed.length && !added.length) {
+      slot.innerHTML = '<div class="diff-box"><span class="diff-empty">No changes yet.</span></div>';
+      return;
+    }
+    let html = '<div class="diff-box">';
+    added.forEach(n => html += '<div class="diff-line added">+ ' + esc(n) + '</div>');
+    removed.forEach((n, i) => {
+      html += '<div class="diff-line removed">− ' + esc(n) + '</div>';
+      html += '<div class="um-note-box">' +
+        '<label>Why remove "' + esc(n) + '"? (required)</label>' +
+        '<textarea id="rc-diffnote-' + id + '-' + i + '"></textarea>' +
+        '<p class="um-note-error" id="rc-diffnote-error-' + id + '-' + i + '">Please add a note.</p>' +
+      '</div>';
+    });
+    html += '</div>';
+    slot.innerHTML = html;
+  }
+
+  /* FIX REAL encontrado al probar: una "async function" declarada
+     dentro de un bloque if{} NO se eleva (hoist) al scope global igual
+     que una function normal -- confirmado con una prueba aislada
+     (normalFn queda en window, asyncFn no). Como este onclick inline
+     necesita encontrarla en window, se asigna explicito en vez de
+     depender del hoisting. Mismo bug real ya existia en la version
+     vieja de esta funcion (senalado aparte, no es nuevo de este
+     cambio). */
+  window.rcSendChangeRequest = async function (id) {
+    if (!rcChangePicker) return;
+    const c = contracts.find(x => x.id === id);
+    if (!c) return;
+    const selected = rcChangePicker.getSelected();
+    const levels = rcChangePicker.getLevels();
+    const nowNames = new Set();
+    Object.values(selected).forEach(m => Object.keys(m).forEach(n => nowNames.add(n)));
+    const base = new Set(rcChangeBaseNames);
+    const addedNames = [...nowNames].filter(n => !base.has(n));
+    const removedList = [...base].filter(n => !nowNames.has(n));
+
+    const removedNotes = [];
+    let ok = true;
+    removedList.forEach((n, i) => {
+      const input = document.getElementById('rc-diffnote-' + id + '-' + i);
+      if (!input || !input.value.trim()) {
+        const errEl = document.getElementById('rc-diffnote-error-' + id + '-' + i);
+        if (errEl) errEl.classList.add('show');
+        ok = false;
+        return;
+      }
+      removedNotes.push({ serviceName: n, note: input.value.trim() });
+    });
+    if (!ok) return;
+
+    /* Las notas por servicio (de los que YA tiene el contrato) se
+       juntan al mensaje general -- no van ligadas a un servicio
+       especifico en el backend (confirmado con el dueno). */
+    const messageParts = [];
+    (c.Services || []).forEach((s, i) => {
+      const noteInput = document.getElementById('rc-svc-note-' + id + '-' + i);
+      if (noteInput && noteInput.value.trim()) {
+        messageParts.push(s.ServiceName + ': ' + noteInput.value.trim());
+      }
+    });
+    const generalInput = document.getElementById('rc-general-note-' + id);
+    if (generalInput && generalInput.value.trim()) messageParts.push(generalInput.value.trim());
+    const message = messageParts.join('\n');
+
+    if (!addedNames.length && !removedNotes.length && !message) { showToast('Nothing was changed.'); return; }
+
     try {
-      await GS.api('/request-recurring-change', { body: { recurringServiceId: id, clientId: client.clientId, message: input.value.trim() } });
-      document.getElementById('change-box-' + id).style.display = 'none';
-      document.getElementById('change-sent-' + id).style.display = 'block';
-      input.value = '';
+      await GS.api('/request-recurring-change', {
+        body: {
+          recurringServiceId: id, clientId: client.clientId,
+          services: addedNames.map(n => ({ serviceName: n, level: levels['Commercial|' + n] || '' })),
+          removedNotes: removedNotes,
+          message: message
+        }
+      });
+      rcToggleChangePanel(id);
+      showToast('Sent to the office for review.');
     } catch (e) {
       alert('Error: ' + e.message);
     }
-  }
+  };
 
 
   /* ============================================================

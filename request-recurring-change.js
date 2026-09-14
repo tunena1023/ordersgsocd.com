@@ -7,9 +7,13 @@
    "Recurring Change", junto a las de campo -- distinguido por
    Source: "Client".
 
-   Aqui no hay servicios que desviar (el cliente no edita el
-   contrato) -- solo un mensaje libre, para que la oficina le de
-   seguimiento directo.
+   El cliente ahora SI puede proponer servicios agregados/quitados
+   (mismo selector real + diff que ya usa Supervisor), ademas del
+   mensaje libre de antes -- ambos son opcionales por separado, pero
+   se necesita al menos uno de los dos. ServicesJSON usa exactamente
+   el mismo formato que submit-recurring-update.js
+   ({services, removedNotes}) para que renderRecurringChangeReview()
+   en Admin lo muestre igual sin ningun cambio de ese lado.
 ============================================================ */
 
 const {
@@ -31,9 +35,18 @@ exports.handler = async (event) => {
     const recurringServiceId = String(b.recurringServiceId || '').trim();
     const clientId = String(b.clientId || '').trim();
     const message = String(b.message || '').trim();
+    const services = Array.isArray(b.services) ? b.services : [];
+    const removedNotes = Array.isArray(b.removedNotes) ? b.removedNotes : [];
     if (!recurringServiceId) return jsonResponse(400, { error: 'recurringServiceId is required' });
     if (!clientId) return jsonResponse(400, { error: 'clientId is required' });
-    if (!message) return jsonResponse(400, { error: 'Please write what you need.' });
+    if (!message && !services.length && !removedNotes.length) {
+      return jsonResponse(400, { error: 'Please add or remove a service, or write what you need.' });
+    }
+    /* Cada quitado necesita su nota -- mismo requisito obligatorio
+       que ya exige el patron de Supervisor. */
+    if (removedNotes.some(r => !r.note || !String(r.note).trim())) {
+      return jsonResponse(400, { error: 'Every removed service needs a note explaining why.' });
+    }
 
     /* Confirmar que el contrato de verdad es de este cliente -- no
        confiar nomas en lo que mande el frontend. */
@@ -55,7 +68,7 @@ exports.handler = async (event) => {
       Source: 'Client',
       LoggedBy: businessName,
       PeopleJSON: '[]',
-      ServicesJSON: '',
+      ServicesJSON: JSON.stringify({ services, removedNotes }),
       Notes: message
     });
 
@@ -64,3 +77,4 @@ exports.handler = async (event) => {
     return jsonResponse(500, { error: e.message });
   }
 };
+
