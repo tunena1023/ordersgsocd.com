@@ -57,10 +57,24 @@ exports.handler = async (event) => {
     const body = JSON.parse(event.body || '{}');
     const orderId = body.orderId;
     const type = body.type;
-    const description = body.description;
+    const description = String(body.description || '').trim();
     if (!orderId || !type) return jsonResponse(400, { error: 'orderId and type are required' });
 
     const isCancel = type === 'cancel';
+
+    /* Servicios agregados/quitados que propone el cliente (mismo formato
+       {services, removedNotes} que ya usan request-recurring-change.js y
+       submit-recurring-update.js). Como las fechas, se guardan en el
+       HISTORIAL, no en la orden: nada se aplica hasta que la oficina
+       apruebe. Cada quitado necesita su nota. */
+    const askServices = (!isCancel && Array.isArray(body.services)) ? body.services : [];
+    const askRemoved  = (!isCancel && Array.isArray(body.removedNotes)) ? body.removedNotes : [];
+    if (askRemoved.some(r => !r || !String(r.note || '').trim())) {
+      return jsonResponse(400, { error: 'Every removed service needs a note explaining why.' });
+    }
+    if (!isCancel && !description && !askServices.length && !askRemoved.length) {
+      return jsonResponse(400, { error: 'Please describe the change, or add or remove a service.' });
+    }
 
     /* Fechas propuestas: solo aplican a una solicitud de cambio */
     const askEntry  = isCancel ? '' : dayOf(body.entryDate);
@@ -175,11 +189,30 @@ exports.handler = async (event) => {
       });
     }
 
+    /* Renglon aparte con los servicios propuestos -- mismo espiritu que
+       el de fechas: la oficina lo ve en Review y decide. */
+    let requestedServices = null;
+    if (askServices.length || askRemoved.length) {
+      requestedServices = { services: askServices, removedNotes: askRemoved };
+      await createListItem(ORDER_HISTORY_LIST, {
+        Title:        revTitle + 'S',
+        OrderID:      orderId,
+        ChangeType:   'Services Change Requested',
+        FieldChanged: 'Requested Services',
+        ChangedBy:    who,
+        ChangeDate:   now,
+        Notes:        'Requested by the client. Nothing is confirmed until our office approves it.',
+        OldValue:     f.Services || '',
+        NewValue:     JSON.stringify(requestedServices)
+      });
+    }
+
     return jsonResponse(200, {
       success: true,
       status: newStatus,
       revision: revTitle,
-      requestedDates: requestedDates
+      requestedDates: requestedDates,
+      requestedServices: requestedServices
     });
 
   } catch (err) {

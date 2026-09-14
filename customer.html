@@ -1357,7 +1357,7 @@
 <script src="shared.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.5/date-time-picker/date-time-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.8/service-picker/service-picker.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.27.0/service-change-panel/service-change-panel.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.27.1/service-change-panel/service-change-panel.js"></script>
 <!-- Pendiente: gsocd-shared va en v1.15.0, el siguiente tag real seria v1.16.0
      (componente nuevo, todavia solo vive en local). Ajustar cuando se suba. -->
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.16.0/estimated-time/estimated-time.js"></script>
@@ -4409,7 +4409,7 @@ if (client) {
       bindActions(body, o);
       const trackerSteps = buildTrackerSteps(o, history);
       mountTracker(o, trackerSteps, 'tracker-mount-' + orderId);
-      orderDetailCache[orderId] = { html: body.innerHTML, order: o, trackerSteps: trackerSteps };
+      orderDetailCache[orderId] = { html: body.innerHTML, order: o, trackerSteps: trackerSteps, services: services };
       orderNeedsConfirmationCache[orderId] = isWaitingForClientConfirmation(history);
       loadClientPhotosInto(orderId);
     } catch (e) {
@@ -5168,10 +5168,23 @@ return html;
     const icoCal = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>';
     const icoClock = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
 
+    /* Servicios de la orden (cacheados al abrir la tarjeta) -- misma
+       lista + selector + diff que Recurring y Admin, via
+       gsocd-shared/service-change-panel. La nota y la foto de cada
+       renglon actual NO se ligan a un servicio especifico: la nota se
+       junta a la descripcion, la camara reusa la subida de fotos de la
+       orden. Quitar un servicio exige nota; nada se aplica hasta que la
+       oficina apruebe. */
+    const ocSvcs = ((orderDetailCache[orderId] || {}).services || []).filter(s => s && s.ServiceName);
+    const ocListHtml = GSServiceChangePanel.currentListHtml(ocSvcs, { listId: 'oc-svc-list-' + orderId, stack: true, notePlaceholder: 'Note about this service (optional)' });
+
     panel.innerHTML = `
       <p class="detail-label" style="margin-bottom:4px">Request a change</p>
       <p style="font-size:12px;color:var(--gray);margin-bottom:18px;line-height:1.6">Tell us what you'd like to change about order ${esc(orderId)}. Our office will review your request and contact you.</p>
-      ${GSOrderFormPremium.textFieldHtml('panel-change-text', '', icoEdit, 'Describe the change', { textarea: true, placeholder: 'e.g. I need to reschedule the entry date...' })}
+      ${ocListHtml ? '<p class="field-caption" style="margin-bottom:6px">Currently on this order</p><div style="margin-bottom:14px">' + ocListHtml + '</div>' : ''}
+      <div id="oc-picker-mount-${escAttr(orderId)}"></div>
+      <div id="oc-diff-mount-${escAttr(orderId)}"></div>
+      ${GSOrderFormPremium.textFieldHtml('panel-change-text', '', icoEdit, 'Describe the change (optional if you changed services above)', { textarea: true, placeholder: 'e.g. I need to reschedule the entry date...' })}
       <div class="gs-ofp-unitrow" style="margin-top:20px">
         ${GSOrderFormPremium.textFieldHtml('panel-change-entry', '', icoCal, 'New entry date', { raw: GSDateTimePicker.dateHtml('panel-change-entry', entryVal) })}
         ${GSOrderFormPremium.textFieldHtml('panel-change-due', '', icoCal, 'New due date', { raw: GSDateTimePicker.dateHtml('panel-change-due', dueVal) })}
@@ -5190,11 +5203,42 @@ return html;
        pudiendo comparar "lo toco o no" sin tocar esa logica. */
     $('panel-change-entry').dataset.original = entryVal;
     $('panel-change-due').dataset.original = dueVal;
+
+    GSServiceChangePanel.wireList($('oc-svc-list-' + orderId), ocSvcs, {
+      onCamera: function () { startClientPhoto(orderId); }
+    });
+    ocMountChangePicker(orderId, ocSvcs);
+  }
+
+  let ocChangeCtrl = null;
+  async function ocMountChangePicker(orderId, svcs) {
+    let catalog = catalogCache;
+    if (!catalog || !catalog.length) {
+      try { const data = await GS.api('/get-services', { method: 'GET' }); catalog = data.catalog || []; } catch (e) { catalog = []; }
+    }
+    /* Puede que el cliente ya haya cerrado el panel mientras cargaba */
+    if (!$('oc-picker-mount-' + orderId)) return;
+    const o = (ordersCache || []).find(x => x.OrderID === orderId) || {};
+    ocChangeCtrl = GSServiceChangePanel.mount({
+      instanceId: 'oc-change-' + orderId,
+      pickerMount: 'oc-picker-mount-' + orderId,
+      diffMount: 'oc-diff-mount-' + orderId,
+      catalog: catalog,
+      division: o.Division || 'Janitorial',
+      propertyType: (svcs[0] && svcs[0].Category) || 'Commercial',
+      currentServices: svcs
+    });
   }
 
   async function submitChangePanel(orderId) {
-    const txt = $('panel-change-text').value.trim();
-    if (!txt) { $('panel-change-error').textContent = 'Please describe the change.'; return; }
+    const ocSvcs = ((orderDetailCache[orderId] || {}).services || []).filter(s => s && s.ServiceName);
+    const diff = ocChangeCtrl ? ocChangeCtrl.collect() : { ok: true, services: [], removedNotes: [] };
+    if (!diff.ok) { $('panel-change-error').textContent = 'Please add a note for each removed service.'; return; }
+    const noteParts = GSServiceChangePanel.collectNotes($('oc-svc-list-' + orderId), ocSvcs);
+    const typed = $('panel-change-text').value.trim();
+    if (typed) noteParts.push(typed);
+    const txt = noteParts.join('\n');
+    if (!txt && !diff.services.length && !diff.removedNotes.length) { $('panel-change-error').textContent = 'Please describe the change, or add or remove a service.'; return; }
 
     const entryEl = $('panel-change-entry'), dueEl = $('panel-change-due');
     const entryDate = entryEl.value !== (entryEl.dataset.original || '') ? entryEl.value : '';
@@ -5211,7 +5255,8 @@ return html;
     try {
       await GS.api('/request-change', { method: 'POST', body: {
         orderId: orderId, type: 'change', description: txt,
-        entryDate: entryDate, dueDate: dueDate, serviceWindow: serviceWindow
+        entryDate: entryDate, dueDate: dueDate, serviceWindow: serviceWindow,
+        services: diff.services, removedNotes: diff.removedNotes
       } });
       closeOpenPanel();
       showToast('Your request was sent. Our office will review it and you will receive the confirmed dates by email.');
