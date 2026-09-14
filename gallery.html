@@ -48,18 +48,9 @@
   .wrap .list-sub { font-size: 12px; color: var(--gray); margin-bottom: 24px; line-height: 1.6; }
   .empty-note { color: var(--gray); font-size: 14px; padding: 40px 0; text-align: center; }
 
-  /* Preview de foto al pasar el mouse -- crece al tamano maximo posible
-     en pantalla, sin necesidad de clic (mismo componente aprobado con
-     mini en Admin, 13/09/2026). Se cierra al SALIR de la miniatura, no
-     por micro-movimientos naturales mientras sigue encima de la misma
-     foto. Requiere quedarse quieto 1 segundo. */
-  .gs-hover-preview-overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0); z-index: 99999;
-    display: flex; align-items: center; justify-content: center;
-    pointer-events: none; opacity: 0; transition: opacity .15s ease, background .15s ease;
-  }
-  .gs-hover-preview-overlay.show { opacity: 1; background: rgba(0,0,0,.82); }
-  .gs-hover-preview-overlay img { max-width: 94vw; max-height: 94vh; object-fit: contain; border-radius: 6px; }
+  /* El CSS de .gs-hover-preview-overlay ahora vive en gsocd-shared/
+     photo-hover-preview (GSPhotoHoverPreview.setup() lo inyecta) --
+     antes estaba copiado aqui a mano. */
 
   @media (max-width: 640px) {
     nav { padding: 12px 20px; }
@@ -98,6 +89,7 @@
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.24/nav-premium/nav-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.24/lightbox/lightbox.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.24/gallery-groups/gallery-groups.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.26.0/photo-hover-preview/photo-hover-preview.js"></script>
 
 <script>
 const client = GS.requireSession();
@@ -139,54 +131,10 @@ if (client) {
     });
   }
 
-  /* Preview de foto al pasar el mouse -- delegacion de eventos porque
-     .gs-gal-ph se inserta/reinserta via innerHTML cada vez que se
-     refresca la busqueda. Mismo componente exacto ya aprobado y
-     funcionando en Admin (Approvals/Review/Active/History/Schedule/
-     Gallery). .gs-gal-ph es un <div> que envuelve un <img> adentro, y
-     tambien se usa para videos (.gs-gal-ph.video) -- los videos se
-     excluyen del preview. */
-  let hoverTimer = null;
-  function setupHoverPreview() {
-    if (document.getElementById('gs-hover-preview-overlay')) return;
-    const overlay = document.createElement('div');
-    overlay.className = 'gs-hover-preview-overlay';
-    overlay.id = 'gs-hover-preview-overlay';
-    overlay.innerHTML = '<img id="gs-hover-preview-img" src="" alt="">';
-    document.body.appendChild(overlay);
-    const previewImg = document.getElementById('gs-hover-preview-img');
-
-    function hidePreview() {
-      clearTimeout(hoverTimer);
-      hoverTimer = null;
-      overlay.classList.remove('show');
-    }
-    function findThumb(target) {
-      const galPh = target.closest('.gs-gal-ph');
-      if (galPh && !galPh.classList.contains('video')) return galPh;
-      return null;
-    }
-
-    document.addEventListener('mouseover', (e) => {
-      const thumb = findThumb(e.target);
-      if (!thumb) return;
-      const img = thumb.querySelector('img');
-      if (!img) return;
-      clearTimeout(hoverTimer);
-      hoverTimer = setTimeout(() => {
-        previewImg.src = img.src;
-        overlay.classList.add('show');
-      }, 1000);
-    });
-
-    document.addEventListener('mouseout', (e) => {
-      const thumb = findThumb(e.target);
-      if (!thumb) return;
-      if (thumb.contains(e.relatedTarget)) return;
-      hidePreview();
-    });
-  }
-  setupHoverPreview();
+  /* El hover-preview (.gs-gal-ph) ahora vive en gsocd-shared/
+     photo-hover-preview -- antes estaba copiado a mano aqui como
+     setupHoverPreview(). */
+  GSPhotoHoverPreview.setup();
 
   async function loadGallery() {
     try {
