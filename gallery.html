@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GS Solutions – Gallery</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black:   #111111;
+    --gold:    #C9A84C;
+    --gold-lt: #E2C97E;
+    --gold-dk: #8C6F2A;
+    --white:   #FFFFFF;
+    --off:     #F7F6F3;
+    --gray:    #6B6B6B;
+    --border:  #E0D9CC;
+  }
+
+  body { font-family: 'Inter', sans-serif; background: var(--white); color: var(--black); min-height: 100vh; }
+
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 48px; min-height: 72px;
+    border-bottom: 1px solid var(--border);
+    background: var(--white); position: sticky; top: 0; z-index: 100;
+    background-image: url('/api/site-image?name=NavBackground.jpg');
+    background-size: cover; background-position: center;
+  }
+  .logo-wrap { display: flex; align-items: center; gap: 12px; }
+  .logo-diamond { width: 80px; height: 80px; }
+  .nav-right { display: flex; align-items: center; gap: 24px; }
+  .nav-link { font-size: 13px; color: var(--gray); text-decoration: none; letter-spacing: .04em; transition: color .2s; }
+  .nav-link:hover { color: var(--gold); }
+
+  .portal-header {
+    background: var(--off); border-bottom: 1px solid var(--border);
+    padding: 16px 48px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .portal-header p { font-size: 12px; color: var(--gray); }
+  .portal-header strong { color: var(--black); }
+  .btn-signout { font-size: 11px; color: var(--gray); background: none; border: none; cursor: pointer; letter-spacing: .06em; text-decoration: underline; }
+
+  .wrap { padding: 32px 48px 60px; max-width: 920px; margin: 0 auto; }
+  .wrap h1 { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 600; margin-bottom: 6px; }
+  .wrap .list-sub { font-size: 12px; color: var(--gray); margin-bottom: 24px; line-height: 1.6; }
+  .empty-note { color: var(--gray); font-size: 14px; padding: 40px 0; text-align: center; }
+
+  /* Preview de foto al pasar el mouse -- crece al tamano maximo posible
+     en pantalla, sin necesidad de clic (mismo componente aprobado con
+     mini en Admin, 13/09/2026). Se cierra al SALIR de la miniatura, no
+     por micro-movimientos naturales mientras sigue encima de la misma
+     foto. Requiere quedarse quieto 1 segundo. */
+  .gs-hover-preview-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0); z-index: 99999;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none; opacity: 0; transition: opacity .15s ease, background .15s ease;
+  }
+  .gs-hover-preview-overlay.show { opacity: 1; background: rgba(0,0,0,.82); }
+  .gs-hover-preview-overlay img { max-width: 94vw; max-height: 94vh; object-fit: contain; border-radius: 6px; }
+
+  @media (max-width: 640px) {
+    nav { padding: 12px 20px; }
+    .portal-header { padding: 14px 20px; }
+    .wrap { padding: 24px 20px 40px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo-wrap">
+    <img src="" alt="GS Solutions Inc." class="logo-diamond" style="object-fit:contain">
+  </div>
+  <div class="nav-right">
+    <a href="https://gsocd.com" class="nav-link">Home</a>
+    <a href="services.html" class="nav-link">Services</a>
+  </div>
+</nav>
+
+<div class="portal-header">
+  <p>Welcome back, <strong id="client-name">Client</strong></p>
+  <button class="btn-signout" onclick="doSignout()">Sign out</button>
+</div>
+
+<div id="gsNav"></div>
+
+<div class="wrap">
+  <h1>Gallery</h1>
+  <p class="list-sub">Photos from your orders, grouped by order.</p>
+  <div id="gallery-search-wrap"></div>
+  <div id="gallery-groups-list"><p class="empty-note">Loading…</p></div>
+</div>
+
+<script src="shared.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.24/nav-premium/nav-premium.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.24/lightbox/lightbox.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.24/gallery-groups/gallery-groups.js"></script>
+
+<script>
+const client = GS.requireSession();
+if (client) {
+
+  GS.applyLogo();
+  GSNavPremium.init('gsNav', [
+    { label: 'New Order', href: 'customer.html' },
+    { label: 'Templates', href: 'templates.html' },
+    { label: 'Processing', href: 'tracking.html#processing' },
+    { label: 'History', href: 'tracking.html#history' },
+    { label: 'Gallery', href: 'gallery.html', active: true },
+    { label: 'Recurring', href: 'recurring.html' },
+    { label: 'Profile', href: 'profile.html' }
+  ]);
+  document.getElementById('client-name').textContent = client.businessName || client.clientId || 'Client';
+
+  function doSignout() {
+    GS.session.clear();
+    location.href = 'index.html';
+  }
+
+  let allGalleryGroups = [];
+
+  function renderGalleryPanel() {
+    const wrap = document.getElementById('gallery-search-wrap');
+    if (wrap && !document.getElementById('gallery-search')) {
+      wrap.innerHTML = GSGalleryGroups.searchHtml('gallery-search', 'Search by order number…');
+      document.getElementById('gallery-search').addEventListener('input', renderGalleryPanel);
+    }
+    const q = (document.getElementById('gallery-search') || {}).value || '';
+    const qLower = q.trim().toLowerCase();
+    let groups = allGalleryGroups;
+    if (qLower) {
+      groups = groups.filter(g => String(g.orderId || '').toLowerCase().includes(qLower));
+    }
+    GSGalleryGroups.render('gallery-groups-list', groups, {
+      emptyMessage: qLower ? 'No orders match that search.' : 'No photos yet.'
+    });
+  }
+
+  /* Preview de foto al pasar el mouse -- delegacion de eventos porque
+     .gs-gal-ph se inserta/reinserta via innerHTML cada vez que se
+     refresca la busqueda. Mismo componente exacto ya aprobado y
+     funcionando en Admin (Approvals/Review/Active/History/Schedule/
+     Gallery). .gs-gal-ph es un <div> que envuelve un <img> adentro, y
+     tambien se usa para videos (.gs-gal-ph.video) -- los videos se
+     excluyen del preview. */
+  let hoverTimer = null;
+  function setupHoverPreview() {
+    if (document.getElementById('gs-hover-preview-overlay')) return;
+    const overlay = document.createElement('div');
+    overlay.className = 'gs-hover-preview-overlay';
+    overlay.id = 'gs-hover-preview-overlay';
+    overlay.innerHTML = '<img id="gs-hover-preview-img" src="" alt="">';
+    document.body.appendChild(overlay);
+    const previewImg = document.getElementById('gs-hover-preview-img');
+
+    function hidePreview() {
+      clearTimeout(hoverTimer);
+      hoverTimer = null;
+      overlay.classList.remove('show');
+    }
+    function findThumb(target) {
+      const galPh = target.closest('.gs-gal-ph');
+      if (galPh && !galPh.classList.contains('video')) return galPh;
+      return null;
+    }
+
+    document.addEventListener('mouseover', (e) => {
+      const thumb = findThumb(e.target);
+      if (!thumb) return;
+      const img = thumb.querySelector('img');
+      if (!img) return;
+      clearTimeout(hoverTimer);
+      hoverTimer = setTimeout(() => {
+        previewImg.src = img.src;
+        overlay.classList.add('show');
+      }, 1000);
+    });
+
+    document.addEventListener('mouseout', (e) => {
+      const thumb = findThumb(e.target);
+      if (!thumb) return;
+      if (thumb.contains(e.relatedTarget)) return;
+      hidePreview();
+    });
+  }
+  setupHoverPreview();
+
+  async function loadGallery() {
+    try {
+      const res = await GS.api('/get-client-gallery', { method: 'POST', body: { clientId: client.clientId } });
+      allGalleryGroups = res.groups || [];
+    } catch (e) {
+      allGalleryGroups = [];
+    }
+    renderGalleryPanel();
+  }
+
+  loadGallery();
+
+} else {
+  location.href = 'index.html';
+}
+</script>
+
+</body>
+</html>
