@@ -15,6 +15,7 @@ const handlers = {
   'get-services':       require('../get-services').handler,
   'upload-client-photo': require('../upload-client-photo').handler,
   'get-client-order-photos': require('../get-client-order-photos').handler,
+  'get-client-gallery':  require('../get-client-gallery').handler,
   'get-holidays':       require('../get-holidays').handler,
   'save-client-holiday': require('../save-client-holiday').handler,
   'recover-client-id':  require('../recover-client-id').handler,
