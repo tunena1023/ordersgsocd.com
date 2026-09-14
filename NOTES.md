@@ -130,13 +130,21 @@ habían quedado en una versión vieja del componente sin el acordeón.
 
 ## Pendientes conocidos (al 10/09/2026)
 
-- **Pendiente (13/09/2026):** el preview de foto al pasar el mouse (1s,
-  tamaño máximo) y la funcionalidad de Gallery todavía NO existen en
-  `tech.gsocd.com`. El plan hablado con el dueño es moverlo primero a
-  `gsocd-shared` como componente propio (hoy vive duplicado, copiado a
-  mano, en `Admingsocd.com/admin.html`, `ordersgsocd.com/customer.html` y
-  `ordersgsocd.com/gallery.html`), y de ahí conectarlo en Tech — no
-  duplicarlo una tercera vez a mano.
+- **RESUELTO (13/09/2026):** el preview de foto al pasar el mouse (1s,
+  tamaño máximo) ya se movió a `gsocd-shared/photo-hover-preview`
+  (tag `v1.26.0` — ver su NOTES.md para el detalle completo).
+  `customer.html` (Gallery embebido) y `tracking.html` (Processing/
+  History) ya usan `GSPhotoHoverPreview.setup()`/`.stripHtml()` en vez
+  de sus propias copias locales — el CSS y las funciones
+  `setupGalleryHoverPreview()`/`setupOrderPhotoHoverPreview()` completas
+  se quitaron de ambos archivos. **Sigue pendiente** conectarlo en
+  `tech.gsocd.com`, que todavía no tiene ni el hover-preview ni Gallery.
+  Nota aparte: `gallery.html` standalone (la página que Gallery usaba
+  antes de convertirse en panel interno de `customer.html`) se quedó
+  con su propia copia vieja del hover-preview, sin actualizar a
+  `GSPhotoHoverPreview` — no se tocó porque ya no se usa dentro de la
+  app (nada enlaza ahí desde que Gallery vive en `customer.html`), pero
+  si alguna vez se vuelve a usar o se borra del todo, revisar esto.
 - El **sistema de servicios recurrentes** (ubicaciones/clientes con
   servicio recurrente, técnico asignado que ve y marca servicios como
   hechos) está apenas empezado — no es funcional todavía. Documento de
