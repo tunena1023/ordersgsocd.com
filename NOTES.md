@@ -130,21 +130,19 @@ habían quedado en una versión vieja del componente sin el acordeón.
 
 ## Pendientes conocidos (al 10/09/2026)
 
-- **RESUELTO (13/09/2026):** el preview de foto al pasar el mouse (1s,
-  tamaño máximo) ya se movió a `gsocd-shared/photo-hover-preview`
-  (tag `v1.26.0` — ver su NOTES.md para el detalle completo).
-  `customer.html` (Gallery embebido) y `tracking.html` (Processing/
-  History) ya usan `GSPhotoHoverPreview.setup()`/`.stripHtml()` en vez
-  de sus propias copias locales — el CSS y las funciones
-  `setupGalleryHoverPreview()`/`setupOrderPhotoHoverPreview()` completas
-  se quitaron de ambos archivos. **Sigue pendiente** conectarlo en
-  `tech.gsocd.com`, que todavía no tiene ni el hover-preview ni Gallery.
-  Nota aparte: `gallery.html` standalone (la página que Gallery usaba
-  antes de convertirse en panel interno de `customer.html`) se quedó
-  con su propia copia vieja del hover-preview, sin actualizar a
-  `GSPhotoHoverPreview` — no se tocó porque ya no se usa dentro de la
-  app (nada enlaza ahí desde que Gallery vive en `customer.html`), pero
-  si alguna vez se vuelve a usar o se borra del todo, revisar esto.
+- **COMPLETAMENTE RESUELTO (13/09/2026):** el preview de foto al pasar el
+  mouse (1s, tamaño máximo) ya se movió a `gsocd-shared/photo-hover-
+  preview` (tag `v1.26.0` — ver su NOTES.md para el detalle completo).
+  `customer.html` (Gallery embebido), `tracking.html` (Processing/
+  History) Y `gallery.html` standalone (por consistencia, aunque ya no
+  lo usa nadie dentro de la app — Gallery vive en `customer.html` desde
+  el fix del parpadeo) ya usan `GSPhotoHoverPreview.setup()`/
+  `.stripHtml()` en vez de sus propias copias locales. **Ya se conectó
+  también en `tech.gsocd.com`** (`employee.html`/`supervisor.html`,
+  mismo día) — resulta que Tech YA tenía Gallery completo y funcionando
+  (`get-my-gallery.js` + `GSGalleryGroups`), solo le faltaba el
+  hover-preview mismo. Los 3 repos quedan conectados al mismo
+  componente compartido, sin ninguna copia local en ningún lado.
 - El **sistema de servicios recurrentes** (ubicaciones/clientes con
   servicio recurrente, técnico asignado que ve y marca servicios como
   hechos) está apenas empezado — no es funcional todavía. Documento de
