@@ -14,6 +14,7 @@
 const { ORDERS_LIST, listChildren, graphFetch, siteListPath, jsonResponse } = require('./lib/graph');
 
 const PHOTOS_FOLDER = process.env.GRAPH_PHOTOS_FOLDER || 'TechPhotos';
+/* forzar build limpio -- 2026-09-13 */
 
 async function fetchByField(listName, fieldName, value) {
   const filter = encodeURIComponent(`fields/${fieldName} eq '${value}'`);
