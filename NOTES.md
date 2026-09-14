@@ -221,6 +221,55 @@ cambios en local sin subir que cambian por completo cual es la forma
 correcta de resolver algo.
 
 
+## SUBIDO Y DESPLEGADO (14/09/2026): Request a Change con lista + selector + diff (Recurring y Processing)
+
+A petición del dueño: "Request a Change" ya no es un cuadro de texto —
+ahora abre un panel a la DERECHA (misma técnica de 2→3 columnas que ya
+usaba Processing/History, `order-2col`/`col-right`) con:
+1. "Currently on this contract/order": un renglón por servicio con nombre
+   + nota (opcional) + cámara — mismo look que Admin > Active > Edit. La
+   nota y la foto NO se ligan a un servicio específico en el backend
+   (confirmado con el dueño): la nota se junta al mensaje general, la
+   cámara reusa `addClientPhoto()` (Recurring) / `startClientPhoto()`
+   (Processing).
+2. El selector real de servicios precargado con lo que ya tiene, y el
+   diff en vivo (verde = agregado, rojo = quitado con nota obligatoria) —
+   mismo patrón que Supervisor en Tech ("Update Services").
+Todo viene de `gsocd-shared/service-change-panel` (ver su NOTES.md).
+
+**Recurring** (`recurring.html` + panel embebido en `customer.html`):
+`request-recurring-change.js` acepta `services`/`removedNotes` además del
+mensaje libre (mismo `ServicesJSON` que `submit-recurring-update.js`);
+`renderRecurringChangeReview()` en Admin ya lo mostraba sin cambios.
+
+**Processing** (`tracking.html` mobile + `customer.html` desktop): el
+panel arranca con la lista + selector + diff y abajo siguen los campos
+de antes (describir, fechas, ventana). Describir es opcional si hubo
+cambio de servicios. `request-change.js` guarda un renglón de historial
+`Services Change Requested` / `Requested Services` con
+`{services, removedNotes}` en NewValue — mismo espíritu que
+`Reschedule Requested`: nada se aplica hasta que la oficina apruebe.
+**Pendiente:** que `admin-approve-order` muestre/aplique esos
+`Requested Services` al aprobar (hoy solo llegan al historial).
+
+**History no cambia:** Request Change nunca se muestra en
+Completed/Cancelled (`actionButtonsFor` ya lo condiciona) — el dueño lo
+confirmó: "eso ya pasó".
+
+**2 bugs reales encontrados en el camino:**
+- Una `async function` declarada dentro de un bloque `if {}` NO se eleva
+  al scope global (a diferencia de `function` normal) — confirmado con
+  prueba aislada. El botón "Send" VIEJO de Recurring ya tenía este bug
+  (nunca funcionó). Fix: `window.rcSendChangeRequest = async function`.
+- Colisión de nombres en `customer.html`: `toggleChangePanel`/
+  `renderChangePanel` ya existían para el Request Change de órdenes
+  normales; la copia de Recurring las pisaba. Fix: prefijo `rc` en las
+  de Recurring, y el componente compartido no usa nombres globales.
+
+**Quirk heredado (documentado en shared):** en Recurring los servicios no
+traen sku, así que quitar uno toma DOS clics en el mismo nivel; en
+Processing (sku real) toma uno.
+
 ## SUBIDO Y DESPLEGADO (13/09/2026): Multi/Single contaba tarjetas de fuera del formulario
 
 Bug real, no de lógica sino de scope: `removeUnitCard()`, `renumberUnitCards()`
