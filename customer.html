@@ -812,16 +812,9 @@
   #panel-processing .tab-panel, #panel-history .tab-panel { display: none; }
   #panel-processing .tab-panel.active, #panel-history .tab-panel.active { display: block; }
   #panel-processing .history-wrap, #panel-history .history-wrap, #panel-gallery .history-wrap { padding: 40px 48px; }
-  /* Preview de foto al pasar el mouse -- crece al tamano maximo posible
-     en pantalla, sin necesidad de clic (mismo componente aprobado con
-     mini en Admin, 13/09/2026, ya funcionando en Gallery standalone). */
-  .gs-hover-preview-overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0); z-index: 99999;
-    display: flex; align-items: center; justify-content: center;
-    pointer-events: none; opacity: 0; transition: opacity .15s ease, background .15s ease;
-  }
-  .gs-hover-preview-overlay.show { opacity: 1; background: rgba(0,0,0,.82); }
-  .gs-hover-preview-overlay img { max-width: 94vw; max-height: 94vh; object-fit: contain; border-radius: 6px; }
+  /* El CSS de .gs-hover-preview-overlay ahora vive en gsocd-shared/
+     photo-hover-preview (GSPhotoHoverPreview.setup() lo inyecta) --
+     antes estaba copiado aqui a mano. */
   #panel-processing .history-wrap h2, #panel-history .history-wrap h2 { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 600; margin-bottom: 6px; }
   #panel-processing .history-wrap .list-sub, #panel-history .history-wrap .list-sub { font-size: 12px; color: var(--gray); margin-bottom: 24px; line-height: 1.6; }
   #panel-processing .list-section-title, #panel-history .list-section-title { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold-dk); font-weight: 700; margin: 28px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
@@ -1361,6 +1354,7 @@
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.14.0/order-history/order-history.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.0.0/lightbox/lightbox.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.9/gallery-groups/gallery-groups.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.26.0/photo-hover-preview/photo-hover-preview.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.8.0/order-badges/order-badges.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.15.0/order-tracker/order-tracker.js"></script>
 <script>
@@ -2596,52 +2590,10 @@ if (client) {
     renderGalleryPanel();
   }
 
-  /* Preview de foto al pasar el mouse -- delegacion de eventos porque
-     .gs-gal-ph se inserta/reinserta via innerHTML cada vez que se
-     refresca la busqueda. .gs-gal-ph es un <div> que envuelve un
-     <img> adentro, y tambien se usa para videos (.gs-gal-ph.video)
-     -- los videos se excluyen del preview. */
-  let galleryHoverTimer = null;
-  function setupGalleryHoverPreview() {
-    if (document.getElementById('gs-hover-preview-overlay')) return;
-    const overlay = document.createElement('div');
-    overlay.className = 'gs-hover-preview-overlay';
-    overlay.id = 'gs-hover-preview-overlay';
-    overlay.innerHTML = '<img id="gs-hover-preview-img" src="" alt="">';
-    document.body.appendChild(overlay);
-    const previewImg = document.getElementById('gs-hover-preview-img');
-
-    function hidePreview() {
-      clearTimeout(galleryHoverTimer);
-      galleryHoverTimer = null;
-      overlay.classList.remove('show');
-    }
-    function findThumb(target) {
-      const galPh = target.closest('.gs-gal-ph');
-      if (galPh && !galPh.classList.contains('video')) return galPh;
-      return null;
-    }
-
-    document.addEventListener('mouseover', (e) => {
-      const thumb = findThumb(e.target);
-      if (!thumb) return;
-      const img = thumb.querySelector('img');
-      if (!img) return;
-      clearTimeout(galleryHoverTimer);
-      galleryHoverTimer = setTimeout(() => {
-        previewImg.src = img.src;
-        overlay.classList.add('show');
-      }, 1000);
-    });
-
-    document.addEventListener('mouseout', (e) => {
-      const thumb = findThumb(e.target);
-      if (!thumb) return;
-      if (thumb.contains(e.relatedTarget)) return;
-      hidePreview();
-    });
-  }
-  setupGalleryHoverPreview();
+  /* El hover-preview (.gs-gal-ph y .order-photo-thumb) ahora vive en
+     gsocd-shared/photo-hover-preview -- antes estaba copiado a mano
+     aqui como setupGalleryHoverPreview(). */
+  GSPhotoHoverPreview.setup();
 
   /* Codigo de promo -- valida contra PROMO_CODES_LIST en SharePoint.
      No hay precio visible en este formulario, asi que el "premio" no
