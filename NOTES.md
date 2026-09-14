@@ -130,6 +130,13 @@ habían quedado en una versión vieja del componente sin el acordeón.
 
 ## Pendientes conocidos (al 10/09/2026)
 
+- **Pendiente (13/09/2026):** el preview de foto al pasar el mouse (1s,
+  tamaño máximo) y la funcionalidad de Gallery todavía NO existen en
+  `tech.gsocd.com`. El plan hablado con el dueño es moverlo primero a
+  `gsocd-shared` como componente propio (hoy vive duplicado, copiado a
+  mano, en `Admingsocd.com/admin.html`, `ordersgsocd.com/customer.html` y
+  `ordersgsocd.com/gallery.html`), y de ahí conectarlo en Tech — no
+  duplicarlo una tercera vez a mano.
 - El **sistema de servicios recurrentes** (ubicaciones/clientes con
   servicio recurrente, técnico asignado que ve y marca servicios como
   hechos) está apenas empezado — no es funcional todavía. Documento de
@@ -207,6 +214,127 @@ version actual del archivo -- puede haber pendientes, decisiones o
 cambios en local sin subir que cambian por completo cual es la forma
 correcta de resolver algo.
 
+
+## SUBIDO Y DESPLEGADO (13/09/2026): Multi/Single contaba tarjetas de fuera del formulario
+
+Bug real, no de lógica sino de scope: `removeUnitCard()`, `renumberUnitCards()`
+y `gatherUnitsRaw()` en `customer.html` buscaban con
+`document.querySelectorAll('.gs-ofp-unitline')` — SIN restringir a ningún
+contenedor, en TODA la página. Esta misma clase también la usa
+`addUnitFormHtml()` (el formulario oculto de "+ Add a Unit" que se agrega a
+CADA orden activa en la lista de Processing). Si el cliente tenía 2+ órdenes
+activas, ya había 2+ elementos `.gs-ofp-unitline` ocultos en el DOM desde
+que se cargaba Processing — inflando el conteo real de Multi sin que el
+usuario tocara nada ahí. El síntoma: quitar unidades hasta llegar a 1 nunca
+bajaba a Single, sin importar cuántas veces se intentara.
+
+Se encontró comparando byte por byte contra `Admingsocd.com/admin.html`
+(`removeCreateUnitCard`), que SIEMPRE restringe su búsqueda a
+`#create-unit-cards` — nunca le pasó esto porque nunca cuenta nada de fuera.
+Fix: las 5 ocurrencias en `customer.html` ahora llevan el prefijo
+`#unit-cards `, igual que Admin usa `#create-unit-cards `. Ningún otro
+cambio de lógica.
+
+**Lección para la próxima vez que un contador/lógica de UI se comporte
+raro sin razón aparente:** revisar primero si la clase CSS que se está
+contando/buscando se reutiliza en algún OTRO lugar de la misma página para
+algo completamente distinto — un `document.querySelectorAll` sin scope
+cuenta TODO lo que exista en el DOM con esa clase, esté visible o no.
+
+## SUBIDO Y DESPLEGADO (13/09/2026): Preview de foto al pasar el mouse (1s, tamaño máximo, sin clic)
+
+Aprobado con mini antes de tocar código real. Reemplaza cualquier
+comportamiento anterior de "crecer un poco al pasar el mouse" por un
+preview tipo lightbox: al quedarse 1 segundo con el mouse sobre una
+miniatura de foto, esta crece al tamaño máximo posible en pantalla — sin
+necesidad de clic. Se cierra en cuanto el mouse SALE de la miniatura (no
+por micro-movimientos naturales mientras sigue encima de la misma foto —
+decisión explícita, se sentiría roto exigir inmovilidad total).
+
+Implementado primero en `Admingsocd.com/admin.html` (reemplazando el viejo
+`.order-photo-thumb:hover { scale(2.4) }`), extendido después a **todos**
+los lugares que muestran una orden real con fotos — a petición explícita
+del dueño ("en todos los tabs... las fotos siempre deben ser visibles desde
+cualquier orden"): Approvals, Review (2 secciones), Active, History,
+Schedule (2 secciones), y Gallery (`.gs-gal-ph`, que es un `<div>` que
+envuelve un `<img>` adentro, a diferencia de `.order-photo-thumb` que es el
+`<img>` directo — los videos `.gs-gal-ph.video` se excluyen del preview).
+
+Se implementó con **delegación de eventos** (`mouseover`/`mouseout` en
+`document`, revisando `closest()`) en vez de `addEventListener` directo
+sobre cada miniatura — necesario porque estas se insertan y reinsertan
+constantemente vía `innerHTML` cada vez que se refresca cualquier tab;
+delegación es la única forma de que siga funcionando sin reconectar
+listeners en cada refresh.
+
+Portado después a `ordersgsocd.com` (ver siguiente sección) — mismo
+componente exacto, mismo criterio de exclusión de videos.
+
+## SUBIDO Y DESPLEGADO (13/09/2026): Gallery en Orders + fotos en Processing/History — Y la lección real del "parpadeo"
+
+**Piezas nuevas:**
+- `get-client-gallery.js` — mismo patrón que `get-admin-gallery.js` de
+  Admin (fotos leídas directo de `TechPhotos/<Cliente>/<OrderID>/Photos`,
+  sin ninguna lista de SharePoint separada), pero SIEMPRE filtrado por
+  `clientId` — el cliente nunca debe poder ver fotos de otra cuenta. No
+  hizo falta ninguna columna nueva de SharePoint; `listChildren()` ya
+  maneja una carpeta que todavía no existe (regresa vacío, no truena), así
+  que las carpetas se siguen creando solas al subir la primera foto.
+- `customer.html` ahora carga TODAS las fotos del cliente de un jalón
+  (`loadOrders()` en paralelo con `get-orders`) para pintar la tira de
+  miniaturas en Processing/History, en vez de pedirlas una por una.
+
+**El error real que costó varias vueltas — documentado para no repetirlo:**
+
+Primero se construyó Gallery como página standalone (`gallery.html`),
+calcada de `recurring.html`. Esto trajo 3 bugs de estructura que
+`recurring.html` YA tenía (nadie los había notado porque nadie comparó
+ambos lado a lado antes):
+1. Layout angosto y centrado (`.wrap { max-width:920px }`) en vez de ancho
+   completo como Processing/History (`.history-wrap`, sin `max-width`).
+2. Orden del banner "Welcome back" ANTES de los tabs de navegación, cuando
+   `customer.html` (la página principal) lo tiene DESPUÉS. Se corrigió en
+   los 6 archivos de Orders (`gallery.html`, `profile.html`,
+   `recurring.html`, `templates.html`, `tracking.html`, y ya lo tenía bien
+   `customer.html`).
+3. **El bug real, el que causaba el "parpadeo":** `gallery.html` era una
+   página `.html` SEPARADA. Cada vez que el usuario entraba o salía de
+   Gallery, el navegador hacía un refresh COMPLETO de la página —
+   incluyendo el nav y el logo, que se destruían y volvían a crear desde
+   cero. "New Order" nunca parpadea porque vive DENTRO de `customer.html`
+   como panel interno (igual que Recurring/Templates/Profile/Processing/
+   History) — cambiar de panel ahí es solo un toggle de clases CSS
+   (`GSNavPremium.showPanel()`), sin ninguna recarga.
+
+   Se intentó primero un fix equivocado (arreglar el tamaño estático del
+   CSS del nav en `customer.html`, que sí tenía un bug real de
+   dependencia en `applyChrome()` en tiempo de ejecución — quedó
+   corregido, pero NO era la causa del parpadeo). El dueño insistió en
+   comparar directo New Order contra Gallery en vez de seguir
+   especulando por timing de red, y ahí se encontró la causa real.
+
+   **Fix definitivo:** Gallery se convirtió en un séptimo panel interno de
+   `customer.html` (`#panel-gallery`), usando los mismos componentes
+   compartidos (`gallery-groups.js` + `lightbox.js`, este último ya estaba
+   cargado). El tab de Gallery en el nav pasó de `href:'gallery.html'` a
+   `dataView:'gallery'` + `onclick:showTab('gallery')` — mismo mecanismo
+   que los otros 6 tabs. `gallery.html` standalone se dejó tal cual (por
+   si alguien llega ahí desde otra página vía link directo), pero DENTRO
+   de `customer.html` ya nunca se usa esa ruta.
+
+**Lección para la próxima vez que algo "parpadee" o se sienta lento al
+cambiar de tab:** antes de tocar CSS o timing, preguntar primero — ¿esta
+sección vive en un archivo `.html` separado, o es un panel interno de la
+página principal? Si es un archivo separado, cualquier navegación hacia o
+desde ahí SIEMPRE va a recargar la página completa (nav, logo, todo) sin
+importar qué tan optimizado esté el CSS o el JS — la única forma real de
+evitarlo es convertirlo en panel interno (`GSNavPremium.showPanel()`),
+como ya hacen la mayoría de los tabs de `customer.html`.
+
+Verificado con Puppeteer contando navegaciones de página reales (no
+timing/CSS): clic en Gallery = 0 navegaciones; ir de Gallery a History y
+de vuelta = 0 navegaciones — el nav y el logo nunca se destruyen. Batería
+completa en 0 errores en cada paso.
 
 ## SUBIDO Y DESPLEGADO (confirmado 13/09/2026): "+ Add a Unit" portado desde Admin
 
