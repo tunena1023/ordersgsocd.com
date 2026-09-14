@@ -624,45 +624,9 @@
   /* .change-box/.change-sent (cuadro viejo debajo del boton) se
      quitaron -- reemplazados por el panel de 3a columna arriba. */
 
-  /* Fila de servicio con nota + camara -- copiado exacto de admin.html
-     (buildAdminSelectedListHtml, ver Active > Edit), reusado aqui para
-     "Currently on this contract" dentro del panel de Request a Change.
-     La nota y la foto de estas filas NO se ligan a un servicio
-     especifico en el backend (confirmado con el dueno) -- la nota se
-     junta al mensaje general, la camara reusa addClientPhoto() tal
-     cual. */
-  #panel-recurring .svc-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
-  #panel-recurring .svc-row:last-child { border-bottom: none; }
-  #panel-recurring .svc-row-name { flex: 0 0 auto; max-width: 240px; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #panel-recurring .svc-row-notewrap { flex: 1; min-width: 0; }
-  #panel-recurring .svc-row-note { width: 100%; border: 1.5px solid var(--border); border-radius: 5px; padding: 7px 10px;
-    font-size: 12.5px; font-family: inherit; color: var(--black); background: var(--off); outline: none;
-    box-sizing: border-box; transition: border-color .15s, background .15s; }
-  #panel-recurring .svc-row-note:focus { border-color: var(--gold); background: var(--white); }
-  #panel-recurring .svc-row-note::placeholder { color: #A9A49A; }
-  #panel-recurring .svc-row-cam { flex-shrink: 0; width: 32px; height: 32px; border-radius: 6px; border: 1.5px solid var(--border);
-    background: var(--white); color: var(--gray); cursor: pointer; display: flex; align-items: center;
-    justify-content: center; transition: border-color .15s, color .15s; position: relative; }
-  #panel-recurring .svc-row-cam:hover { border-color: var(--gold); color: var(--gold-dk); }
-  #panel-recurring .svc-row-cam svg { width: 14px; height: 14px; }
-  /* Dentro de col-right (1/3 de columna, tan angosto como un celular),
-     se apila igual que ya hace admin.html en su propio breakpoint
-     movil -- en vez de inventar una proporcion de columnas nueva. */
-  #panel-recurring .col-right .svc-row { flex-wrap: wrap; }
-  #panel-recurring .col-right .svc-row-name { max-width: none; flex-basis: 100%; white-space: normal; }
-
-  /* Diff de servicios agregados/quitados -- mismo patron ya usado por
-     Supervisor (tech.gsocd.com) en su propio "Update Services". */
-  #panel-recurring .diff-box { background: var(--white); border: 1px solid var(--border); padding: 12px 14px; margin: 14px 0; border-radius: 4px; }
-  #panel-recurring .diff-line { font-size: 12px; margin-bottom: 4px; }
-  #panel-recurring .diff-line.removed { color: var(--red); }
-  #panel-recurring .diff-line.added { color: var(--green); }
-  #panel-recurring .diff-empty { font-size: 12px; color: var(--gray); }
-  #panel-recurring .um-note-box { background: var(--off); border: 1px solid var(--border); padding: 12px; margin: 6px 0 10px; }
-  #panel-recurring .um-note-box label { font-size: 10px; text-transform: uppercase; color: var(--gray); font-weight: 700; display: block; margin-bottom: 6px; }
-  #panel-recurring .um-note-box textarea { width: 100%; padding: 10px; border: 1px solid var(--border); font-size: 12px; font-family: inherit; resize: vertical; min-height: 56px; box-sizing: border-box; }
-  #panel-recurring .um-note-error { font-size: 11px; color: var(--red); margin-top: 6px; display: none; }
-  #panel-recurring .um-note-error.show { display: block; }
+  /* El CSS de la lista de servicios (renglon + nota + camara) y del
+     diff ahora lo inyecta gsocd-shared/service-change-panel
+     (prefijo gs-scp-) -- antes estaba copiado aqui a mano. */
   #panel-recurring .gallery-view { display: none; padding: 32px 48px 60px; }
   #panel-recurring .gallery-view.active { display: block; }
   #panel-recurring .gallery-back { font-size: 12px; color: var(--gold-dk); cursor: pointer; margin-bottom: 14px; display: inline-block; }
@@ -1393,6 +1357,7 @@
 <script src="shared.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.5/date-time-picker/date-time-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.8/service-picker/service-picker.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.27.0/service-change-panel/service-change-panel.js"></script>
 <!-- Pendiente: gsocd-shared va en v1.15.0, el siguiente tag real seria v1.16.0
      (componente nuevo, todavia solo vive en local). Ajustar cuando se suba. -->
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.16.0/estimated-time/estimated-time.js"></script>
@@ -2683,7 +2648,7 @@ if (client) {
        referencia viva a un panel de Request a Change abierto quedaria
        apuntando a DOM que ya no existe. */
     rcChangeOpenFor = null;
-    rcChangePicker = null;
+    rcChangeCtrl = null;
     renderContracts();
   }
 
@@ -2797,16 +2762,15 @@ if (client) {
 
   /* ===== Request a Change -- panel de 3a columna a la derecha, mismo
      mecanismo de 2->3 columnas que ya usa Orders en Processing/History
-     (order-2col/col-right), con el selector real de servicios + diff
-     ya usado por Supervisor (tech.gsocd.com) para "Update Services".
+     (order-2col/col-right). La lista de servicios actuales + selector
+     real + diff vienen de gsocd-shared/service-change-panel
+     (GSServiceChangePanel) -- misma pieza que usan Processing y Admin.
      Se manda igual que una sugerencia de supervisor (mismo mecanismo,
      Pending Review), cae en el mismo Review que ya usa la oficina.
      Solo un panel abierto a la vez -- abrir uno nuevo cierra
      cualquier otro que estuviera abierto. ===== */
-  const RC_CAM_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>';
   let rcChangeOpenFor = null;
-  let rcChangePicker = null;
-  let rcChangeBaseNames = [];
+  let rcChangeCtrl = null;
 
   function rcToggleChangePanel(id) {
     const wrap = document.getElementById('ord2col-' + id);
@@ -2819,7 +2783,7 @@ if (client) {
       if (slot) slot.innerHTML = '';
       if (btn) btn.textContent = 'Request a Change';
       rcChangeOpenFor = null;
-      rcChangePicker = null;
+      rcChangeCtrl = null;
       return;
     }
     if (rcChangeOpenFor) {
@@ -2843,25 +2807,18 @@ if (client) {
     const c = contracts.find(x => x.id === id);
     if (!c) return;
 
-    /* "Currently on this contract" -- mismo look que
-       buildAdminSelectedListHtml() en admin.html (Active > Edit), pero
-       la nota y la foto de estas filas NO se ligan a un servicio
-       especifico en el backend (confirmado con el dueno) -- la nota
-       se junta al mensaje general de la solicitud, y la camara reusa
-       addClientPhoto() tal cual (misma carpeta de fotos del contrato). */
-    const currentRowsHtml = (c.Services || []).map((s, i) => {
-      const label = esc(s.ServiceName) + (s.Level ? ' — ' + esc(s.Level) : '');
-      return '<div class="svc-row">' +
-        '<b class="svc-row-name">' + label + '</b>' +
-        '<div class="svc-row-notewrap"><input type="text" id="rc-svc-note-' + id + '-' + i + '" class="svc-row-note" placeholder="Note about this service (optional)"></div>' +
-        '<button type="button" class="svc-row-cam" title="Add a photo" onclick="addClientPhoto(\'' + id + '\')">' + RC_CAM_ICON + '</button>' +
-      '</div>';
-    }).join('');
+    /* "Currently on this contract": la nota y la foto de estos
+       renglones NO se ligan a un servicio especifico en el backend
+       (confirmado con el dueno) -- la nota se junta al mensaje
+       general, la camara reusa addClientPhoto() tal cual (misma
+       carpeta de fotos del contrato). stack:true porque col-right es
+       1/3 de columna, tan angosto como un celular. */
+    const listHtml = GSServiceChangePanel.currentListHtml(c.Services || [], { listId: 'rc-svc-list-' + id, stack: true });
 
     slot.innerHTML =
       '<p class="detail-label" style="margin-bottom:4px">Request a Change</p>' +
       '<p style="font-size:12px;color:var(--gray);margin-bottom:14px;line-height:1.6">Add or remove services below. Our office reviews every request before it takes effect.</p>' +
-      (currentRowsHtml ? '<p class="field-caption" style="margin-bottom:6px">Currently on this contract</p><div style="margin-bottom:16px">' + currentRowsHtml + '</div>' : '') +
+      (listHtml ? '<p class="field-caption" style="margin-bottom:6px">Currently on this contract</p><div style="margin-bottom:16px">' + listHtml + '</div>' : '') +
       '<div id="rc-picker-mount-' + id + '"></div>' +
       '<div id="rc-diff-mount-' + id + '"></div>' +
       '<div style="margin-top:14px">' +
@@ -2872,6 +2829,9 @@ if (client) {
         '<button class="gs-ofp-btn-secondary" onclick="rcToggleChangePanel(\'' + id + '\')">Cancel</button>' +
       '</div>';
 
+    GSServiceChangePanel.wireList(document.getElementById('rc-svc-list-' + id), c.Services || [], {
+      onCamera: function () { addClientPhoto(id); }
+    });
     rcMountChangePicker(id, c);
   }
 
@@ -2889,53 +2849,15 @@ if (client) {
         catalog = [];
       }
     }
-    const mountEl = document.getElementById('rc-picker-mount-' + id);
-    if (!mountEl || rcChangeOpenFor !== id) return;
-
-    const initialSelected = { Commercial: {} };
-    const initialLevels = {};
-    rcChangeBaseNames = [];
-    (c.Services || []).forEach(s => {
-      initialSelected.Commercial[s.ServiceName] = s.ServiceName; // sin sku real disponible aqui, se usa el nombre como llave
-      if (s.Level) initialLevels['Commercial|' + s.ServiceName] = s.Level;
-      rcChangeBaseNames.push(s.ServiceName);
-    });
-    rcChangePicker = GSServicePicker.mount('rc-change-' + id, mountEl, {
+    if (!document.getElementById('rc-picker-mount-' + id) || rcChangeOpenFor !== id) return;
+    rcChangeCtrl = GSServiceChangePanel.mount({
+      instanceId: 'rc-change-' + id,
+      pickerMount: 'rc-picker-mount-' + id,
+      diffMount: 'rc-diff-mount-' + id,
       catalog: catalog,
-      division: 'Janitorial', mode: 'levels', showSelectAll: false,
-      groupByCategory: true, propertyType: 'Commercial',
-      initialSelected: initialSelected, initialLevels: initialLevels,
-      onChange: function () { rcRenderChangeDiff(id); }
+      division: 'Janitorial', propertyType: 'Commercial',
+      currentServices: c.Services || []
     });
-    rcRenderChangeDiff(id);
-  }
-
-  function rcRenderChangeDiff(id) {
-    const slot = document.getElementById('rc-diff-mount-' + id);
-    if (!slot || !rcChangePicker) return;
-    const selected = rcChangePicker.getSelected();
-    const nowNames = new Set();
-    Object.values(selected).forEach(m => Object.keys(m).forEach(n => nowNames.add(n)));
-    const base = new Set(rcChangeBaseNames);
-    const removed = [...base].filter(n => !nowNames.has(n));
-    const added = [...nowNames].filter(n => !base.has(n));
-
-    if (!removed.length && !added.length) {
-      slot.innerHTML = '<div class="diff-box"><span class="diff-empty">No changes yet.</span></div>';
-      return;
-    }
-    let html = '<div class="diff-box">';
-    added.forEach(n => html += '<div class="diff-line added">+ ' + esc(n) + '</div>');
-    removed.forEach((n, i) => {
-      html += '<div class="diff-line removed">− ' + esc(n) + '</div>';
-      html += '<div class="um-note-box">' +
-        '<label>Why remove "' + esc(n) + '"? (required)</label>' +
-        '<textarea id="rc-diffnote-' + id + '-' + i + '"></textarea>' +
-        '<p class="um-note-error" id="rc-diffnote-error-' + id + '-' + i + '">Please add a note.</p>' +
-      '</div>';
-    });
-    html += '</div>';
-    slot.innerHTML = html;
   }
 
   /* FIX REAL encontrado al probar: una "async function" declarada
@@ -2947,53 +2869,26 @@ if (client) {
      vieja de esta funcion (senalado aparte, no es nuevo de este
      cambio). */
   window.rcSendChangeRequest = async function (id) {
-    if (!rcChangePicker) return;
+    if (!rcChangeCtrl) return;
     const c = contracts.find(x => x.id === id);
     if (!c) return;
-    const selected = rcChangePicker.getSelected();
-    const levels = rcChangePicker.getLevels();
-    const nowNames = new Set();
-    Object.values(selected).forEach(m => Object.keys(m).forEach(n => nowNames.add(n)));
-    const base = new Set(rcChangeBaseNames);
-    const addedNames = [...nowNames].filter(n => !base.has(n));
-    const removedList = [...base].filter(n => !nowNames.has(n));
 
-    const removedNotes = [];
-    let ok = true;
-    removedList.forEach((n, i) => {
-      const input = document.getElementById('rc-diffnote-' + id + '-' + i);
-      if (!input || !input.value.trim()) {
-        const errEl = document.getElementById('rc-diffnote-error-' + id + '-' + i);
-        if (errEl) errEl.classList.add('show');
-        ok = false;
-        return;
-      }
-      removedNotes.push({ serviceName: n, note: input.value.trim() });
-    });
-    if (!ok) return;
+    const result = rcChangeCtrl.collect();
+    if (!result.ok) return;
 
-    /* Las notas por servicio (de los que YA tiene el contrato) se
-       juntan al mensaje general -- no van ligadas a un servicio
-       especifico en el backend (confirmado con el dueno). */
-    const messageParts = [];
-    (c.Services || []).forEach((s, i) => {
-      const noteInput = document.getElementById('rc-svc-note-' + id + '-' + i);
-      if (noteInput && noteInput.value.trim()) {
-        messageParts.push(s.ServiceName + ': ' + noteInput.value.trim());
-      }
-    });
+    const messageParts = GSServiceChangePanel.collectNotes(document.getElementById('rc-svc-list-' + id), c.Services || []);
     const generalInput = document.getElementById('rc-general-note-' + id);
     if (generalInput && generalInput.value.trim()) messageParts.push(generalInput.value.trim());
     const message = messageParts.join('\n');
 
-    if (!addedNames.length && !removedNotes.length && !message) { showToast('Nothing was changed.'); return; }
+    if (!result.services.length && !result.removedNotes.length && !message) { showToast('Nothing was changed.'); return; }
 
     try {
       await GS.api('/request-recurring-change', {
         body: {
           recurringServiceId: id, clientId: client.clientId,
-          services: addedNames.map(n => ({ serviceName: n, level: levels['Commercial|' + n] || '' })),
-          removedNotes: removedNotes,
+          services: result.services,
+          removedNotes: result.removedNotes,
           message: message
         }
       });
