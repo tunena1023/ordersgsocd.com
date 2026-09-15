@@ -289,7 +289,6 @@
 </head>
 <body>
 
-<input type="file" id="client-camera-input" accept="image/*" capture="environment" style="display:none">
 
 <nav>
   <div class="logo-wrap">
@@ -303,6 +302,8 @@
 </nav>
 
 <div id="gsNav"></div>
+
+<div id="camera-queue-banner" style="display:none;background:#3a2f18;color:#E2C97E;font-size:12px;padding:8px 16px;text-align:center"></div>
 
 <div class="portal-header">
   <p>Welcome back, <strong id="client-name">Client</strong> &nbsp;·&nbsp; <span id="client-num-display"></span></p>
@@ -417,6 +418,7 @@
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.27.1/service-picker/service-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.27.2/service-change-panel/service-change-panel.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.27.3/order-history/order-history.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.1/camera-queue/camera-queue.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.8.0/order-badges/order-badges.js"></script>
 <!-- Pendiente: gsocd-shared tagea TODO el repo junto (no por componente), y ya va
      en v1.11.0 -- el siguiente tag real seria v1.12.0. Este componente todavia
@@ -430,6 +432,29 @@
 <script>
 const client = GS.requireSession();
 if (client) {
+
+  /* Mismo dbName que camera-capture.html/customer.html/recurring.html
+     -- comparten dominio, mismo cajon de IndexedDB. */
+  GSCameraQueue.init({
+    dbName: 'gs-orders-camera-queue',
+    maxAttempts: 10,
+    retryIntervalMs: 20000,
+    uploadFn: async function (item) { return GS.api(item.endpoint, { body: item.body }); },
+    onChange: function (pending) {
+      const banner = document.getElementById('camera-queue-banner');
+      const waiting = pending.filter(p => !p.failed).length;
+      const failed = pending.filter(p => p.failed).length;
+      if (failed) {
+        banner.style.display = 'block';
+        banner.textContent = failed + ' photo' + (failed === 1 ? '' : 's') + ' could not be uploaded — try again.';
+      } else if (waiting) {
+        banner.style.display = 'block';
+        banner.textContent = waiting + ' photo' + (waiting === 1 ? '' : 's') + ' waiting for signal — will upload automatically.';
+      } else {
+        banner.style.display = 'none';
+      }
+    }
+  });
 
   const $ = id => document.getElementById(id);
   let ordersCache = [];
@@ -507,7 +532,14 @@ if (client) {
     { label: 'Profile', href: 'profile.html' }
   ]);
   showSection(initialSection);
-  loadOrders();
+  loadOrders().then(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const openOrderParam = urlParams.get('openOrder');
+    if (openOrderParam) {
+      history.replaceState(null, '', location.pathname + location.hash);
+      restoreOcChangeSnapshotIfAny();
+    }
+  });
 
   function showSection(which) {
     $('processing').classList.toggle('active', which === 'processing');
@@ -975,7 +1007,6 @@ if (client) {
      para rastrear a nadie, solo para que el cliente muestre algo.
      Van a la MISMA carpeta que ya usa Tech, para que el staff las vea
      en la galeria de siempre sin que Admin necesite ningun cambio. */
-  let clientPhotoTargetOrderId = null;
   /* Fotos cargadas por orden, para poder pasarle el arreglo completo
      a GSLightbox.open() (necesita el conjunto, no solo la que se
      toco, para poder navegar con flechas prev/next). */
@@ -1002,46 +1033,71 @@ if (client) {
     GSLightbox.open(clientPhotosByOrder[orderId] || [], photoIdx);
   }
 
-  function startClientPhoto(orderId) {
-    clientPhotoTargetOrderId = orderId;
-    document.getElementById('client-camera-input').click();
+  /* ===== Fotos del cliente -- cámara propia (camera-capture.html),
+     con cola offline real. El panel "Request a change" de aqui tiene
+     picker de servicios + notas, mas fecha de entrada, fecha de
+     entrega, ventana de servicio y descripcion libre -- se guarda
+     TODO antes de salir a la camara. ===== */
+  function saveOcChangeSnapshot() {
+    if (!(openPanelOrderId && openPanelType === 'change')) return;
+    const orderId = openPanelOrderId;
+    let removedNotes = {};
+    if (ocChangeCtrl && ocChangeCtrl.picker) {
+      const diff = ocChangeCtrl.getDiff();
+      diff.removed.forEach((name, i) => {
+        const ta = document.querySelector('#oc-diff-mount-' + orderId + ' textarea[data-removed-index="' + i + '"]');
+        if (ta && ta.value.trim()) removedNotes[name] = ta.value;
+      });
+    }
+    sessionStorage.setItem('tracking_oc_change_snapshot', JSON.stringify({
+      orderId: orderId,
+      selected: ocChangeCtrl && ocChangeCtrl.picker ? ocChangeCtrl.picker.getSelected() : null,
+      levels: ocChangeCtrl && ocChangeCtrl.picker ? ocChangeCtrl.picker.getLevels() : null,
+      removedNotes: removedNotes,
+      description: (document.getElementById('panel-change-text') || {}).value || '',
+      entry: (document.getElementById('panel-change-entry') || {}).value || '',
+      due: (document.getElementById('panel-change-due') || {}).value || '',
+      window: (document.getElementById('panel-change-window') || {}).value || ''
+    }));
   }
 
-  document.getElementById('client-camera-input').addEventListener('change', function () {
-    const file = this.files[0];
-    const orderId = clientPhotoTargetOrderId;
-    this.value = '';
-    clientPhotoTargetOrderId = null;
-    if (!file || !orderId) return;
+  async function restoreOcChangeSnapshotIfAny() {
+    const raw = sessionStorage.getItem('tracking_oc_change_snapshot');
+    if (!raw) return;
+    sessionStorage.removeItem('tracking_oc_change_snapshot');
+    let snap;
+    try { snap = JSON.parse(raw); } catch (e) { return; }
+    if (!snap || !snap.orderId) return;
 
-    const wrap = document.getElementById('client-photo-thumbs-' + orderId);
-    const localUrl = URL.createObjectURL(file);
-    let thumb = null;
-    if (wrap) {
-      thumb = document.createElement('img');
-      thumb.className = 'client-photo-thumb';
-      thumb.src = localUrl;
-      thumb.style.opacity = '.5';
-      wrap.appendChild(thumb);
+    const card = document.querySelector('.order-card[data-order="' + snap.orderId.replace(/"/g, '') + '"]');
+    if (!card) return;
+    const body = card.querySelector('.order-card-header')?.nextElementSibling;
+    if (body) body.classList.add('open');
+    await toggleChangePanel(snap.orderId);
+
+    if (snap.selected && ocChangeCtrl && ocChangeCtrl.picker) {
+      ocChangeCtrl.picker.setSelected(snap.selected, snap.levels);
+      ocChangeCtrl.renderDiff();
+      const diff = ocChangeCtrl.getDiff();
+      diff.removed.forEach((name, i) => {
+        if (!snap.removedNotes[name]) return;
+        const ta = document.querySelector('#oc-diff-mount-' + snap.orderId + ' textarea[data-removed-index="' + i + '"]');
+        if (ta) ta.value = snap.removedNotes[name];
+      });
     }
+    const setVal = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
+    setVal('panel-change-text', snap.description);
+    setVal('panel-change-entry', snap.entry);
+    setVal('panel-change-due', snap.due);
+    setVal('panel-change-window', snap.window);
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 
-    const reader = new FileReader();
-    reader.onload = async () => {
-      try {
-        await GS.api('/upload-client-photo', { method: 'POST', body: { orderId, imageBase64: reader.result } });
-        if (thumb) thumb.style.opacity = '1';
-        showToast('Photo added.');
-      } catch (e) {
-        if (thumb) thumb.remove();
-        showToast('Could not add that photo: ' + e.message);
-      }
-    };
-    reader.onerror = () => {
-      if (thumb) thumb.remove();
-      showToast('Could not read that photo -- please try again.');
-    };
-    reader.readAsDataURL(file);
-  });
+  function startClientPhoto(orderId) {
+    saveOcChangeSnapshot();
+    location.href = 'camera-capture.html?context=tracking-photo&orderId=' + encodeURIComponent(orderId) +
+      '&return=' + encodeURIComponent('tracking.html?openOrder=' + orderId) + '&label=' + encodeURIComponent('Order ' + orderId);
+  }
 
   /* Catalogo nuevo: SubOption ya es el SKU interno (ej. "222-68"), no
      un texto legible -- nunca se muestra tal cual. Para esos casos el
@@ -1691,7 +1747,7 @@ return html;
   }
 
   /* ===== Change request ===== */
-  function toggleChangePanel(orderId) {
+  async function toggleChangePanel(orderId) {
     if (openPanelOrderId === orderId && openPanelType === 'change') { closeOpenPanel(); return; }
     closeOpenPanel();
     const wrap = $('ord2col-' + orderId);
@@ -1699,10 +1755,10 @@ return html;
     openPanelOrderId = orderId;
     openPanelType = 'change';
     wrap.classList.add('open');
-    renderChangePanel(orderId);
+    await renderChangePanel(orderId);
   }
 
-  function renderChangePanel(orderId) {
+  async function renderChangePanel(orderId) {
     const panel = $('sidepanel-' + orderId);
     if (!panel) return;
     /* Las fechas llegan prellenadas con las que la orden tiene hoy, para
@@ -1759,7 +1815,7 @@ return html;
     GSServiceChangePanel.wireList($('oc-svc-list-' + orderId), ocSvcs, {
       onCamera: function () { startClientPhoto(orderId); }
     });
-    ocMountChangePicker(orderId, ocSvcs);
+    await ocMountChangePicker(orderId, ocSvcs);
   }
 
   let ocChangeCtrl = null;

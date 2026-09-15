@@ -135,7 +135,6 @@
 </head>
 <body>
 
-<input type="file" id="client-camera-input" accept="image/*" capture="environment" style="display:none">
 
 <nav>
   <div class="logo-wrap">
@@ -148,6 +147,8 @@
 </nav>
 
 <div id="gsNav"></div>
+
+<div id="camera-queue-banner" style="display:none;background:#3a2f18;color:#E2C97E;font-size:12px;padding:8px 16px;text-align:center"></div>
 
 <div class="portal-header">
   <p>Welcome back, <strong id="client-name">Client</strong></p>
@@ -174,6 +175,7 @@
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.6/nav-premium/nav-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.0.0/lightbox/lightbox.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.27.3/order-history/order-history.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.1/camera-queue/camera-queue.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.24/order-form-premium/order-form-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.26.0/service-picker/service-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.27.2/service-change-panel/service-change-panel.js"></script>
@@ -181,6 +183,29 @@
 <script>
 const client = GS.requireSession();
 if (client) {
+
+  /* Mismo dbName que camera-capture.html/customer.html -- comparten
+     dominio, mismo cajon de IndexedDB. */
+  GSCameraQueue.init({
+    dbName: 'gs-orders-camera-queue',
+    maxAttempts: 10,
+    retryIntervalMs: 20000,
+    uploadFn: async function (item) { return GS.api(item.endpoint, { body: item.body }); },
+    onChange: function (pending) {
+      const banner = document.getElementById('camera-queue-banner');
+      const waiting = pending.filter(p => !p.failed).length;
+      const failed = pending.filter(p => p.failed).length;
+      if (failed) {
+        banner.style.display = 'block';
+        banner.textContent = failed + ' photo' + (failed === 1 ? '' : 's') + ' could not be uploaded — try again.';
+      } else if (waiting) {
+        banner.style.display = 'block';
+        banner.textContent = waiting + ' photo' + (waiting === 1 ? '' : 's') + ' waiting for signal — will upload automatically.';
+      } else {
+        banner.style.display = 'none';
+      }
+    }
+  });
 
   GSOrderFormPremium.styleTag();
   GS.applyLogo();
@@ -213,7 +238,6 @@ if (client) {
 
   let contracts = [];
   let openId = null;
-  let clientPhotoTarget = null; // recurringServiceId de la tarjeta donde se esta agregando foto
 
   async function loadRecurring() {
     const box = document.getElementById('contracts-list');
@@ -317,32 +341,58 @@ if (client) {
     document.getElementById('main-view').classList.remove('hidden');
   }
 
-  /* ===== Fotos del cliente -- mismo <input> nativo que ya usa el
-     resto del portal, sin ubicacion (esto no rastrea a nadie). ===== */
-  function addClientPhoto(id) {
-    clientPhotoTarget = id;
-    document.getElementById('client-camera-input').click();
+  /* ===== Fotos del cliente -- cámara propia (camera-capture.html),
+     con cola offline real. Como esto navega fuera de la pagina por
+     completo, y aqui SI puede haber un panel "Request a Change" sin
+     enviar (picker + notas escritas a medias), se guarda un
+     snapshot antes de salir y se restaura al volver. ===== */
+  function saveRcChangeSnapshot() {
+    if (!(rcChangeOpenFor && rcChangeCtrl && rcChangeCtrl.picker)) return;
+    const diff = rcChangeCtrl.getDiff();
+    const removedNotes = {};
+    diff.removed.forEach((name, i) => {
+      const ta = document.querySelector('#rc-diff-mount-' + rcChangeOpenFor + ' textarea[data-removed-index="' + i + '"]');
+      if (ta && ta.value.trim()) removedNotes[name] = ta.value;
+    });
+    sessionStorage.setItem('rc_change_snapshot', JSON.stringify({
+      id: rcChangeOpenFor,
+      selected: rcChangeCtrl.picker.getSelected(),
+      levels: rcChangeCtrl.picker.getLevels(),
+      generalNote: (document.getElementById('rc-general-note-' + rcChangeOpenFor) || {}).value || '',
+      removedNotes: removedNotes
+    }));
   }
-  document.getElementById('client-camera-input').addEventListener('change', async function () {
-    const file = this.files[0];
-    const id = clientPhotoTarget;
-    this.value = '';
-    clientPhotoTarget = null;
-    if (!file || !id) return;
-    const reader = new FileReader();
-    reader.onload = async () => {
-      try {
-        await GS.api('/upload-client-recurring-photo', { body: { recurringServiceId: id, imageBase64: reader.result } });
-        showToast('Photo saved.');
-        await loadRecurring();
-        openId = id;
-        renderContracts();
-      } catch (e) {
-        alert('Could not save that: ' + e.message);
-      }
-    };
-    reader.readAsDataURL(file);
-  });
+
+  async function restoreRcChangeSnapshotIfAny() {
+    const raw = sessionStorage.getItem('rc_change_snapshot');
+    if (!raw) return;
+    sessionStorage.removeItem('rc_change_snapshot');
+    let snap;
+    try { snap = JSON.parse(raw); } catch (e) { return; }
+    if (!snap || !snap.id) return;
+
+    const btn = document.getElementById('rc-change-btn-' + snap.id);
+    if (!btn) return;
+    await rcToggleChangePanel(snap.id);
+    if (!rcChangeCtrl || !rcChangeCtrl.picker) return;
+    rcChangeCtrl.picker.setSelected(snap.selected, snap.levels);
+    rcChangeCtrl.renderDiff();
+    const generalEl = document.getElementById('rc-general-note-' + snap.id);
+    if (generalEl) generalEl.value = snap.generalNote || '';
+    const diff = rcChangeCtrl.getDiff();
+    diff.removed.forEach((name, i) => {
+      if (!snap.removedNotes[name]) return;
+      const ta = document.querySelector('#rc-diff-mount-' + snap.id + ' textarea[data-removed-index="' + i + '"]');
+      if (ta) ta.value = snap.removedNotes[name];
+    });
+    btn.closest('.order-card, [class*="card"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function addClientPhoto(id) {
+    saveRcChangeSnapshot();
+    location.href = 'camera-capture.html?context=recurring-photo&recurringServiceId=' + encodeURIComponent(id) +
+      '&return=' + encodeURIComponent('recurring.html?openId=' + id) + '&label=' + encodeURIComponent('Contract photo');
+  }
 
   /* ===== Request a Change -- panel de 3a columna a la derecha, mismo
      mecanismo de 2->3 columnas que ya usa Orders en Processing/History
@@ -357,7 +407,7 @@ if (client) {
   let rcChangeCtrl = null;
   let servicesCatalogCache = null;
 
-  function rcToggleChangePanel(id) {
+  async function rcToggleChangePanel(id) {
     const wrap = document.getElementById('ord2col-' + id);
     const btn = document.getElementById('rc-change-btn-' + id);
     if (!wrap) return;
@@ -383,10 +433,13 @@ if (client) {
     rcChangeOpenFor = id;
     if (btn) btn.textContent = 'Cancel';
     wrap.classList.add('open');
-    rcRenderChangePanel(id);
+    await rcRenderChangePanel(id);
   }
+  /* Ahora es async -- se expone a mano a window porque el onclick
+     inline la busca ahi, y una async function no hace hoist sola. */
+  window.rcToggleChangePanel = rcToggleChangePanel;
 
-  function rcRenderChangePanel(id) {
+  async function rcRenderChangePanel(id) {
     const slot = document.getElementById('sidepanel-' + id);
     if (!slot) return;
     const c = contracts.find(x => x.id === id);
@@ -417,7 +470,7 @@ if (client) {
     GSServiceChangePanel.wireList(document.getElementById('rc-svc-list-' + id), c.Services || [], {
       onCamera: function () { addClientPhoto(id); }
     });
-    rcMountChangePicker(id, c);
+    await rcMountChangePicker(id, c);
   }
 
   async function rcMountChangePicker(id, c) {
@@ -482,7 +535,16 @@ if (client) {
     }
   };
 
-  loadRecurring();
+  loadRecurring().then(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const openIdParam = urlParams.get('openId');
+    if (openIdParam) {
+      history.replaceState(null, '', location.pathname);
+      openId = openIdParam;
+      renderContracts();
+      restoreRcChangeSnapshotIfAny();
+    }
+  });
 } else {
   window.location.href = 'index.html';
 }
