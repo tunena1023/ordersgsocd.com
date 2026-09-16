@@ -143,10 +143,6 @@ habían quedado en una versión vieja del componente sin el acordeón.
   (`get-my-gallery.js` + `GSGalleryGroups`), solo le faltaba el
   hover-preview mismo. Los 3 repos quedan conectados al mismo
   componente compartido, sin ninguna copia local en ningún lado.
-- El **sistema de servicios recurrentes** (ubicaciones/clientes con
-  servicio recurrente, técnico asignado que ve y marca servicios como
-  hechos) está apenas empezado — no es funcional todavía. Documento de
-  referencia pendiente de analizar con el dueño.
 - **En local, sin subir al repo:** fix en `service-picker.js` para que solo
   una categoría del acordeón esté abierta a la vez (hoy se pueden abrir
   varias al mismo tiempo). Vive en el sandbox de la sesión del 10/09/2026,
@@ -524,10 +520,3 @@ y el que tuvo el caso más complicado de los 3.
   `if(){}` no hace hoist al scope global sola, a diferencia de una
   `function` normal).
 
-**Pendiente:** nada de esto se ha probado en un navegador real todavía
-(solo `node --check` de sintaxis, más Node+fake-indexeddb para la cola en
-sí). Este repo es el que tiene más superficie sin probar de los 3 --
-vale la pena probarlo con calma antes de confiar en que todo quedó bien,
-sobre todo el caso de la orden nueva (drafts, `?continue=`, el lote de
-varias unidades) y los paneles de Request a Change con fecha/ventana/
-descripción en Tracking.
