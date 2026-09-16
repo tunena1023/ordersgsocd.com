@@ -475,3 +475,59 @@ real de `customer.html`: 20/20 en Add Unit.
 HTML servido, y no queda ningún rastro del texto viejo ni de
 `addUnitBuildingsCache`. Deployment en Vercel: `READY`, sin errores
 nuevos en runtime logs.
+
+## Proyecto grande (15/09/2026): cámara propia + cola offline real
+
+Ver `gsocd-shared/NOTES.md` para el contexto completo (origen, arquitectura
+por dominio, los 9 puntos totales). Este repo fue el ÚLTIMO en conectarse
+y el que tuvo el caso más complicado de los 3.
+
+- **`ordersgsocd.com/camera-capture.html`** (nuevo) -- usa `shared.js`/
+  `GS.api` de este dominio, mismo patrón que Tech.
+- 3 puntos de captura, repartidos en 4 archivos (customer.html trae los 3
+  juntos; `recurring.html` y `tracking.html` standalone repiten Recurring
+  y Tracking cada uno por su lado):
+  1. **Recurring** (`addClientPhoto`) -- opcional, botón "+ Add Photo" en
+     "Your Photos", más un ícono de cámara aparte dentro de "Request a
+     Change" (mismo `addClientPhoto`, misma función).
+  2. **Tracking/Processing** (`startClientPhoto`) -- opcional, botón
+     "📷 Add Photo" en la sección "Photos" de cada orden.
+  3. **Orden nueva sin `OrderID` todavía** (`addNewOrderPhoto`) -- el más
+     raro de los 9 en total. Ver el detalle completo en
+     `gsocd-shared/NOTES.md` ("El caso de la orden nueva"). Resumen: usa
+     `notReady`/`release` de `camera-queue` (v1.28.1), fuerza `saveDraft()`
+     antes de ir a la cámara para proteger el resto del formulario, y
+     reusa `?continue=<draftOrderId>` (mecanismo que YA EXISTÍA, el mismo
+     del botón "Continue" del diálogo de drafts) para restaurar todo al
+     volver. **Si se está editando una orden existente** (`editOrderId`
+     real desde el principio), la MISMA función sube la foto directo, sin
+     diferir nada -- se encontró este caso a tiempo revisando el código
+     antes de que se rompiera silenciosamente.
+- `client-photo-thumbs-new` (la fila de miniaturas del formulario de
+  orden/edición) ahora siempre muestra AMBAS cosas juntas: las fotos que
+  YA existen en el servidor (`/get-client-order-photos`, mismo endpoint
+  real que ya usaba Tracking, reusado tal cual) más las que están
+  pendientes de subir en la cola -- confirmado con el dueño explícitamente
+  ("toda información debe ser visible para admin en todo momento"), nunca
+  se esconde nada aunque sea un estado intermedio.
+- **Efecto secundario real:** "Request a Change" (Recurring y
+  Tracking/Processing) tiene edición viva en memoria (picker de
+  servicios + notas +, en Tracking, también fechas/ventana/descripción).
+  Mismo patrón de snapshot en `sessionStorage` que Admin/Supervisor.
+  Se volvieron `async`/esperables `rcToggleChangePanel`/
+  `rcRenderChangePanel`/`rcMountChangePicker` (Recurring) y
+  `toggleChangePanel`/`renderChangePanel`/`ocMountChangePicker`
+  (Tracking) -- ninguna de las dos cadenas esperaba el montaje del picker
+  antes de este cambio. Las que se llaman desde un `onclick` inline en el
+  HTML se expusieron a mano a `window` (bug real ya documentado en este
+  mismo archivo: una `async function` declarada dentro de un bloque
+  `if(){}` no hace hoist al scope global sola, a diferencia de una
+  `function` normal).
+
+**Pendiente:** nada de esto se ha probado en un navegador real todavía
+(solo `node --check` de sintaxis, más Node+fake-indexeddb para la cola en
+sí). Este repo es el que tiene más superficie sin probar de los 3 --
+vale la pena probarlo con calma antes de confiar en que todo quedó bien,
+sobre todo el caso de la orden nueva (drafts, `?continue=`, el lote de
+varias unidades) y los paneles de Request a Change con fecha/ventana/
+descripción en Tracking.
