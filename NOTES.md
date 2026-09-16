@@ -143,10 +143,6 @@ habían quedado en una versión vieja del componente sin el acordeón.
   (`get-my-gallery.js` + `GSGalleryGroups`), solo le faltaba el
   hover-preview mismo. Los 3 repos quedan conectados al mismo
   componente compartido, sin ninguna copia local en ningún lado.
-- **En local, sin subir al repo:** fix en `service-picker.js` para que solo
-  una categoría del acordeón esté abierta a la vez (hoy se pueden abrir
-  varias al mismo tiempo). Vive en el sandbox de la sesión del 10/09/2026,
-  no en GitHub — si no aparece en el repo y no se sabe por qué, es por esto.
 **Si una imagen/banner/logo da 404 en cualquiera de los 3 repos
 (`/api/site-image`):** comparar `site-image.js`/`lib/graph.js` contra su
 equivalente en Admingsocd.com byte por byte (`diff`) -- Admin suele tener
