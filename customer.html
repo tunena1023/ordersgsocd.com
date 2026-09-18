@@ -906,6 +906,7 @@
   #panel-processing .toggle-state, #panel-history .toggle-state { font-size: 13px; font-weight: 600; }
   #panel-processing .toggle-state.off, #panel-history .toggle-state.off { color: var(--gray); }
   #panel-processing .toggle-state.on, #panel-history .toggle-state.on { color: var(--gold-dk); }
+  #panel-processing .toggle-state.pending, #panel-history .toggle-state.pending { color: var(--gold-dk); font-style: italic; }
   #panel-processing .ready-reveal, #panel-history .ready-reveal { display: none; }
   #panel-processing .ready-reveal.show, #panel-history .ready-reveal.show { display: block; }
   #panel-processing .occupied-note, #panel-history .occupied-note { font-size: 11px; color: var(--gray); margin-top: 6px; line-height: 1.5; }
@@ -5035,6 +5036,7 @@ if (client) {
 
   function onMaterialsReadyToggle(orderId, checkboxEl) {
     const safe = String(orderId).replace(/[^a-z0-9]/gi, '_');
+    const stateEl = $('readyState-' + safe);
     if (checkboxEl.checked) {
       /* Se prende y se ve prendido de inmediato -- no se revierte.
          Se revelan fecha y hora, pero SIN abrir ningun popover solo:
@@ -5042,7 +5044,13 @@ if (client) {
          llenar. Si nunca elige nada y apaga el switch el mismo, o
          cierra un popover que si abrio manualmente sin elegir, el
          listener de gs-popover-closed de abajo revierte -- pero
-         mientras tanto, se ve prendido. */
+         mientras tanto, se ve prendido.
+         BUG REAL arreglado (18/09/2026): el texto de al lado
+         ('Not ready yet') se quedaba sin cambiar mientras esperaba
+         fecha/hora -- el switch ya se veia prendido pero el texto
+         seguia diciendo lo contrario. Ahora se actualiza aqui mismo,
+         apenas se prende, para que los 2 digan lo mismo. */
+      if (stateEl) { stateEl.textContent = 'Waiting for date & time'; stateEl.className = 'toggle-state pending'; }
       const block = $('entryTimeBlock-' + safe);
       if (block) block.classList.add('show');
       const dateBlock = $('readyDateBlock-' + safe);
@@ -5054,6 +5062,7 @@ if (client) {
          arrepintio y lo apago el mismo antes de elegir hora: cancelar
          sin pedir nota (no hay nada real que revertir todavia). */
       pendingActivation[safe] = false;
+      if (stateEl) { stateEl.textContent = 'Not ready yet'; stateEl.className = 'toggle-state off'; }
       const block = $('entryTimeBlock-' + safe);
       if (block) block.classList.remove('show');
       const dateBlock = $('readyDateBlock-' + safe);
@@ -5086,6 +5095,8 @@ if (client) {
     pendingActivation[safe] = false;
     const cb = $('readyToggle-' + safe);
     if (cb) cb.checked = false;
+    const stateEl = $('readyState-' + safe);
+    if (stateEl) { stateEl.textContent = 'Not ready yet'; stateEl.className = 'toggle-state off'; }
     const block = $('entryTimeBlock-' + safe);
     if (block) block.classList.remove('show');
     const dateBlock = $('readyDateBlock-' + safe);
