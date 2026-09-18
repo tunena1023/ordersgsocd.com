@@ -1600,9 +1600,17 @@ if (client) {
      usa el mismo mecanismo que ya se armo en Admin, para no volver a
      escribirlo de cero pagina por pagina. */
   function showTab(tab) {
+    if (tab !== 'new-order') flushDraftSave();
     GSNavPremium.showPanel(tab);
   }
   window.showTab = showTab;
+
+  /* Cambiar de pestaña/ventana del navegador (o minimizar) con un
+     guardado pendiente -- mismo criterio que cambiar de tab dentro
+     del portal, ver flushDraftSave() mas arriba. */
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) flushDraftSave();
+  });
 
   loadRecurring().then(() => {
     const urlParams = new URLSearchParams(location.search);
@@ -2107,6 +2115,21 @@ if (client) {
     saveTimer = setTimeout(saveDraft, 3000);
   }
 
+  /* Pedido del dueño (18/09/2026): ademas del guardado cada 3
+     segundos de inactividad, si el cliente cambia de pestaña dentro
+     del portal (New Order -> Processing, etc.) o cambia de pestaña/
+     ventana del navegador con un guardado pendiente, se guarda de
+     inmediato en vez de esperar a que se cumplan los 3 segundos --
+     asi el draft esta ahi si vuelve, y en la lista de Processing
+     aparece sin demora. */
+  function flushDraftSave() {
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+      saveDraft();
+    }
+  }
+
   async function saveDraft() {
     saveTimer = null;
     const snap = formSnapshot();
@@ -2147,6 +2170,16 @@ if (client) {
       if (res.orderId) {
         draftOrderId = res.orderId;
       }
+      /* BUG REAL encontrado y arreglado (18/09/2026, reportado por el
+         dueño): el draft SI se guardaba en el backend, pero la lista
+         "Unfinished drafts" nunca se refrescaba -- se quedaba con lo
+         que se cargo al abrir la pagina (loadOrders() solo se llama
+         una vez al inicio, showTab() de aqui abajo solo cambia CSS,
+         no vuelve a pedir datos). Por eso parecia que el draft nunca
+         se guardaba, aunque si estaba en SharePoint. Ahora se refresca
+         la lista apenas el guardado responde exito, para que aparezca
+         de inmediato sin tener que recargar toda la pagina. */
+      loadOrders();
     } catch (e) { 
       console.error('Draft save failed:', e); 
     }
