@@ -1705,11 +1705,13 @@ if (client) {
     currentDiv = div;
     selected = {}; svcLevel = {}; propertyType = 'Commercial';
     draftOrderId = null; draftPendingData = null;
-    /* BUG FIX: multiUnitsOn se quedaba prendido de una division a otra
-       -- si activabas Multiple Units en una y luego cambiabas de
-       division sin apagarlo a mano, se quedaba pegado (y el formulario
-       de Multiple Units seguia mostrandose para la division nueva). */
-    setOrderMode('single');
+    /* A peticion del dueno (17/09/2026): antes esto forzaba de vuelta
+       a Single en cada cambio de division -- si el cliente ya estaba
+       en Multi, se le ocultaba (setOrderMode solo esconde el
+       contenedor con display:none, no borra las unidades) y parecia
+       que se le habia borrado todo, aunque los datos seguian ahi. Ya
+       no se toca el modo aqui -- si estaba en Multi, se queda en
+       Multi; si estaba en Single, se queda en Single. */
     /* A peticion del dueno (17/09/2026): ya NO se borran Building/
        Unit/Bedrooms/Bathrooms/fechas al cambiar de division -- antes
        se limpiaban aqui a proposito (ver el bug que arreglaba, abajo),
