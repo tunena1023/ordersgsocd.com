@@ -34,7 +34,8 @@ async function fetchCatalog() {
     propertyType: it.fields.PropertyType || '',
     price: it.fields.Price != null ? it.fields.Price : null,
     category: it.fields.Category || '',
-    active: it.fields.Active === undefined ? true : (it.fields.Active === true || it.fields.Active === 'true')
+    active: it.fields.Active === undefined ? true : (it.fields.Active === true || it.fields.Active === 'true'),
+    requiresQuantity: it.fields.RequiresQuantity === true || it.fields.RequiresQuantity === 'true'
   })).filter(s => s.active);
 }
 
