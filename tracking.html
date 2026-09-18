@@ -738,13 +738,34 @@ if (client) {
     return s;
   }
 
+  /* Mismo criterio que customer.html -- ver ahi para el detalle
+     completo del por que. */
+  function draftSummaryLine(o) {
+    const parts = [esc(o.Division || '')];
+    let unitsCount = 0;
+    if (o.UnitsData) {
+      try { unitsCount = (JSON.parse(o.UnitsData) || []).length; } catch (e) { /* ignorar */ }
+    }
+    if (unitsCount > 1) {
+      parts.push(unitsCount + ' units');
+    } else if (o.UnitNumber) {
+      parts.push('Unit ' + esc(o.UnitNumber));
+    }
+    if (o.Bedrooms || o.Bathrooms) parts.push(esc(o.Bedrooms || '—') + 'bd/' + esc(o.Bathrooms || '—') + 'ba');
+    if (o.EntryDate) parts.push('Entry ' + fmtDate(o.EntryDate));
+    if (o.DueDate) parts.push('Due ' + fmtDate(o.DueDate));
+    const svcCount = Number(o.ServiceCount) || 0;
+    parts.push(svcCount === 1 ? '1 service selected' : svcCount + ' services selected');
+    return parts.join(' · ');
+  }
+
   function renderDraftCard(o) {
     return `
       <div class="order-card" data-order="${escAttr(o.OrderID || '')}">
         <div class="order-card-header" onclick="toggleOrder(this,'${escAttr(o.OrderID || '')}')" ondblclick="pinOrder(this,'${escAttr(o.OrderID || '')}','processing')">
           <div>
             <div class="order-num">Draft · ${esc(o.OrderID || '')}<span class="order-pin"></span></div>
-            <div class="order-date">${esc(o.Division || '')} · saved ${fmtDate(o.createdDateTime)}</div>
+            <div class="order-date">${draftSummaryLine(o)}</div>
           </div>
           <div style="display:flex;align-items:center;gap:16px">
             <span class="order-status status-incomplete">Incomplete</span>
@@ -752,7 +773,10 @@ if (client) {
           </div>
         </div>
         <div class="order-card-body">
-          <p class="empty-note">This order was started but not submitted. Continue where you left off or delete it.</p>
+          <div class="h-cancelled-banner" style="background:#fff3cd;border-color:#ffe69c;color:#664d03">This is a draft — not an active order yet. Continue to submit it, or delete it if you don't need it.</div>
+          <p class="empty-note" style="margin-top:10px">
+            Started ${fmtDateTime(o.createdDateTime)}${o.lastModifiedDateTime ? '<br>Last edited ' + fmtDateTime(o.lastModifiedDateTime) : ''}
+          </p>
           <div class="order-actions">
             <button class="btn-action primary" onclick="continueDraft('${escAttr(o.OrderID || '')}')">Continue</button>
             <button class="btn-action danger" onclick="openDeleteDraft('${escAttr(o.OrderID || '')}')">Delete draft</button>

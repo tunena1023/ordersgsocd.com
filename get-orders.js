@@ -75,6 +75,21 @@ exports.handler = async (event) => {
         };
       });
 
+    /* BUG REAL / mejora pedida por el dueño (18/09/2026): la tarjeta
+       de un draft solo mostraba Division + fecha guardada -- para ver
+       de que se trataba (unidad, fechas, servicios) habia que abrirlo
+       si o si. Los servicios SI se guardan (una fila por servicio,
+       igual que una orden real) pero este endpoint las descartaba --
+       aqui se cuentan, sin traer el detalle completo de cada una
+       (solo el numero, para la tarjeta resumen). */
+    const draftServiceCounts = {};
+    draftRows.forEach(it => {
+      if (it.fields && it.fields.ServiceName && it.fields.OrderID) {
+        const oid = it.fields.OrderID;
+        draftServiceCounts[oid] = (draftServiceCounts[oid] || 0) + 1;
+      }
+    });
+
     /* Solo filas header de drafts (sin ServiceName) con Status=Draft */
     const mappedDrafts = draftRows
       .filter(it => it.fields && !it.fields.ServiceName && it.fields.Status === 'Draft')
@@ -83,6 +98,11 @@ exports.handler = async (event) => {
         return {
           id:              it.id,
           createdDateTime: it.createdDateTime || f.DraftDate || f.Created || '',
+          /* lastModifiedDateTime ya viene gratis en cada renglon de
+             SharePoint via Graph -- no hace falta guardar nada nuevo,
+             el autoguardado cada 3 segundos ya lo va actualizando solo
+             cada vez que hace un updateListItemByItemId(). */
+          lastModifiedDateTime: it.lastModifiedDateTime || '',
           OrderID:         f.OrderID || f.Title || '',
           ClientID:        f.ClientID || '',
           BusinessName:    f.BusinessName || f.Title || '',
@@ -90,6 +110,7 @@ exports.handler = async (event) => {
           Status:          'Incomplete',
           DirtLevel:       f.DirtLevel || '',
           Services:        '',
+          ServiceCount:    draftServiceCounts[f.OrderID || f.Title || ''] || 0,
           DraftData:       '',
           BuildingNumber:  f.BuildingNumber || '',
           UnitNumber:      f.UnitNumber || '',
