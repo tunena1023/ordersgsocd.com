@@ -41,6 +41,11 @@ exports.handler = async (event) => {
         return {
           id:              it.id,
           createdDateTime: it.createdDateTime || f.Created || '',
+          /* Mismo criterio que ya se agrego para mappedDrafts abajo --
+             lo necesita el encabezado del PO agrupado en el portal,
+             para saber si alguna unidad se modifico de verdad despues
+             de crearse. */
+          lastModifiedDateTime: it.lastModifiedDateTime || '',
           OrderID:         f.OrderID || f.Title || '',
           ClientID:        f.ClientID || '',
           BusinessName:    f.BusinessName || f.Title || '',

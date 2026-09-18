@@ -589,15 +589,34 @@ if (client) {
     return { standalone, groupsMap, groupOrder };
   }
 
+  /* Mismo criterio que Admin (poGroupDateLabel), confirmado con el
+     dueño antes de tocar nada: una sola fecha visible en el
+     encabezado del PO cerrado -- la de creacion original, o la del
+     ultimo cambio real si alguna unidad se modifico despues de nacer
+     (nunca las 2 a la vez). Cada unidad se compara contra SU PROPIA
+     fecha de creacion, no contra la del grupo entero -- si no, el
+     desfase normal de 1-2 segundos entre la creacion de cada unidad
+     hermana se confundiria con un cambio de verdad. */
+  function poGroupDateLabel(units) {
+    const created = units.map(o => o.createdDateTime).filter(Boolean).sort();
+    const realChanges = units
+      .filter(o => o.createdDateTime && o.lastModifiedDateTime && o.lastModifiedDateTime > o.createdDateTime)
+      .map(o => o.lastModifiedDateTime)
+      .sort();
+    if (realChanges.length) return 'Last change ' + fmtDateTime(realChanges[realChanges.length - 1]);
+    return created.length ? 'Created ' + fmtDateTime(created[0]) : '';
+  }
+
   function renderBatchGroupCard(batchId, units, cardRenderer, showAddButton) {
     const groupOrderId = 'batch-' + batchId;
     const innerHtml = units.map(cardRenderer).join('');
+    const dateLabel = poGroupDateLabel(units);
     return `
       <div class="order-card" data-order="${escAttr(groupOrderId)}">
         <div class="order-card-header" onclick="toggleBatchCard(this, '${escAttr(groupOrderId)}')">
           <div>
             <div class="order-num">PO #${esc(client.clientId + '-' + batchId)}<span class="order-pin"></span></div>
-            <div class="order-date">${units.length} units in this order</div>
+            <div class="order-date">${units.length} units in this order${dateLabel ? ' · ' + dateLabel : ''}</div>
           </div>
           <div style="display:flex;align-items:center;gap:16px">
             <span style="font-size:11px;color:var(--gray)">▼</span>
