@@ -513,6 +513,17 @@ if (client) {
     { label: 'Recurring', href: 'recurring.html' },
     { label: 'Profile', href: 'profile.html' }
   ]);
+  /* Pedido del dueño (18/09/2026): los botones Continue/Delete draft
+     ahora usan el skin compartido gs-ofp-btn-primary/gs-ofp-btn-danger
+     -- ese CSS solo se inyecta cuando se llama a GSOrderFormPremium
+     por primera vez, y aqui eso normalmente pasa hasta que el cliente
+     abre un panel de Notifications o Request Change. Si hay drafts
+     desde el primer render (loadOrders() de aqui abajo, antes de que
+     el cliente toque nada), sus botones se verian sin estilo hasta
+     ese momento. Se llama aqui explicito, una vez, para que el CSS ya
+     este listo desde el principio -- mismo patron que ya usa
+     customer.html. */
+  GSOrderFormPremium.styleTag();
   showSection(initialSection);
   loadOrders().then(() => {
     const urlParams = new URLSearchParams(location.search);
@@ -837,8 +848,8 @@ if (client) {
                 <div><div class="field-caption">Last edited</div><div class="field-value">${o.lastModifiedDateTime ? fmtDateTime(o.lastModifiedDateTime) : '—'}</div></div>
               </div>
               <div class="order-actions">
-                <button class="btn-action primary" onclick="continueDraft('${escAttr(orderId)}')">Continue</button>
-                <button class="btn-action danger" onclick="openDeleteDraft('${escAttr(orderId)}')">Delete draft</button>
+                <button class="gs-ofp-btn-primary" onclick="continueDraft('${escAttr(orderId)}')">Continue</button>
+                <button class="gs-ofp-btn-danger" onclick="openDeleteDraft('${escAttr(orderId)}')">Delete draft</button>
               </div>
             </div>
           </div>
