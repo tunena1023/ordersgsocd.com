@@ -369,31 +369,6 @@
   </div>
 </div>
 
-<div class="dialog-overlay" id="addunit-dialog">
-  <div class="dialog-panel">
-    <h3>Add a Unit to <span id="addunit-po-id"></span></h3>
-    <p style="font-size:12px;color:var(--gray);margin-bottom:16px">Uses the same services as the rest of this order. Just fill in this unit's details.</p>
-    <div class="field">
-      <label>Building # (optional)</label>
-      <input type="text" id="addunit-building-number" placeholder="e.g. 1215">
-    </div>
-    <div class="field">
-      <label>Unit #</label>
-      <input type="text" id="addunit-unit-number" placeholder="e.g. 205">
-    </div>
-    <div class="field">
-      <label>Bedrooms</label>
-      <input type="number" id="addunit-bedrooms" min="1" max="5" placeholder="e.g. 2">
-    </div>
-    <div class="field">
-      <label>Bathrooms</label>
-      <input type="number" id="addunit-bathrooms" min="1" max="3" placeholder="e.g. 1">
-    </div>
-    <div id="addunit-panel-mount"></div>
-    <p class="dialog-error" id="addunit-error"></p>
-  </div>
-</div>
-
 <div class="dialog-overlay" id="notready-dialog">
   <div class="dialog-panel">
     <h3>Turn off Materials Ready?</h3>
@@ -618,7 +593,7 @@ if (client) {
           </div>
         </div>
         <div class="order-card-body" style="padding:16px">
-          ${showAddButton ? '<button type="button" class="btn-action" style="margin-bottom:16px" onclick="event.stopPropagation(); openAddBatchUnit(\'' + escAttr(batchId) + '\')">+ Add a Unit</button>' : ''}
+          ${showAddButton ? '<button type="button" class="btn-action" style="margin-bottom:16px" onclick="event.stopPropagation(); toggleAddUnitForm(\'' + escAttr(batchId) + '\')">+ Add a Unit</button>' + addUnitFormHtml(batchId) : ''}
           ${innerHtml}
         </div>
       </div>`;
@@ -2001,55 +1976,85 @@ return html;
     }
   }
 
-  /* ===== Add a Unit a un PO ya existente ===== */
-  let addUnitBatchId = null;
+  /* ===== Add a Unit a un PO ya existente =====
+     BUG REAL arreglado (18/09/2026, reportado por el dueño): este
+     archivo tenia su PROPIA implementacion de Add Unit, un modal/popup
+     global (addunit-dialog) -- distinta de customer.html (que expande
+     el formulario en linea, dentro de la propia tarjeta del PO,
+     mismo patron que ya usa Admin). Portado aqui para que las 2
+     paginas de Orders (y Admin) se comporten igual: cada PO tiene su
+     propio formulario, con su propio dom (addunit-<batchId>), nada de
+     modal compartido. */
+  function addUnitFormHtml(batchId) {
+    const dom = 'addunit-' + batchId.replace(/[^a-z0-9]/gi,'_');
+    return `
+      <div id="${dom}-form" style="display:none;border:1px dashed var(--border);padding:16px;margin-top:12px;margin-bottom:16px">
+        <div class="gs-ofp-unitrow gs-ofp-unitline" style="margin-bottom:20px">
+          <div class="gs-ofp-unitfield">
+            <div class="gs-ofp-unitfield-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 21V5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v16"/><path d="M12 21V9a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v12"/><path d="M8 8h1M8 12h1M8 16h1M16 12h1M16 16h1"/></svg>Building # (optional)</div>
+            <input type="text" id="${dom}-building-number" placeholder="e.g. 1215">
+          </div>
+          <div class="gs-ofp-unitfield">
+            <div class="gs-ofp-unitfield-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 10h16"/></svg>Unit #</div>
+            <input type="text" id="${dom}-unit-number" placeholder="e.g. 205">
+          </div>
+          <div class="gs-ofp-unitfield">
+            <div class="gs-ofp-unitfield-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4"/><path d="M2 10h20v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-3z"/><path d="M2 18l1-4M22 18l-1-4"/></svg>Bedrooms</div>
+            <input type="number" id="${dom}-bedrooms" min="1" max="5" placeholder="e.g. 2">
+          </div>
+          <div class="gs-ofp-unitfield">
+            <div class="gs-ofp-unitfield-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12h16M4 12a2 2 0 0 0-2 2v1a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-1a2 2 0 0 0-2-2M4 12V7a2 2 0 0 1 2-2h1"/><circle cx="7" cy="8" r="1"/><path d="M6 18l-1 3M18 18l1 3"/></svg>Bathrooms</div>
+            <input type="number" id="${dom}-bathrooms" min="1" max="3" placeholder="e.g. 1">
+          </div>
+        </div>
 
-  async function openAddBatchUnit(batchId) {
-    addUnitBatchId = batchId;
-    $('addunit-po-id').textContent = client.clientId + '-' + batchId;
-    $('addunit-error').textContent = '';
-    $('addunit-building-number').value = '';
-    $('addunit-unit-number').value = '';
-    $('addunit-bedrooms').value = '';
-    $('addunit-bathrooms').value = '';
-    if (!$('addunit-panel-mount').dataset.mounted) {
-      try {
-        $('addunit-panel-mount').innerHTML = GSOrderFormPremium.unitDetailPanelHtml('addunit', {
-          showTime: false, showButtons: true, compact: true,
-          submitLabel: 'Add Unit', submitOnclick: 'submitAddBatchUnit()',
-          cancelLabel: 'Cancel', cancelOnclick: 'closeAddBatchUnit()'
-        });
-        $('addunit-panel-mount').dataset.mounted = '1';
-      } catch (e) {
-        console.error('No se pudo montar el panel de Add Unit:', e);
+        <div id="${dom}-panel-mount"></div>
+
+        <p class="dialog-error" id="${dom}-error"></p>
+      </div>`;
+  }
+
+  function toggleAddUnitForm(batchId) {
+    const dom = 'addunit-' + batchId.replace(/[^a-z0-9]/gi,'_');
+    const el = $(dom + '-form');
+    if (!el) return;
+    const opening = el.style.display === 'none' || !el.style.display;
+
+    if (opening) {
+      $(dom + '-error').textContent = '';
+      if (!$(dom + '-panel-mount').dataset.mounted) {
+        try {
+          $(dom + '-panel-mount').innerHTML = GSOrderFormPremium.unitDetailPanelHtml(dom, {
+            showTime: false, showButtons: true, compact: true,
+            submitLabel: 'Add Unit', submitOnclick: "submitAddBatchUnit('" + batchId.replace(/'/g,"\\'") + "','" + dom + "')",
+            cancelLabel: 'Cancel', cancelOnclick: "event.stopPropagation(); toggleAddUnitForm('" + batchId.replace(/'/g,"\\'") + "')"
+          });
+          $(dom + '-entry-mount').innerHTML = GSDateTimePicker.dateHtml(dom + '-entry', '', null, { min: todayISO() });
+          $(dom + '-due-mount').innerHTML = GSDateTimePicker.dateHtml(dom + '-due', '', null, { min: todayISO() });
+          $(dom + '-panel-mount').dataset.mounted = '1';
+        } catch (e) {
+          console.error('No se pudo montar el panel de Add Unit:', e);
+        }
       }
     } else {
-      GSOrderFormPremium.setOfficeNeedText('addunit', '');
+      GSDateTimePicker.closeAllPopovers();
     }
-    $('addunit-entry-mount').innerHTML = GSDateTimePicker.dateHtml('addunit-entry', '', null, { min: todayISO() });
-    $('addunit-due-mount').innerHTML = GSDateTimePicker.dateHtml('addunit-due', '', null, { min: todayISO() });
 
-    $('addunit-dialog').classList.add('open');
+    el.style.display = opening ? 'block' : 'none';
   }
 
-  function closeAddBatchUnit() {
-    $('addunit-dialog').classList.remove('open');
-    addUnitBatchId = null;
-  }
-
-  async function submitAddBatchUnit() {
-    if (!addUnitBatchId) return;
-    const errEl = $('addunit-error');
+  async function submitAddBatchUnit(batchId, dom) {
+    const errEl = $(dom + '-error');
     errEl.textContent = '';
 
-    const buildingNumber = $('addunit-building-number').value.trim();
-    const unitNumber = $('addunit-unit-number').value.trim();
-    const bedrooms = $('addunit-bedrooms').value.trim();
-    const bathrooms = $('addunit-bathrooms').value.trim();
-    const entryDateVal = $('addunit-entry').value;
-    const dueDateVal = $('addunit-due').value;
-    const needsOfficeAccess = GSOrderFormPremium.getOfficeNeedValue('addunit');
-    const officeNeedNotes = GSOrderFormPremium.getOfficeNeedNotes('addunit');
+    const buildingNumber = $(dom + '-building-number').value.trim();
+    const unitNumber = $(dom + '-unit-number').value.trim();
+    const bedrooms = $(dom + '-bedrooms').value.trim();
+    const bathrooms = $(dom + '-bathrooms').value.trim();
+    const entryDateVal = $(dom + '-entry').value;
+    const dueDateVal = $(dom + '-due').value;
+    const needsOfficeAccess = GSOrderFormPremium.getOfficeNeedValue(dom);
+    const officeNeedNotes = GSOrderFormPremium.getOfficeNeedNotes(dom);
 
     if (!unitNumber)  { errEl.textContent = 'Please enter the Unit Number.'; return; }
     if (!bedrooms || parseInt(bedrooms) < 1)  { errEl.textContent = 'Please enter a valid number of Bedrooms.'; return; }
@@ -2059,7 +2064,7 @@ return html;
 
     const body = {
       clientId:   client.clientId,
-      batchId:    addUnitBatchId,
+      batchId:    batchId,
       buildingNumber: buildingNumber,
       unitNumber: unitNumber,
       bedrooms:   bedrooms,
@@ -2070,16 +2075,15 @@ return html;
       officeNeedNotes: officeNeedNotes
     };
 
-    $('addunit-submit-btn').disabled = true;
+    const saveBtn = $(dom + '-submit-btn');
+    saveBtn.disabled = true;
     try {
       await GS.api('/add-batch-unit', { method: 'POST', body });
-      closeAddBatchUnit();
-      showToast('Unit added to ' + client.clientId + '-' + addUnitBatchId + '.');
+      showToast('Unit added to ' + client.clientId + '-' + batchId + '.');
       loadOrders();
     } catch (e) {
       errEl.textContent = e.message;
-    } finally {
-      $('addunit-submit-btn').disabled = false;
+      saveBtn.disabled = false;
     }
   }
 
@@ -2232,8 +2236,7 @@ return html;
   window.toggleChangePanel = toggleChangePanel;
   window.submitChangePanel = submitChangePanel;
   window.toggleBatchCard = toggleBatchCard;
-  window.openAddBatchUnit = openAddBatchUnit;
-  window.closeAddBatchUnit = closeAddBatchUnit;
+  window.toggleAddUnitForm = toggleAddUnitForm;
   window.submitAddBatchUnit = submitAddBatchUnit;
   window.toggleNotifPanel = toggleNotifPanel;
   window.submitNotifPanel = submitNotifPanel;
