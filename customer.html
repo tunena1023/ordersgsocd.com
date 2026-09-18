@@ -1032,7 +1032,7 @@
           <div class="gs-ofp-unitfield">
             <div class="gs-ofp-unitfield-label">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 21V5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v16"/><path d="M12 21V9a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v12"/><path d="M8 8h1M8 12h1M8 16h1M16 12h1M16 16h1"/></svg>
-              Building #
+              Building # (optional)
             </div>
             <input type="text" id="building-number" placeholder="e.g. 1215" />
           </div>
@@ -2474,7 +2474,13 @@ if (client) {
       const unitNumber = $('unit-number').value.trim();
       const bedrooms = $('bedrooms').value.trim();
       const bathrooms = $('bathrooms').value.trim();
-      if (!buildingNumber) { alert('Please enter the Building Number.'); return; }
+      /* Building Number es opcional (mismo criterio que Admin y que
+         el backend de aqui mismo -- si viene vacio, submit-order.js
+         se autorellena con los digitos iniciales de la direccion del
+         cliente). Esta validacion se habia quedado exigiendolo con un
+         alert bloqueante, aunque el resto del sistema ya lo trataba
+         como opcional desde el 12/09. Bug real, arreglado a peticion
+         del dueno, 18/09/2026. */
       if (!unitNumber) { alert('Please enter the Unit Number.'); return; }
       if (!bedrooms || parseInt(bedrooms) < 1) { alert('Please enter a valid number of Bedrooms (1-5).'); return; }
       if (!bathrooms || parseInt(bathrooms) < 1) { alert('Please enter a valid number of Bathrooms (1-3).'); return; }
