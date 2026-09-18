@@ -309,6 +309,7 @@ if (client) {
   let propertyType = 'Commercial';
   let selected = {};
   let svcLevel = {};
+  let svcQty = {};
     let editingTemplateId = null;   /* null = crear nuevo; id = actualizando este template */
 
   function svcKey(p, n) { return p + '|' + n; }
@@ -320,7 +321,7 @@ if (client) {
     editingTemplateId = null;
     $('tpl-name').value = '';
     currentDiv = 'Janitorial';
-    selected = {}; svcLevel = {}; propertyType = 'Commercial';
+    selected = {}; svcLevel = {}; svcQty = {}; propertyType = 'Commercial';
     document.querySelectorAll('#div-toggle button').forEach(b => b.classList.toggle('active', b.dataset.div === currentDiv));
     showSubview('add');
     renderPicker();
@@ -335,12 +336,13 @@ if (client) {
     editingTemplateId = id;
     $('tpl-name').value = t.name;
     currentDiv = t.division || 'Janitorial';
-    selected = {}; svcLevel = {}; propertyType = 'Commercial';
+    selected = {}; svcLevel = {}; svcQty = {}; propertyType = 'Commercial';
     (t.services || []).forEach(s => {
       const cat = s.Category || 'Commercial';
       if (!selected[cat]) selected[cat] = {};
       selected[cat][s.ServiceName] = s.SubOption;
       if (s.Level) svcLevel[svcKey(cat, s.ServiceName)] = s.Level;
+      if (s.Quantity) svcQty[svcKey(cat, s.ServiceName)] = Number(s.Quantity);
     });
     /* La primera categoria con algo elegido es el property type real
        de este template -- mismo criterio ya usado en customer.html. */
@@ -354,7 +356,7 @@ if (client) {
   function selectDiv(div, el) {
     currentDiv = div;
     GSOrderFormPremium.activateDivTab(div, {cardId:'tpl-div-card', tabsId:'tpl-div-tabs', underlineId:'tpl-div-underline'});
-    selected = {}; svcLevel = {}; propertyType = 'Commercial';
+    selected = {}; svcLevel = {}; svcQty = {}; propertyType = 'Commercial';
     renderPicker();
   }
 
@@ -376,9 +378,11 @@ if (client) {
       propertyType: propertyType,
       initialSelected: selected,
       initialLevels: svcLevel,
-      onChange: function (sel, lvl, propType) {
+      initialQuantities: svcQty,
+      onChange: function (sel, lvl, propType, qty) {
         selected = sel;
         svcLevel = lvl;
+        svcQty = qty;
         propertyType = propType;
       }
     });
@@ -393,7 +397,8 @@ if (client) {
           ServiceName: svcName,
           SubOption:   sku,
           Division:    GSOrderFormPremium.realDivisionForSku(catalogCache, sku, currentDiv),
-          Level:       svcLevel[svcKey(propType, svcName)] || ''
+          Level:       svcLevel[svcKey(propType, svcName)] || '',
+          Quantity:    svcQty[svcKey(propType, svcName)] || ''
         });
       });
     });
@@ -415,8 +420,8 @@ if (client) {
       console.log('save-template response:', res);
       showToast(editingTemplateId ? 'Template "' + name + '" updated.' : 'Template "' + name + '" saved.');
       $('tpl-name').value = '';
-      selected = {}; svcLevel = {}; editingTemplateId = null;
-      if (tplPicker) tplPicker.setSelected({}, {});
+      selected = {}; svcLevel = {}; svcQty = {}; editingTemplateId = null;
+      if (tplPicker) tplPicker.setSelected({}, {}, {});
       showSubview('saved');
     } catch (e) {
       console.error('save-template failed:', e);

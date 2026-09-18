@@ -3176,6 +3176,7 @@ if (client) {
   let tplPropertyType = 'Commercial';
   let tplSelected = {};
   let tplSvcLevel = {};
+  let tplQty = {};
     let editingTemplateId = null;   /* null = crear nuevo; id = actualizando este template */
 
   /* svcKey ya existe en customer.html, identica (pura, sin estado). */
@@ -3187,7 +3188,7 @@ if (client) {
     editingTemplateId = null;
     $('tpl-name').value = '';
     tplCurrentDiv = 'Janitorial';
-    tplSelected = {}; tplSvcLevel = {}; tplPropertyType = 'Commercial';
+    tplSelected = {}; tplSvcLevel = {}; tplQty = {}; tplPropertyType = 'Commercial';
     document.querySelectorAll('#div-toggle button').forEach(b => b.classList.toggle('active', b.dataset.div === tplCurrentDiv));
     showSubview('add');
     renderPicker();
@@ -3202,12 +3203,13 @@ if (client) {
     editingTemplateId = id;
     $('tpl-name').value = t.name;
     tplCurrentDiv = t.division || 'Janitorial';
-    tplSelected = {}; tplSvcLevel = {}; tplPropertyType = 'Commercial';
+    tplSelected = {}; tplSvcLevel = {}; tplQty = {}; tplPropertyType = 'Commercial';
     (t.services || []).forEach(s => {
       const cat = s.Category || 'Commercial';
       if (!tplSelected[cat]) tplSelected[cat] = {};
       tplSelected[cat][s.ServiceName] = s.SubOption;
       if (s.Level) tplSvcLevel[svcKey(cat, s.ServiceName)] = s.Level;
+      if (s.Quantity) tplQty[svcKey(cat, s.ServiceName)] = Number(s.Quantity);
     });
     /* La primera categoria con algo elegido es el property type real
        de este template -- mismo criterio ya usado en customer.html. */
@@ -3221,7 +3223,7 @@ if (client) {
   function tplSelectDiv(div, el) {
     tplCurrentDiv = div;
     GSOrderFormPremium.activateDivTab(div, {cardId:'tpl-div-card', tabsId:'tpl-div-tabs', underlineId:'tpl-div-underline'});
-    tplSelected = {}; tplSvcLevel = {}; tplPropertyType = 'Commercial';
+    tplSelected = {}; tplSvcLevel = {}; tplQty = {}; tplPropertyType = 'Commercial';
     renderPicker();
   }
 
@@ -3243,9 +3245,11 @@ if (client) {
       tplPropertyType: tplPropertyType,
       initialSelected: tplSelected,
       initialLevels: tplSvcLevel,
-      onChange: function (sel, lvl, propType) {
+      initialQuantities: tplQty,
+      onChange: function (sel, lvl, propType, qty) {
         tplSelected = sel;
         tplSvcLevel = lvl;
+        tplQty = qty;
         tplPropertyType = propType;
       }
     });
@@ -3260,7 +3264,8 @@ if (client) {
           ServiceName: svcName,
           SubOption:   sku,
           Division:    GSOrderFormPremium.realDivisionForSku(tplCatalogCache, sku, tplCurrentDiv),
-          Level:       tplSvcLevel[svcKey(propType, svcName)] || ''
+          Level:       tplSvcLevel[svcKey(propType, svcName)] || '',
+          Quantity:    tplQty[svcKey(propType, svcName)] || ''
         });
       });
     });
@@ -3282,8 +3287,8 @@ if (client) {
       console.log('save-template response:', res);
       showToast(editingTemplateId ? 'Template "' + name + '" updated.' : 'Template "' + name + '" saved.');
       $('tpl-name').value = '';
-      tplSelected = {}; tplSvcLevel = {}; editingTemplateId = null;
-      if (tplPicker) tplPicker.setSelected({}, {});
+      tplSelected = {}; tplSvcLevel = {}; tplQty = {}; editingTemplateId = null;
+      if (tplPicker) tplPicker.setSelected({}, {}, {});
       showSubview('saved');
     } catch (e) {
       console.error('save-template failed:', e);
