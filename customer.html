@@ -1364,7 +1364,7 @@
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.16.0/estimated-time/estimated-time.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.6/nav-premium/nav-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.24/order-form-premium/order-form-premium.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.3/order-history/order-history.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.4/order-history/order-history.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.1/camera-queue/camera-queue.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.0.0/lightbox/lightbox.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.9/gallery-groups/gallery-groups.js"></script>
@@ -4277,7 +4277,7 @@ if (client) {
     switch (s) {
       case 'Received': return 'status-pending';
       case 'Review': case 'Change Review': return 'status-review';
-      case 'Assigned': return 'status-assigned';
+      case 'Scheduled': case 'Assigned': return 'status-assigned';
       case 'Working': return 'status-working';
       case 'Change Requested': return 'status-changereq';
       case 'Cancellation Requested': case 'Cancelled': return 'status-cancelreq';
@@ -4287,6 +4287,23 @@ if (client) {
       case 'Completed': return 'status-confirmed';
       default: return 'status-pending';
     }
+  }
+
+  /* BUG REAL reportado por el dueno con captura real (18/09/2026):
+     una orden que YA fue agendada (Supervisor/Service Window/fecha ya
+     puestos por oficina) se sigue viendo como "RECEIVED" para el
+     cliente hasta que alguien en Admin le de "Mark as Seen" -- ese
+     ultimo paso es interno (solo genera el PDF y avisa por correo),
+     no significa que nadie la haya agendado. Received + agendada de
+     verdad ahora se muestra como "Scheduled" en vez de "Received",
+     mismo criterio (Supervisor+ServiceWindow+DispatchDate puestos)
+     que ya usa Admin para distinguir este mismo caso. Una orden
+     Received que de verdad NO se ha agendado (recien creada, oficina
+     todavia no la toca) se sigue viendo como "Received" tal cual. */
+  function displayStatus(o) {
+    const s = o.Status || 'Received';
+    if (s === 'Received' && o.Supervisor && o.ServiceWindow && o.DispatchDate) return 'Scheduled';
+    return s;
   }
 
   function renderDraftCard(o) {
@@ -4333,7 +4350,7 @@ if (client) {
      compartida entre Admin/Tech/Orders. */
 
   function renderActiveCard(o) {
-    const status = o.Status || 'Received';
+    const status = displayStatus(o);
     return `
       <div class="order-card" data-order="${escAttr(o.OrderID)}">
         <div class="order-card-header" onclick="expandOrder(this, '${escAttr(o.OrderID)}')" ondblclick="pinOrder(this,'${escAttr(o.OrderID)}','processing')">

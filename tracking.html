@@ -418,7 +418,7 @@
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.24/order-form-premium/order-form-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.27.1/service-picker/service-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.27.2/service-change-panel/service-change-panel.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.3/order-history/order-history.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.4/order-history/order-history.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.1/camera-queue/camera-queue.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.8.0/order-badges/order-badges.js"></script>
 <!-- Pendiente: gsocd-shared tagea TODO el repo junto (no por componente), y ya va
@@ -742,7 +742,7 @@ if (client) {
     switch (s) {
       case 'Received': return 'status-pending';
       case 'Review': case 'Change Review': return 'status-review';
-      case 'Assigned': return 'status-assigned';
+      case 'Scheduled': case 'Assigned': return 'status-assigned';
       case 'Working': return 'status-working';
       case 'Change Requested': return 'status-changereq';
       case 'Cancellation Requested': case 'Cancelled': return 'status-cancelreq';
@@ -752,6 +752,15 @@ if (client) {
       case 'Completed': return 'status-confirmed';
       default: return 'status-pending';
     }
+  }
+
+  /* Mismo fix que customer.html (18/09/2026, ver ese commit para el
+     detalle completo): Received + ya agendada de verdad se muestra
+     como "Scheduled". */
+  function displayStatus(o) {
+    const s = o.Status || 'Received';
+    if (s === 'Received' && o.Supervisor && o.ServiceWindow && o.DispatchDate) return 'Scheduled';
+    return s;
   }
 
   function renderDraftCard(o) {
@@ -808,7 +817,7 @@ if (client) {
   GSPhotoHoverPreview.setup();
 
   function renderActiveCard(o) {
-    const status = o.Status || 'Received';
+    const status = displayStatus(o);
     return `
       <div class="order-card" data-order="${escAttr(o.OrderID)}">
         <div class="order-card-header" onclick="expandOrder(this, '${escAttr(o.OrderID)}')" ondblclick="pinOrder(this,'${escAttr(o.OrderID)}','processing')">
