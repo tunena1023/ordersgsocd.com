@@ -458,6 +458,12 @@ if (client) {
   });
 
   const $ = id => document.getElementById(id);
+  /* Mismo helper que customer.html -- "YYYY-MM-DD" de hoy, hora LOCAL. */
+  function todayISO() {
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
   let ordersCache = [];
   /* Tiempos por servicio -- solo se pide si el cliente tiene el
      permiso activado, para no jalar datos de mas cuando no hace
@@ -1388,6 +1394,7 @@ if (client) {
       : 'If you know roughly when materials will arrive, let us know so we can plan ahead.';
 
     const dateVal = dateInputValue(o.ExpectedReadyDate);
+    const entryDateVal = dateInputValue(o.EntryDate);
     const occupied = !!o.UnitOccupied;
 
     return `<div class="ready-block">
@@ -1408,7 +1415,7 @@ if (client) {
         <div class="ready-field ready-reveal${backendReady ? ' show' : ''}" id="readyDateBlock-${safe}">
           <div style="font-weight:600;font-size:13px">Ready Date &amp; Time</div>
           <div class="field-sub">${readyDateSub}</div>
-          ${GSDateTimePicker.dateHtml('readyDate-' + safe, dateVal || null)}
+          ${GSDateTimePicker.dateHtml('readyDate-' + safe, dateVal || null, null, { min: todayISO(), max: entryDateVal || null })}
         </div>
 
         <div class="ready-field ready-reveal${backendReady ? ' show' : ''}" id="entryTimeBlock-${safe}">
@@ -1821,8 +1828,8 @@ return html;
       <div id="oc-diff-mount-${escAttr(orderId)}"></div>
       ${GSOrderFormPremium.textFieldHtml('panel-change-text', '', icoEdit, 'Describe the change (optional if you changed services above)', { textarea: true, placeholder: 'e.g. I need to reschedule the entry date...' })}
       <div class="gs-ofp-unitrow" style="margin-top:20px">
-        ${GSOrderFormPremium.textFieldHtml('panel-change-entry', '', icoCal, 'New entry date', { raw: GSDateTimePicker.dateHtml('panel-change-entry', entryVal) })}
-        ${GSOrderFormPremium.textFieldHtml('panel-change-due', '', icoCal, 'New due date', { raw: GSDateTimePicker.dateHtml('panel-change-due', dueVal) })}
+        ${GSOrderFormPremium.textFieldHtml('panel-change-entry', '', icoCal, 'New entry date', { raw: GSDateTimePicker.dateHtml('panel-change-entry', entryVal, null, { min: todayISO() }) })}
+        ${GSOrderFormPremium.textFieldHtml('panel-change-due', '', icoCal, 'New due date', { raw: GSDateTimePicker.dateHtml('panel-change-due', dueVal, null, { min: todayISO() }) })}
         ${GSOrderFormPremium.textFieldHtml('panel-change-window', '', icoClock, 'Preferred service window', { selectOptionsHtml: windowOptions })}
       </div>
       <p style="font-size:11px;color:var(--gray);line-height:1.6;margin:16px 0">Dates and service windows are a request only. Nothing changes until our office approves it, and you will receive the confirmed dates by email.</p>
@@ -2010,8 +2017,8 @@ return html;
     } else {
       GSOrderFormPremium.setOfficeNeedText('addunit', '');
     }
-    $('addunit-entry-mount').innerHTML = GSDateTimePicker.dateHtml('addunit-entry', '');
-    $('addunit-due-mount').innerHTML = GSDateTimePicker.dateHtml('addunit-due', '');
+    $('addunit-entry-mount').innerHTML = GSDateTimePicker.dateHtml('addunit-entry', '', null, { min: todayISO() });
+    $('addunit-due-mount').innerHTML = GSDateTimePicker.dateHtml('addunit-due', '', null, { min: todayISO() });
 
     $('addunit-dialog').classList.add('open');
   }

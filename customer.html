@@ -1527,6 +1527,16 @@ if (client) {
   let unitCardCounter = 0;
 
   const $ = id => document.getElementById(id);
+  /* "YYYY-MM-DD" de hoy, hora LOCAL del navegador (no UTC -- toISOString
+     usa UTC y puede dar el dia siguiente/anterior segun la hora). Usado
+     para que los calendarios de fechas nuevas (New Order, Add Unit)
+     nunca dejen elegir un dia ya pasado. A peticion del dueno,
+     18/09/2026. */
+  function todayISO() {
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
 
   /* Panel unificado (Office Access + fechas/hora + Submit/Cancel) --
      mismo punto exacto donde antes vivia el fill de dates-grid-container,
@@ -1555,9 +1565,9 @@ if (client) {
       cancelLabel: 'Cancel',
       cancelOnclick: 'cancelEdit()'
     });
-    $('create-entry-mount').innerHTML = GSDateTimePicker.dateHtml('entry-date', null);
+    $('create-entry-mount').innerHTML = GSDateTimePicker.dateHtml('entry-date', null, null, { min: todayISO() });
     $('create-entry-time-mount').innerHTML = GSDateTimePicker.timeHtml('entry-time', '08:00');
-    $('create-due-mount').innerHTML = GSDateTimePicker.dateHtml('delivery-date', null);
+    $('create-due-mount').innerHTML = GSDateTimePicker.dateHtml('delivery-date', null, null, { min: todayISO() });
     GSOrderFormPremium.onOfficeNeedChange('create', function(yes) {
       const lbl = $('create-entry-time-label');
       if (lbl) lbl.textContent = yes ? 'Office availability time' : 'Entry time';
@@ -1910,9 +1920,9 @@ if (client) {
       const dom = 'unit-' + idx;
       try {
         reveal.innerHTML = GSOrderFormPremium.unitDetailPanelHtml(dom, { showTime: true, showButtons: false });
-        $(dom + '-entry-mount').innerHTML = GSDateTimePicker.dateHtml(dom + '-entry', '');
+        $(dom + '-entry-mount').innerHTML = GSDateTimePicker.dateHtml(dom + '-entry', '', null, { min: todayISO() });
         $(dom + '-entry-time-mount').innerHTML = GSDateTimePicker.timeHtml(dom + '-entry-time', '08:00');
-        $(dom + '-due-mount').innerHTML = GSDateTimePicker.dateHtml(dom + '-due', '');
+        $(dom + '-due-mount').innerHTML = GSDateTimePicker.dateHtml(dom + '-due', '', null, { min: todayISO() });
         reveal.dataset.mounted = '1';
       } catch (e) {
         console.error('No se pudo montar el panel de Customize para la unidad ' + idx + ':', e);
@@ -4912,6 +4922,7 @@ if (client) {
       : 'If you know roughly when materials will arrive, let us know so we can plan ahead.';
 
     const dateVal = dateInputValue(o.ExpectedReadyDate);
+    const entryDateVal = dateInputValue(o.EntryDate);
     const occupied = !!o.UnitOccupied;
 
     return `<div class="ready-block">
@@ -4932,7 +4943,7 @@ if (client) {
         <div class="ready-field ready-reveal${backendReady ? ' show' : ''}" id="readyDateBlock-${safe}">
           <div style="font-weight:600;font-size:13px">Ready Date &amp; Time</div>
           <div class="field-sub">${readyDateSub}</div>
-          ${GSDateTimePicker.dateHtml('readyDate-' + safe, dateVal || null)}
+          ${GSDateTimePicker.dateHtml('readyDate-' + safe, dateVal || null, null, { min: todayISO(), max: entryDateVal || null })}
         </div>
 
         <div class="ready-field ready-reveal${backendReady ? ' show' : ''}" id="entryTimeBlock-${safe}">
@@ -5358,8 +5369,8 @@ return html;
       <div id="oc-diff-mount-${escAttr(orderId)}"></div>
       ${GSOrderFormPremium.textFieldHtml('panel-change-text', '', icoEdit, 'Describe the change (optional if you changed services above)', { textarea: true, placeholder: 'e.g. I need to reschedule the entry date...' })}
       <div class="gs-ofp-unitrow" style="margin-top:20px">
-        ${GSOrderFormPremium.textFieldHtml('panel-change-entry', '', icoCal, 'New entry date', { raw: GSDateTimePicker.dateHtml('panel-change-entry', entryVal) })}
-        ${GSOrderFormPremium.textFieldHtml('panel-change-due', '', icoCal, 'New due date', { raw: GSDateTimePicker.dateHtml('panel-change-due', dueVal) })}
+        ${GSOrderFormPremium.textFieldHtml('panel-change-entry', '', icoCal, 'New entry date', { raw: GSDateTimePicker.dateHtml('panel-change-entry', entryVal, null, { min: todayISO() }) })}
+        ${GSOrderFormPremium.textFieldHtml('panel-change-due', '', icoCal, 'New due date', { raw: GSDateTimePicker.dateHtml('panel-change-due', dueVal, null, { min: todayISO() }) })}
         ${GSOrderFormPremium.textFieldHtml('panel-change-window', '', icoClock, 'Preferred service window', { selectOptionsHtml: windowOptions })}
       </div>
       <p style="font-size:11px;color:var(--gray);line-height:1.6;margin:16px 0">Dates and service windows are a request only. Nothing changes until our office approves it, and you will receive the confirmed dates by email.</p>
@@ -5576,8 +5587,8 @@ return html;
             submitLabel: 'Add Unit', submitOnclick: "submitAddBatchUnit('" + batchId.replace(/'/g,"\\'") + "','" + dom + "')",
             cancelLabel: 'Cancel', cancelOnclick: "event.stopPropagation(); toggleAddUnitForm('" + batchId.replace(/'/g,"\\'") + "')"
           });
-          $(dom + '-entry-mount').innerHTML = GSDateTimePicker.dateHtml(dom + '-entry', '');
-          $(dom + '-due-mount').innerHTML = GSDateTimePicker.dateHtml(dom + '-due', '');
+          $(dom + '-entry-mount').innerHTML = GSDateTimePicker.dateHtml(dom + '-entry', '', null, { min: todayISO() });
+          $(dom + '-due-mount').innerHTML = GSDateTimePicker.dateHtml(dom + '-due', '', null, { min: todayISO() });
           $(dom + '-panel-mount').dataset.mounted = '1';
         } catch (e) {
           console.error('No se pudo montar el panel de Add Unit:', e);
