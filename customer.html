@@ -4483,6 +4483,10 @@ if (client) {
     if (o.Bedrooms || o.Bathrooms) parts.push(esc(o.Bedrooms || '—') + 'bd/' + esc(o.Bathrooms || '—') + 'ba');
     if (o.EntryDate) parts.push('Entry ' + fmtDate(o.EntryDate));
     if (o.DueDate) parts.push('Due ' + fmtDate(o.DueDate));
+    /* Pedido del dueño (18/09/2026): antes solo se veia cuando se
+       creo la orden abriendola y expandiendo el historial -- ahora
+       siempre visible en la tarjeta cerrada, sin tener que entrar. */
+    if (o.createdDateTime) parts.push('Created ' + fmtDateTime(o.createdDateTime));
     return parts.join(' · ');
   }
 
