@@ -185,40 +185,52 @@
 
   async function capture() {
     if (count >= MAX_PHOTOS || !stream) return;
+    /* Mismo fix que tech.gsocd.com (18/09/2026, ver ese commit para
+       el detalle completo): el boton se bloquea durante toda la
+       captura -- si se toca de nuevo mientras GSCameraQueue.enqueue()
+       todavia esta en curso, antes se disparaba una segunda captura
+       de la misma imagen. */
+    const btn = document.getElementById('shutter-btn');
+    if (btn.disabled) return;
+    btn.disabled = true;
+
     count++;
     document.getElementById('counter-pill').textContent = count + ' / ' + MAX_PHOTOS + ' photos';
-    if (count >= MAX_PHOTOS) document.getElementById('shutter-btn').disabled = true;
 
     const imageBase64 = captureFrame();
     const { thumb, status } = addThumb(imageBase64);
 
-    let endpoint, body, notReady = false;
-    if (context === 'recurring-photo') {
-      endpoint = '/upload-client-recurring-photo';
-      body = { recurringServiceId: recurringServiceId, imageBase64: imageBase64 };
-    } else if (context === 'new-order-photo') {
-      /* La orden todavia no existe -- se guarda igual (regla de oro,
-         sin excepcion), pero no debe intentar subir sola hasta que
-         customer.html la "libere" con el OrderID real, una vez que
-         submit-order confirme que ya existe. */
-      endpoint = '/upload-client-photo';
-      body = { orderId: null, imageBase64: imageBase64 };
-      notReady = true;
-    } else {
-      endpoint = '/upload-client-photo';
-      body = { orderId: orderId, imageBase64: imageBase64 };
-    }
+    try {
+      let endpoint, body, notReady = false;
+      if (context === 'recurring-photo') {
+        endpoint = '/upload-client-recurring-photo';
+        body = { recurringServiceId: recurringServiceId, imageBase64: imageBase64 };
+      } else if (context === 'new-order-photo') {
+        /* La orden todavia no existe -- se guarda igual (regla de oro,
+           sin excepcion), pero no debe intentar subir sola hasta que
+           customer.html la "libere" con el OrderID real, una vez que
+           submit-order confirme que ya existe. */
+        endpoint = '/upload-client-photo';
+        body = { orderId: null, imageBase64: imageBase64 };
+        notReady = true;
+      } else {
+        endpoint = '/upload-client-photo';
+        body = { orderId: orderId, imageBase64: imageBase64 };
+      }
 
-    /* enqueue() ya guarda la foto en el telefono/navegador ANTES de
-       intentar subirla (regla de oro: nunca se pierde, pase lo que
-       pase). Si el intento inmediato falla (sin señal), el propio
-       onChange de abajo la pinta como "esperando señal"; si notReady,
-       ni siquiera lo intenta hasta que customer.html la libere. */
-    const id = await GSCameraQueue.enqueue({
-      endpoint: endpoint, body: body, notReady: notReady,
-      meta: { orderId: orderId, recurringServiceId: recurringServiceId, draftKey: draftKey }
-    });
-    thumbById[id] = { thumb, status };
+      /* enqueue() ya guarda la foto en el telefono/navegador ANTES de
+         intentar subirla (regla de oro: nunca se pierde, pase lo que
+         pase). Si el intento inmediato falla (sin señal), el propio
+         onChange de abajo la pinta como "esperando señal"; si notReady,
+         ni siquiera lo intenta hasta que customer.html la libere. */
+      const id = await GSCameraQueue.enqueue({
+        endpoint: endpoint, body: body, notReady: notReady,
+        meta: { orderId: orderId, recurringServiceId: recurringServiceId, draftKey: draftKey }
+      });
+      thumbById[id] = { thumb, status };
+    } finally {
+      if (count < MAX_PHOTOS) btn.disabled = false;
+    }
   }
   document.getElementById('shutter-btn').addEventListener('click', capture);
 
