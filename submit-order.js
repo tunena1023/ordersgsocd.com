@@ -116,7 +116,8 @@ function resolveServices(raw, division) {
       ServiceName: s.ServiceName || '',
       SubOption:   s.SubOption   || '',
       Division:    s.Division    || division,
-      Level:       s.Level       || ''
+      Level:       s.Level       || '',
+      Quantity:    s.Quantity    || ''
     })).filter(s => s.Category || s.ServiceName);
   }
   return parseServicesString(raw, division);
@@ -251,7 +252,8 @@ exports.handler = async (event) => {
             Category:    f.Category    || '',
             ServiceName: f.ServiceName || '',
             SubOption:   f.SubOption   || '',
-            Division:    f.Division    || template.Division
+            Division:    f.Division    || template.Division,
+            Quantity:    f.Quantity    || ''
           });
         }));
 
@@ -364,7 +366,8 @@ exports.handler = async (event) => {
               Category:    s.Category    || '',
               ServiceName: s.ServiceName || '',
               SubOption:   s.SubOption   || '',
-              Division:    s.Division    || b.Division
+              Division:    s.Division    || b.Division,
+              Quantity:    s.Quantity    || ''
             })
           ),
           createListItem(ORDER_HISTORY_LIST, {
@@ -566,7 +569,8 @@ exports.handler = async (event) => {
               ServiceName: s.ServiceName || '',
               SubOption:   s.SubOption   || '',
               Division:    s.Division    || b.Division,
-              Level:       s.Level       || ''
+              Level:       s.Level       || '',
+              Quantity:    s.Quantity    || ''
             })
           ));
 
@@ -640,7 +644,8 @@ exports.handler = async (event) => {
         ServiceName: s.ServiceName,
         SubOption:   s.SubOption,
         Division:    s.Division,
-        Level:       s.Level || ''
+        Level:       s.Level || '',
+        Quantity:    s.Quantity || ''
       })
     ));
 

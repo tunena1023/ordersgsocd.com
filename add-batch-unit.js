@@ -159,7 +159,8 @@ exports.handler = async (event) => {
           ServiceName: f.ServiceName || '',
           SubOption:   f.SubOption   || '',
           Division:    f.Division    || template.Division,
-          Level:       f.Level       || ''
+          Level:       f.Level       || '',
+          Quantity:    f.Quantity    || ''
         });
       }));
 
