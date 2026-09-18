@@ -69,9 +69,17 @@ exports.handler = async (event) => {
     if (!b.unitNumber) return jsonResponse(400, { error: 'Please enter the Unit Number.' });
     if (!b.bedrooms)   return jsonResponse(400, { error: 'Please enter Bedrooms.' });
     if (!b.bathrooms)  return jsonResponse(400, { error: 'Please enter Bathrooms.' });
-    if (!b.entryDate)  return jsonResponse(400, { error: 'Please enter the entry date.' });
-    if (!b.dueDate)    return jsonResponse(400, { error: 'Please enter the due date.' });
-    /* buildingNumber es OPCIONAL a proposito -- ver el fallback abajo. */
+    /* buildingNumber es OPCIONAL a proposito -- ver el fallback abajo.
+       A peticion del dueño (18/09/2026): entryDate/dueDate TAMBIEN son
+       opcionales -- BUG REAL encontrado ese mismo dia: este archivo es
+       el que de VERDAD llama el frontend de Orders (/add-batch-unit),
+       distinto de submit-order.js (que tambien maneja un caso
+       AddUnitToBatch, pero ese nunca lo llama Orders -- ahi es Admin
+       el que pega). Arregle primero submit-order.js pensando que era
+       el mismo camino -- no lo era, por eso Orders se seguia quedando
+       con la validacion vieja aunque Admin ya funcionara bien. Mismo
+       fallback aqui: si vienen vacias, se copian las de template
+       (la primera unidad hermana del lote). */
 
     const [clientOrders, clientRows] = await Promise.all([
       fetchByField(ORDERS_LIST, 'ClientID', b.clientId),
@@ -98,6 +106,10 @@ exports.handler = async (event) => {
     const bf = { BuildingNumber: buildingNumber, Address: cf.Address || '', Suite: cf.Suite || '', City: cf.City || '', Zip: cf.Zip || '' };
 
     const template = siblings[0].fields;
+    const effectiveEntryDate = b.entryDate || template.EntryDate || '';
+    const effectiveDueDate = b.dueDate || template.DueDate || '';
+    if (!effectiveEntryDate) return jsonResponse(400, { error: 'Please enter the entry date (the order this belongs to has none to copy either).' });
+    if (!effectiveDueDate)   return jsonResponse(400, { error: 'Please enter the due date (the order this belongs to has none to copy either).' });
     const suffix = nextGlobalSuffix(clientOrders);
     const orderId = String(b.clientId).trim() + '-' + suffix + '-' + b.batchId;
     /* needsOfficeAccess/officeNeedNotes son de ESTA unidad nueva
@@ -128,8 +140,8 @@ exports.handler = async (event) => {
       Notes:          template.Notes || '',
       NeedsOfficeAccess: needsOfficeAccess,
       OfficeNeedNotes:   officeNeedNotes,
-      EntryDate:      b.entryDate,
-      DueDate:        b.dueDate,
+      EntryDate:      effectiveEntryDate,
+      DueDate:        effectiveDueDate,
       DraftData:      '',
       BatchId:        b.batchId
     });
