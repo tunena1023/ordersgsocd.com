@@ -754,17 +754,54 @@ if (client) {
     if (o.Bedrooms || o.Bathrooms) parts.push(esc(o.Bedrooms || '—') + 'bd/' + esc(o.Bathrooms || '—') + 'ba');
     if (o.EntryDate) parts.push('Entry ' + fmtDate(o.EntryDate));
     if (o.DueDate) parts.push('Due ' + fmtDate(o.DueDate));
-    const svcCount = Number(o.ServiceCount) || 0;
+    const svcCount = (o.DraftServices || []).length;
     parts.push(svcCount === 1 ? '1 service selected' : svcCount + ' services selected');
     return parts.join(' · ');
   }
 
+  /* Mismo criterio que customer.html -- ver ahi para el detalle
+     completo del por que. */
+  function draftServicesTableHtml(o) {
+    const svcs = o.DraftServices || [];
+    if (!svcs.length) return '<div style="font-size:12px;padding:10px 0">No services selected yet.</div>';
+    const byCat = {};
+    const catOrder = [];
+    svcs.forEach(s => {
+      const cat = s.Category || 'General';
+      if (!byCat[cat]) { byCat[cat] = []; catOrder.push(cat); }
+      byCat[cat].push(s);
+    });
+    const rows = [];
+    catOrder.forEach(cat => {
+      byCat[cat].forEach((s, i) => {
+        const sub = [s.SubOption, s.Level].filter(Boolean).join(' · ');
+        rows.push({ cat: i === 0 ? cat : '', name: esc(s.ServiceName || ''), sub: sub ? esc(sub) : '' });
+      });
+    });
+    return '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
+      rows.map((r, i) =>
+        '<tr' + (i < rows.length - 1 ? ' style="border-bottom:1px solid var(--border)"' : '') + '>' +
+        '<td style="padding:8px 12px 8px 0;color:var(--gold-dk);font-weight:600;width:36%">' + r.cat + '</td>' +
+        '<td style="padding:8px 8px 8px 0;width:32%">' + r.name + '</td>' +
+        '<td style="padding:8px 0;color:' + (r.sub ? 'var(--black)' : 'var(--gray)') + '">' + (r.sub || '—') + '</td>' +
+        '</tr>'
+      ).join('') +
+      '</table>';
+  }
+
   function renderDraftCard(o) {
+    const orderId = o.OrderID || '';
+    let unitsCount = 0;
+    if (o.UnitsData) {
+      try { unitsCount = (JSON.parse(o.UnitsData) || []).length; } catch (e) { /* ignorar */ }
+    }
+    const svcCount = (o.DraftServices || []).length;
+    const svcDetailId = 'draft-svc-detail-' + String(orderId).replace(/[^a-z0-9]/gi, '_');
     return `
-      <div class="order-card" data-order="${escAttr(o.OrderID || '')}">
-        <div class="order-card-header" onclick="toggleOrder(this,'${escAttr(o.OrderID || '')}')" ondblclick="pinOrder(this,'${escAttr(o.OrderID || '')}','processing')">
+      <div class="order-card" data-order="${escAttr(orderId)}">
+        <div class="order-card-header" onclick="toggleOrder(this,'${escAttr(orderId)}')" ondblclick="pinOrder(this,'${escAttr(orderId)}','processing')">
           <div>
-            <div class="order-num">Draft · ${esc(o.OrderID || '')}<span class="order-pin"></span></div>
+            <div class="order-num">Draft · ${esc(orderId)}<span class="order-pin"></span></div>
             <div class="order-date">${draftSummaryLine(o)}</div>
           </div>
           <div style="display:flex;align-items:center;gap:16px">
@@ -773,13 +810,37 @@ if (client) {
           </div>
         </div>
         <div class="order-card-body">
-          <div class="h-cancelled-banner" style="background:#fff3cd;border-color:#ffe69c;color:#664d03">This is a draft — not an active order yet. Continue to submit it, or delete it if you don't need it.</div>
-          <p class="empty-note" style="margin-top:10px">
-            Started ${fmtDateTime(o.createdDateTime)}${o.lastModifiedDateTime ? '<br>Last edited ' + fmtDateTime(o.lastModifiedDateTime) : ''}
-          </p>
-          <div class="order-actions">
-            <button class="btn-action primary" onclick="continueDraft('${escAttr(o.OrderID || '')}')">Continue</button>
-            <button class="btn-action danger" onclick="openDeleteDraft('${escAttr(o.OrderID || '')}')">Delete draft</button>
+          <div class="order-2col">
+            <div>
+              <p class="detail-label">Draft Details</p>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px 16px;margin-bottom:14px">
+                <div><div class="field-caption">Entry</div><div class="field-value">${o.EntryDate ? fmtDateTime(o.EntryDate) : '—'}</div></div>
+                <div><div class="field-caption">Due</div><div class="field-value">${o.DueDate ? fmtDate(o.DueDate) : '—'}</div></div>
+                <div><div class="field-caption">Division</div><div class="field-value">${esc(o.Division || '—')}</div></div>
+                <div><div class="field-caption">Building / Unit</div><div class="field-value">${unitsCount > 1 ? unitsCount + ' units' : esc(o.BuildingNumber || '—') + ' / ' + esc(o.UnitNumber || '—')}</div></div>
+                <div><div class="field-caption">Bed / Bath</div><div class="field-value">${esc(o.Bedrooms || '—')} / ${esc(o.Bathrooms || '—')}</div></div>
+              </div>
+              <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">
+                <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;cursor:pointer;padding:10px 12px;background:var(--off)"
+                     onclick="var d=document.getElementById('${svcDetailId}');d.style.display=d.style.display==='none'?'block':'none'">
+                  <p class="detail-label" style="margin:0">Services Requested</p>
+                  <span style="font-size:10px;color:var(--gold-dk);white-space:nowrap">&#9660; ${svcCount} service${svcCount === 1 ? '' : 's'}</span>
+                </div>
+                <div id="${svcDetailId}" style="display:none;padding:0 12px">${draftServicesTableHtml(o)}</div>
+              </div>
+            </div>
+            <div>
+              <p class="detail-label">Timeline</p>
+              <div class="h-cancelled-banner" style="background:#fff3cd;border-color:#ffe69c;color:#664d03">This is a draft — not an active order yet. Continue to submit it, or delete it if you don't need it.</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px 16px;margin:14px 0">
+                <div><div class="field-caption">Started</div><div class="field-value">${fmtDateTime(o.createdDateTime)}</div></div>
+                <div><div class="field-caption">Last edited</div><div class="field-value">${o.lastModifiedDateTime ? fmtDateTime(o.lastModifiedDateTime) : '—'}</div></div>
+              </div>
+              <div class="order-actions">
+                <button class="btn-action primary" onclick="continueDraft('${escAttr(orderId)}')">Continue</button>
+                <button class="btn-action danger" onclick="openDeleteDraft('${escAttr(orderId)}')">Delete draft</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>`;

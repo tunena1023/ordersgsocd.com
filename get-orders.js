@@ -80,13 +80,20 @@ exports.handler = async (event) => {
        de que se trataba (unidad, fechas, servicios) habia que abrirlo
        si o si. Los servicios SI se guardan (una fila por servicio,
        igual que una orden real) pero este endpoint las descartaba --
-       aqui se cuentan, sin traer el detalle completo de cada una
-       (solo el numero, para la tarjeta resumen). */
-    const draftServiceCounts = {};
+       ahora se agrupan por OrderID y se mandan completas (nombre,
+       categoria, nivel), no solo el numero, para poder mostrar el
+       mismo formato de "Services Requested" que usa una orden real. */
+    const draftServicesByOrder = {};
     draftRows.forEach(it => {
       if (it.fields && it.fields.ServiceName && it.fields.OrderID) {
         const oid = it.fields.OrderID;
-        draftServiceCounts[oid] = (draftServiceCounts[oid] || 0) + 1;
+        if (!draftServicesByOrder[oid]) draftServicesByOrder[oid] = [];
+        draftServicesByOrder[oid].push({
+          ServiceName: it.fields.ServiceName || '',
+          Category:    it.fields.Category || '',
+          SubOption:   it.fields.SubOption || '',
+          Level:       it.fields.Level || ''
+        });
       }
     });
 
@@ -110,7 +117,7 @@ exports.handler = async (event) => {
           Status:          'Incomplete',
           DirtLevel:       f.DirtLevel || '',
           Services:        '',
-          ServiceCount:    draftServiceCounts[f.OrderID || f.Title || ''] || 0,
+          DraftServices:   draftServicesByOrder[f.OrderID || f.Title || ''] || [],
           DraftData:       '',
           BuildingNumber:  f.BuildingNumber || '',
           UnitNumber:      f.UnitNumber || '',
