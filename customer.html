@@ -2394,6 +2394,22 @@ if (client) {
     $('edit-banner').style.display = 'none';
     GSOrderFormPremium.setUnitDetailSubmitLabel('create', 'Submit Order →');
     $('submit-note-text').textContent = 'Your order will be reviewed by our team. You\'ll receive confirmation with full details.';
+    /* BUG REAL encontrado y arreglado (18/09/2026, reportado por el
+       dueño): editOrder() navega con ?edit=<orderId> en la URL
+       (location.href = 'customer.html?edit=...'), y este cancel se
+       queda EN LA MISMA customer.html (showSection, sin navegar a
+       otra pagina) -- nunca limpiaba ese query param. La barra de
+       direcciones se quedaba con ?edit=... para siempre, aunque en
+       pantalla ya se viera Processing. Si la pagina se recargaba
+       DESPUES por cualquier razon (boton atras del navegador movil,
+       refresco, Chrome recargando una pestana inactiva) volvia a
+       leer ese mismo ?edit=... y entraba en modo edicion otra vez --
+       sin ningun error visible, solo "atorado" sin forma de empezar
+       una orden nueva, porque el ciclo se repetia cada vez. Guardar
+       exitosamente (Save Changes) nunca tuvo este problema porque
+       ese camino navega a tracking.html, una pagina distinta, que
+       limpia la URL sola. */
+    history.replaceState(null, '', location.pathname);
     loadOrders();
     showSection('processing');
   }
