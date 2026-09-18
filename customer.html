@@ -2144,18 +2144,18 @@ if (client) {
 
   ['building-number', 'unit-number', 'bedrooms', 'bathrooms'].forEach(id => $(id).addEventListener('input', scheduleDraftSave));
 
-  async function checkDraftFor(div) {
-    try {
-      const data = await GS.api('/get-orders', { method: 'POST', body: { clientId: client.clientId } });
-      const draft = (data.orders || []).find(o => o.Status === 'Incomplete' && o.Division === div);
-      if (draft) {
-        draftPendingData = draft;
-        $('draft-dialog-division').textContent = div;
-        $('draft-dialog-id').textContent = draft.OrderID || '';
-        $('draft-dialog').classList.add('open');
-      }
-    } catch (e) { console.error(e); }
-  }
+  /* A peticion del dueno (17/09/2026): ya no se interrumpe con el
+     dialogo de "Continue where you left off / Start Over" -- el
+     draft se sigue guardando solo en segundo plano (saveDraft(), sin
+     ningun cambio ahi), nomas ya no se le pregunta nada al cliente
+     al volver a una division con un draft pendiente. Si quiere
+     retomar uno viejo, ya existe el camino de siempre: la lista de
+     "Orders in progress and unfinished drafts" -- lo abre desde ahi
+     cuando el quiera, no se le impone.
+     checkDraftFor() se deja como no-operacion (en vez de borrar sus
+     6 llamadas por todo el archivo) para no arriesgar tocar el resto
+     del flujo de cada una. */
+  async function checkDraftFor(div) { /* intencionalmente vacio */ }
 
   /* ===== Continue — cierra el diálogo y carga el draft completo desde el backend ===== */
   async function draftContinue() {
