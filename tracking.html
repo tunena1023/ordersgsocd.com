@@ -1360,15 +1360,18 @@ if (client) {
   /* ============================================================
      RENOVATIONS + JANITORIAL — Ready Date & Time / switch de listo
      para entrar / Unidad ocupada. Solo ordenes activas (no
-     Cancelled/Completed). La fecha nunca es obligatoria; el switch
-     ahora SI exige hora al prenderse (antes era opcional).
+     Cancelled/Completed). A peticion del dueno (18/09/2026): el
+     switch SOLO puede prenderse -- y solo se MUESTRA prendido -- si
+     Ready Date Y Ready Time estan los 2 completos. Mismo fix que
+     customer.html (ver ese archivo para el detalle completo).
   ============================================================ */
   function materialsReadyBlockHtml(o) {
     const div = String(o.Division || '').toLowerCase();
     if (div !== 'renovations' && div !== 'janitorial') return '';
     if (o.Status === 'Cancelled' || o.Status === 'Completed') return '';
     const safe = String(o.OrderID || '').replace(/[^a-z0-9]/gi, '_');
-    const ready = !!o.MaterialsReady;
+    const backendReady = !!o.MaterialsReady;
+    const ready = backendReady && !!o.ExpectedReadyDate && !!o.EntryTime;
     orderIdBySafe[safe] = o.OrderID;
 
     /* Unico texto que cambia por division: el nombre del switch
@@ -1401,13 +1404,13 @@ if (client) {
           </div>
         </div>
 
-        <div class="ready-field ready-reveal${ready ? ' show' : ''}" id="readyDateBlock-${safe}">
+        <div class="ready-field ready-reveal${backendReady ? ' show' : ''}" id="readyDateBlock-${safe}">
           <div style="font-weight:600;font-size:13px">Ready Date &amp; Time</div>
           <div class="field-sub">${readyDateSub}</div>
           ${GSDateTimePicker.dateHtml('readyDate-' + safe, dateVal || null)}
         </div>
 
-        <div class="ready-field ready-reveal${ready ? ' show' : ''}" id="entryTimeBlock-${safe}">
+        <div class="ready-field ready-reveal${backendReady ? ' show' : ''}" id="entryTimeBlock-${safe}">
           <div style="font-weight:600;font-size:13px">What time can we come in?</div>
           <div class="field-sub">Earliest time on that day we're clear to start.</div>
           ${GSDateTimePicker.timeHtml('entryTime-' + safe, o.EntryTime || null)}
@@ -1431,11 +1434,21 @@ if (client) {
   const orderIdBySafe = {};
   const pendingActivation = {};
 
+  /* A peticion del dueno (18/09/2026): mismo fix que customer.html --
+     los 2 campos deben estar completos para activar de verdad. */
   document.addEventListener('gs-date-picked', (e) => {
     if (e.detail.fieldId.indexOf('readyDate-') !== 0) return;
     const safe = e.detail.fieldId.slice('readyDate-'.length);
     const orderId = orderIdBySafe[safe];
-    if (orderId) saveExpectedReadyDate(orderId, e.detail.value);
+    if (!orderId) return;
+    saveExpectedReadyDate(orderId, e.detail.value);
+    const timeVal = GSDateTimePicker.getTime('entryTime-' + safe);
+    if (timeVal) {
+      pendingActivation[safe] = false;
+      const cb = $('readyToggle-' + safe);
+      if (cb) cb.checked = true;
+      setMaterialsReady(orderId, true, timeVal, '').catch(() => {});
+    }
   });
 
   document.addEventListener('gs-time-picked', (e) => {
@@ -1443,6 +1456,11 @@ if (client) {
     const safe = e.detail.fieldId.slice('entryTime-'.length);
     const orderId = orderIdBySafe[safe];
     if (!orderId) return;
+    const dateVal = GSDateTimePicker.getDate('readyDate-' + safe);
+    if (!dateVal) {
+      showToast('Pick a date too, so we know when to expect you.');
+      return;
+    }
     if (pendingActivation[safe]) {
       pendingActivation[safe] = false;
       const cb = $('readyToggle-' + safe);
