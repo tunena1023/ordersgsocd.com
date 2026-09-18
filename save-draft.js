@@ -126,6 +126,7 @@ exports.handler = async (event) => {
         ServiceName: svc.ServiceName || '',
         SubOption:   svc.SubOption || '',
         Level:       svc.Level || '',
+        Quantity:    svc.Quantity || '',
         Status:      'Draft'
       })
     ));

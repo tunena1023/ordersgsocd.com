@@ -1512,6 +1512,7 @@ if (client) {
   let propertyType = 'Commercial';
   let selected = {};
   let svcLevel = {};
+  let svcQty = {};
   let editOrderId = null;
   /* Direccion original de la orden que se esta editando -- distinta de
      client.address (la del perfil ACTUAL del cliente) si el perfil
@@ -1722,7 +1723,7 @@ if (client) {
       showToast('Draft ' + orphan + ' deleted — you switched to another division.');
     }
     currentDiv = div;
-    selected = {}; svcLevel = {}; propertyType = 'Commercial';
+    selected = {}; svcLevel = {}; svcQty = {}; propertyType = 'Commercial';
     draftOrderId = null; draftPendingData = null;
     /* A peticion del dueno (17/09/2026): antes esto forzaba de vuelta
        a Single en cada cambio de division -- si el cliente ya estaba
@@ -1796,9 +1797,11 @@ if (client) {
       propertyType: propertyType,
       initialSelected: selected,
       initialLevels: svcLevel,
-      onChange: function (sel, lvl, propType) {
+      initialQuantities: svcQty,
+      onChange: function (sel, lvl, propType, qty) {
         selected = sel;
         svcLevel = lvl;
+        svcQty = qty;
         propertyType = propType;
         updateSummary();
         scheduleDraftSave();
@@ -1813,7 +1816,8 @@ if (client) {
     Object.entries(selected).forEach(([propType, svcs]) => {
       Object.entries(svcs).forEach(([svc, sku]) => {
         const lvl = svcLevel[svcKey(propType, svc)];
-        lines.push({ propType, svc, sku, lvl });
+        const qty = svcQty[svcKey(propType, svc)];
+        lines.push({ propType, svc, sku, lvl, qty });
       });
     });
 
@@ -1827,11 +1831,12 @@ if (client) {
         return '<div class="summary-item" style="align-items:center"><div style="min-width:0">' +
                '<span>' + esc(l.svc) + '</span>' +
                (l.lvl ? '<br><span style="color:var(--gray)">' + esc(l.lvl) + '</span>' : '') +
-               (mins != null ? '<br><span class="gs-est-time-inline" style="font-size:11px">' + esc(GSEstimatedTime.fmtDuration(mins)) + '</span>' : '') + '</div>' +
+               (l.qty ? '<br><span style="color:var(--gray)">Qty: ' + esc(l.qty) + '</span>' : '') +
+               (mins != null ? '<br><span class="gs-est-time-inline" style="font-size:11px">' + esc(GSEstimatedTime.fmtDuration(mins * (l.qty || 1))) + '</span>' : '') + '</div>' +
                '<button class="summary-remove" data-proptype="' + esc(l.propType) + '" data-svc="' + esc(l.svc) + '" title="Remove service">\u2715</button></div>';
       }).join('');
       if (showTime) {
-        const svcRows = lines.map(l => ({ SubOption: l.sku, Level: l.lvl || '' }));
+        const svcRows = lines.map(l => ({ SubOption: l.sku, Level: l.lvl || '', Quantity: l.qty || 1 }));
         box.innerHTML += GSEstimatedTime.boxHtml(svcRows, serviceTimesCache);
       }
     }
@@ -2046,7 +2051,8 @@ if (client) {
           ServiceName: svcName,
           SubOption:   sku,
           Division:    GSOrderFormPremium.realDivisionForSku(catalogCache, sku, currentDiv),
-          Level:       svcLevel[svcKey(propType, svcName)] || ''
+          Level:       svcLevel[svcKey(propType, svcName)] || '',
+          Quantity:    svcQty[svcKey(propType, svcName)] || ''
         });
       });
     });
@@ -2246,7 +2252,7 @@ if (client) {
       try { await GS.api('/delete-draft', { method: 'POST', body: { orderId: draftPendingData.OrderID } }); refreshOrdersCount(); } catch (e) {}
     }
     draftPendingData = null; draftOrderId = null;
-    selected = {}; svcLevel = {};
+    selected = {}; svcLevel = {}; svcQty = {};
     ['building-number','unit-number','bedrooms','bathrooms','entry-date','delivery-date'].forEach(id => $(id).value = '');
     $('entry-time').value = '08:00';
     restoreOfficeNeed({});
@@ -2275,7 +2281,7 @@ if (client) {
      (no se pierden en SharePoint, solo no aparecen marcados aqui hasta
      que se vuelvan a elegir con el picker nuevo y se guarde de nuevo). */
   function restoreSelectionFrom(services) {
-    selected = {}; svcLevel = {};
+    selected = {}; svcLevel = {}; svcQty = {};
     const legacyNames = [];
     (services || []).forEach(s => {
       const known = catalogCache.some(c => String(c.sku) === String(s.SubOption));
@@ -2284,6 +2290,7 @@ if (client) {
       if (!selected[propType]) selected[propType] = {};
       selected[propType][s.ServiceName] = s.SubOption;
       if (s.Level) svcLevel[svcKey(propType, s.ServiceName)] = s.Level;
+      if (s.Quantity) svcQty[svcKey(propType, s.ServiceName)] = Number(s.Quantity);
     });
     if (legacyNames.length) {
       showToast('Some services on this order are in an old format and need to be re-selected: ' + legacyNames.join(', '));
