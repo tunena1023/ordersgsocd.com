@@ -1710,16 +1710,13 @@ if (client) {
        division sin apagarlo a mano, se quedaba pegado (y el formulario
        de Multiple Units seguia mostrandose para la division nueva). */
     setOrderMode('single');
-    /* BUG FIX: los campos de control (edificio, unidad, fechas, notas)
-       no se limpiaban al cambiar de division -- se quedaban pegados de
-       la division anterior hasta que se aceptaba el dialogo de
-       "continuar borrador" (y si esta division no tenia borrador
-       todavia, esos valores viejos se colaban en el borrador nuevo).
-       Se limpian aqui siempre; si checkDraftFor mas abajo encuentra un
-       borrador real de esta division y el usuario le da Continue,
-       draftContinue() los vuelve a llenar con los valores correctos. */
-    ['building-number', 'unit-number', 'bedrooms', 'bathrooms', 'entry-date', 'delivery-date'].forEach(id => { $(id).value = ''; });
-    $('entry-time').value = '08:00';
+    /* A peticion del dueno (17/09/2026): ya NO se borran Building/
+       Unit/Bedrooms/Bathrooms/fechas al cambiar de division -- antes
+       se limpiaban aqui a proposito (ver el bug que arreglaba, abajo),
+       pero el dueno prefiere que los datos ya escritos sobrevivan el
+       cambio, aceptando el riesgo de que un valor se cuele al
+       borrador de otra division si el cliente selecciona servicios en
+       las 2 sin corregir estos campos entre una y otra. */
     restoreOfficeNeed({});
     checkDueWarning();
     $('summary-division').textContent = el ? el.textContent : div;
