@@ -4690,6 +4690,16 @@ if (client) {
     if (ct === 'Document Generated' || ct === 'Document Failed') return true;
     if (ct === 'Archived') return true;
     if (ct === 'Order Details Set') return true;
+    /* BUG REAL encontrado y arreglado (18/09/2026, reportado por
+       el dueño): esto ya se ocultaba en el historial detallado
+       compartido (order-history.js, ALWAYS_HIDDEN_TYPES) por ser
+       redundante -- 'Order created' ya trae el mismo detalle. Pero
+       el Tracker tiene su PROPIA lista de ocultos, separada de esa --
+       nunca se toco ahi, asi que seguia generando su propio punto,
+       sin etapa asignada (0%, triangulo vacio) justo antes de que
+       'Created' lo llenara -- se veia como un parpadeo raro al
+       principio del tracker. */
+    if (ct === 'Batch Created') return true;
     /* Formato viejo (antes de consolidar): un renglon suelto por cada
        campo que se guardo al aprobar por primera vez (Supervisor,
        Service Window, Dispatch Date, Due Date, Inspection Date...).
@@ -4734,6 +4744,7 @@ if (client) {
     'Occupied Unit Reported':      { label: 'Unit occupied',      stage: 'Client reported the unit occupied' },
     'Services Updated':            { label: 'Services',           stage: 'Services updated' },
     'Client Data Updated':         { label: 'Client info',        stage: 'Client info updated' },
+    'Services Change Requested':   { label: 'Change requested',   stage: 'Change requested (services)' },
     'Scheduling':                  { label: 'Scheduling',         stage: 'In Scheduling' },
     'Change Approved':             { label: 'Change approved',    stage: 'Change approved' },  // PENDING: does this advance a stage?
     'Batch Created':               { label: 'Batch created',      stage: 'Order created in a batch' } // PENDING: same as 'Created'?
@@ -4877,14 +4888,17 @@ if (client) {
       const advanceTo = STAGE_ADVANCE[step.changeType];
       const regressTo = STAGE_REGRESS[step.changeType];
       let isRegression = false;
+      let isMilestone = false;
       if (advanceTo != null && advanceTo > stage) {
         stage = advanceTo;
+        isMilestone = true;
       } else if (regressTo != null) {
         stage = regressTo;
         isRegression = true;
+        isMilestone = true;
       }
       // neutral (ninguno de los dos, o un avance que ya se habia alcanzado antes): stage sin cambio
-      return Object.assign(step, { resultStage: stage, isRegression: isRegression });
+      return Object.assign(step, { resultStage: stage, isRegression: isRegression, isMilestone: isMilestone });
     });
 
     /* BUG REAL encontrado y arreglado (18/09/2026, reportado por el
@@ -4899,16 +4913,25 @@ if (client) {
        parchando combinacion por combinacion: si dos pasos consecutivos
        terminan en la MISMA etapa (ninguno de los dos avanzo ni
        retrocedio la orden de verdad), se colapsan en uno solo -- se
-       queda el mas reciente, que es el que de verdad importa ver. */
+       queda el mas reciente, que es el que de verdad importa ver.
+
+       CORREGIDO el mismo dia, antes de desplegar: la primera version
+       de esta regla protegia solo el primer punto ('Created') --
+       cualquier OTRO evento que si avanzo la orden de verdad (Order
+       Assigned, Materials Ready, etc.) se perdia si el siguiente
+       evento neutral caia en la misma etapa por casualidad (ej.
+       'Order Assigned' seguido de 'Reschedule Requested', los 2 en
+       etapa 2 -- se borraba 'Order Assigned', un momento real que el
+       cliente si necesita ver). Ahora solo se colapsan 2 eventos
+       NEUTRALES seguidos entre si (isMilestone false en ambos) -- un
+       evento que de verdad movio el icono (isMilestone true, en
+       cualquier direccion) nunca se pierde, sin importar que evento
+       neutral le siga despues. Confirmado con el dueño simulando el
+       ciclo completo de una orden real antes de subir esto. */
     const merged = [];
     stepsWithStage.forEach(step => {
       const last = merged[merged.length - 1];
-      /* El primer punto (casi siempre 'Created', el nacimiento de la
-         orden) nunca se reemplaza -- si algo neutral llega justo
-         despues con la misma etapa (ej. el cliente pide un cambio
-         antes de que la asignen), se agrega aparte en vez de borrar
-         de donde vino la orden. */
-      if (last && last.resultStage === step.resultStage && last.changeType !== 'Created') {
+      if (last && !last.isMilestone && !step.isMilestone && last.resultStage === step.resultStage) {
         merged[merged.length - 1] = step;
         return;
       }

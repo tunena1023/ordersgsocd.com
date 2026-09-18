@@ -1118,6 +1118,16 @@ if (client) {
     if (ct === 'Document Generated' || ct === 'Document Failed') return true;
     if (ct === 'Archived') return true;
     if (ct === 'Order Details Set') return true;
+    /* BUG REAL encontrado y arreglado (18/09/2026, reportado por
+       el dueño): esto ya se ocultaba en el historial detallado
+       compartido (order-history.js, ALWAYS_HIDDEN_TYPES) por ser
+       redundante -- 'Order created' ya trae el mismo detalle. Pero
+       el Tracker tiene su PROPIA lista de ocultos, separada de esa --
+       nunca se toco ahi, asi que seguia generando su propio punto,
+       sin etapa asignada (0%, triangulo vacio) justo antes de que
+       'Created' lo llenara -- se veia como un parpadeo raro al
+       principio del tracker. */
+    if (ct === 'Batch Created') return true;
     /* Formato viejo (antes de consolidar): un renglon suelto por cada
        campo que se guardo al aprobar por primera vez (Supervisor,
        Service Window, Dispatch Date, Due Date, Inspection Date...).
@@ -1162,6 +1172,7 @@ if (client) {
     'Occupied Unit Reported':      { label: 'Unit occupied',      stage: 'Client reported the unit occupied' },
     'Services Updated':            { label: 'Services',           stage: 'Services updated' },
     'Client Data Updated':         { label: 'Client info',        stage: 'Client info updated' },
+    'Services Change Requested':   { label: 'Change requested',   stage: 'Change requested (services)' },
     'Scheduling':                  { label: 'Scheduling',         stage: 'In Scheduling' },
     'Change Approved':             { label: 'Change approved',    stage: 'Change approved' },  // PENDING: does this advance a stage?
     'Batch Created':               { label: 'Batch created',      stage: 'Order created in a batch' } // PENDING: same as 'Created'?
@@ -1305,25 +1316,30 @@ if (client) {
       const advanceTo = STAGE_ADVANCE[step.changeType];
       const regressTo = STAGE_REGRESS[step.changeType];
       let isRegression = false;
+      let isMilestone = false;
       if (advanceTo != null && advanceTo > stage) {
         stage = advanceTo;
+        isMilestone = true;
       } else if (regressTo != null) {
         stage = regressTo;
         isRegression = true;
+        isMilestone = true;
       }
       // neutral (ninguno de los dos, o un avance que ya se habia alcanzado antes): stage sin cambio
-      return Object.assign(step, { resultStage: stage, isRegression: isRegression });
+      return Object.assign(step, { resultStage: stage, isRegression: isRegression, isMilestone: isMilestone });
     });
 
-    /* Mismo fix que customer.html (18/09/2026, ver ese archivo para el
-       detalle completo): colapsar cualquier secuencia de eventos que
-       terminen en la misma etapa, no solo las 3 combinaciones
-       puntuales de arriba -- protegiendo siempre el primer punto
-       (Created). */
+    /* CORREGIDO (18/09/2026, ver customer.html para el detalle
+       completo): la version anterior protegia solo el primer punto
+       ('Created') -- cualquier OTRO evento que si avanzo la orden de
+       verdad se perdia si el siguiente evento neutral caia en la
+       misma etapa por casualidad. Ahora solo se colapsan 2 eventos
+       NEUTRALES seguidos entre si -- un evento que de verdad movio el
+       icono (isMilestone, en cualquier direccion) nunca se pierde. */
     const merged = [];
     stepsWithStage.forEach(step => {
       const last = merged[merged.length - 1];
-      if (last && last.resultStage === step.resultStage && last.changeType !== 'Created') {
+      if (last && !last.isMilestone && !step.isMilestone && last.resultStage === step.resultStage) {
         merged[merged.length - 1] = step;
         return;
       }
