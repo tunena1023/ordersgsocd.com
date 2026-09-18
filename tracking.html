@@ -2031,6 +2031,14 @@ return html;
           });
           $(dom + '-entry-mount').innerHTML = GSDateTimePicker.dateHtml(dom + '-entry', '', null, { min: todayISO() });
           $(dom + '-due-mount').innerHTML = GSDateTimePicker.dateHtml(dom + '-due', '', null, { min: todayISO() });
+          /* A peticion del dueño (18/09/2026): aqui (Add Unit) son
+             opcionales -- heredan la fecha del resto del lote si se
+             dejan vacias. Solo se aclara en ESTE contexto, sin tocar
+             el componente compartido ni el New Order normal (ahi SI
+             son obligatorias). */
+          const entryLbl = $(dom + '-entry-label'), dueLbl = $(dom + '-due-label');
+          if (entryLbl) entryLbl.textContent = 'Entry Date (optional, copies the order if left blank)';
+          if (dueLbl) dueLbl.textContent = 'Due Date (optional, copies the order if left blank)';
           $(dom + '-panel-mount').dataset.mounted = '1';
         } catch (e) {
           console.error('No se pudo montar el panel de Add Unit:', e);
@@ -2059,8 +2067,9 @@ return html;
     if (!unitNumber)  { errEl.textContent = 'Please enter the Unit Number.'; return; }
     if (!bedrooms || parseInt(bedrooms) < 1)  { errEl.textContent = 'Please enter a valid number of Bedrooms.'; return; }
     if (!bathrooms || parseInt(bathrooms) < 1) { errEl.textContent = 'Please enter a valid number of Bathrooms.'; return; }
-    if (!entryDateVal) { errEl.textContent = 'Please enter the entry date.'; return; }
-    if (!dueDateVal)   { errEl.textContent = 'Please enter the due date.'; return; }
+    /* A peticion del dueño (18/09/2026): ya no son obligatorias -- si
+       se dejan vacias, el backend hace que la unidad nueva herede las
+       mismas fechas del resto del lote. */
 
     const body = {
       clientId:   client.clientId,
@@ -2069,8 +2078,8 @@ return html;
       unitNumber: unitNumber,
       bedrooms:   bedrooms,
       bathrooms:  bathrooms,
-      entryDate:  new Date(entryDateVal + 'T08:00').toISOString(),
-      dueDate:    new Date(dueDateVal + 'T23:59:59').toISOString(),
+      entryDate:  entryDateVal ? new Date(entryDateVal + 'T08:00').toISOString() : '',
+      dueDate:    dueDateVal ? new Date(dueDateVal + 'T23:59:59').toISOString() : '',
       needsOfficeAccess: needsOfficeAccess,
       officeNeedNotes: officeNeedNotes
     };

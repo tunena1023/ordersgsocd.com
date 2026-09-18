@@ -177,8 +177,10 @@ exports.handler = async (event) => {
       if (!add.unitNumber) return jsonResponse(400, { error: 'Please enter the Unit Number.' });
       if (!add.bedrooms)   return jsonResponse(400, { error: 'Please enter Bedrooms.' });
       if (!add.bathrooms)  return jsonResponse(400, { error: 'Please enter Bathrooms.' });
-      if (!add.entryDate)  return jsonResponse(400, { error: 'Please enter the entry date.' });
-      if (!add.dueDate)    return jsonResponse(400, { error: 'Please enter the due date.' });
+      /* A peticion del dueño (18/09/2026, mismo criterio que Admin --
+         ver admingsocd-com/submit-order.js): entryDate/dueDate son
+         opcionales -- si vienen vacias, la unidad nueva hereda las
+         mismas fechas que ya tiene el resto del lote. */
 
       const allOrders = await fetchAll(ORDERS_LIST);
 
@@ -189,6 +191,10 @@ exports.handler = async (event) => {
       if (!siblings.length) return jsonResponse(404, { error: 'That order was not found.' });
 
       const template = siblings[0].fields;
+      const effectiveEntryDate = add.entryDate || template.EntryDate || '';
+      const effectiveDueDate = add.dueDate || template.DueDate || '';
+      if (!effectiveEntryDate) return jsonResponse(400, { error: 'Please enter the entry date (the order this belongs to has none to copy either).' });
+      if (!effectiveDueDate)   return jsonResponse(400, { error: 'Please enter the due date (the order this belongs to has none to copy either).' });
       /* Igual que add-batch-unit.js: siempre la direccion del resto
          del lote (todas las unidades de un mismo PO comparten
          direccion); si no viene buildingNumber, se autorellena con
@@ -223,8 +229,8 @@ exports.handler = async (event) => {
         Zip:            bf.Zip     || '',
         Email:          template.Email || '',
         Notes:          template.Notes || '',
-        EntryDate:      add.entryDate,
-        DueDate:        add.dueDate,
+        EntryDate:      effectiveEntryDate,
+        DueDate:        effectiveDueDate,
         DraftData:      '',
         BatchId:        add.batchId,
         NeedsOfficeAccess: add.needsOfficeAccess === true || add.needsOfficeAccess === 'true',
@@ -261,7 +267,7 @@ exports.handler = async (event) => {
           ChangeDate: new Date().toISOString(),
           Notes:      'Added to existing order ' + template.OrderID + ' by ' + actor + '.',
           OldValue:   '',
-          NewValue:   'SERVICES:' + JSON.stringify({ services: unitServices, dirtLevel: '', entryDate: add.entryDate || '', dueDate: add.dueDate || '' })
+          NewValue:   'SERVICES:' + JSON.stringify({ services: unitServices, dirtLevel: '', entryDate: effectiveEntryDate, dueDate: effectiveDueDate })
         });
       } catch (e) {
         console.error('AddUnitToBatch post-create write failed:', e.message);
