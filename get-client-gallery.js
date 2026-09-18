@@ -46,6 +46,21 @@ function formatSvcPhotoDate(y, mo, d, h, mi) {
   return get('month') + ' ' + get('day') + ', ' + get('year') + ' · ' + get('hour') + ':' + get('minute') + ' ' + get('dayPeriod');
 }
 
+/* BUG REAL encontrado y arreglado (18/09/2026, reportado por el
+   dueño): fotos normales nunca tenian caption -- respaldo con
+   createdDateTime, mismo criterio que en Admin y Tech. */
+function formatIsoDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Chicago', month: 'short', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit', hour12: true
+  }).formatToParts(d);
+  const get = type => (parts.find(p => p.type === type) || {}).value || '';
+  return get('month') + ' ' + get('day') + ', ' + get('year') + ' · ' + get('hour') + ':' + get('minute') + ' ' + get('dayPeriod');
+}
+
 async function buildServiceCaptions(orderId, photoNames) {
   const svcNamesInPhotos = photoNames
     .map(n => (n.match(SVC_PHOTO_PREFIX) || [])[1])
@@ -114,7 +129,7 @@ exports.handler = async (event) => {
         division: f.Division || '',
         status: f.Status || '',
         date: f.EntryDate || f.DispatchDate || f.createdDateTime || '',
-        photos: photos.map(p => ({ name: p.name, downloadUrl: p.downloadUrl, caption: captions[p.name] || undefined }))
+        photos: photos.map(p => ({ name: p.name, downloadUrl: p.downloadUrl, caption: captions[p.name] || formatIsoDate(p.createdDateTime) || undefined }))
       };
     }));
 
