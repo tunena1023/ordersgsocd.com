@@ -4872,7 +4872,7 @@ if (client) {
        -- resultStage de cada paso es la etapa en la que quedo la orden
        DESPUES de ese evento especifico, no un conteo que solo sube. */
     let stage = 0;
-    return events3.map(h => {
+    const stepsWithStage = events3.map(h => {
       const step = stepFrom(h);
       const advanceTo = STAGE_ADVANCE[step.changeType];
       const regressTo = STAGE_REGRESS[step.changeType];
@@ -4886,6 +4886,35 @@ if (client) {
       // neutral (ninguno de los dos, o un avance que ya se habia alcanzado antes): stage sin cambio
       return Object.assign(step, { resultStage: stage, isRegression: isRegression });
     });
+
+    /* BUG REAL encontrado y arreglado (18/09/2026, reportado por el
+       dueño): las 3 fusiones de arriba (events2/events2b/events3) solo
+       cubren 3 combinaciones puntuales que ya sabiamos que se
+       duplicaban por como escribe el backend. Cualquier OTRA secuencia
+       de eventos "neutrales" seguidos (Change Requested seguido de
+       Change Rejected, dos Services Updated seguidos, etc.) igual
+       generaba un punto nuevo por cada evento -- con el MISMO
+       resultStage que el punto anterior, mostrando el mismo triangulo
+       repetido varias veces seguidas. Regla general en vez de ir
+       parchando combinacion por combinacion: si dos pasos consecutivos
+       terminan en la MISMA etapa (ninguno de los dos avanzo ni
+       retrocedio la orden de verdad), se colapsan en uno solo -- se
+       queda el mas reciente, que es el que de verdad importa ver. */
+    const merged = [];
+    stepsWithStage.forEach(step => {
+      const last = merged[merged.length - 1];
+      /* El primer punto (casi siempre 'Created', el nacimiento de la
+         orden) nunca se reemplaza -- si algo neutral llega justo
+         despues con la misma etapa (ej. el cliente pide un cambio
+         antes de que la asignen), se agrega aparte en vez de borrar
+         de donde vino la orden. */
+      if (last && last.resultStage === step.resultStage && last.changeType !== 'Created') {
+        merged[merged.length - 1] = step;
+        return;
+      }
+      merged.push(step);
+    });
+    return merged;
   }
 
   /* Uno por orden -- si la pantalla llega a mostrar varias tarjetas

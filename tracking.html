@@ -1300,7 +1300,7 @@ if (client) {
        -- resultStage de cada paso es la etapa en la que quedo la orden
        DESPUES de ese evento especifico, no un conteo que solo sube. */
     let stage = 0;
-    return events3.map(h => {
+    const stepsWithStage = events3.map(h => {
       const step = stepFrom(h);
       const advanceTo = STAGE_ADVANCE[step.changeType];
       const regressTo = STAGE_REGRESS[step.changeType];
@@ -1314,6 +1314,22 @@ if (client) {
       // neutral (ninguno de los dos, o un avance que ya se habia alcanzado antes): stage sin cambio
       return Object.assign(step, { resultStage: stage, isRegression: isRegression });
     });
+
+    /* Mismo fix que customer.html (18/09/2026, ver ese archivo para el
+       detalle completo): colapsar cualquier secuencia de eventos que
+       terminen en la misma etapa, no solo las 3 combinaciones
+       puntuales de arriba -- protegiendo siempre el primer punto
+       (Created). */
+    const merged = [];
+    stepsWithStage.forEach(step => {
+      const last = merged[merged.length - 1];
+      if (last && last.resultStage === step.resultStage && last.changeType !== 'Created') {
+        merged[merged.length - 1] = step;
+        return;
+      }
+      merged.push(step);
+    });
+    return merged;
   }
 
   /* Uno por orden -- si la pantalla llega a mostrar varias tarjetas
