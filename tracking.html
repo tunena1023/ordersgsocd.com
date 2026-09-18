@@ -1022,14 +1022,15 @@ if (client) {
                 (s.NotCompletedReason ? ': ' + esc(s.NotCompletedReason) : '') + '</b>' : '';
           const label = svcSubLabel(s);
           const subText = (label ? esc(label) : '') + ncText;
-          svcRows.push({ cat: i === 0 ? cat : '', name: esc(s.ServiceName || ''), sub: (label || nc) ? subText : '', sku: s.SubOption, lvl: s.Level });
+          svcRows.push({ cat: i === 0 ? cat : '', name: esc(s.ServiceName || ''), sub: (label || nc) ? subText : '', sku: s.SubOption, lvl: s.Level, qty: s.Quantity });
         });
       });
       const showTime = !!client.showEstimatedTime;
       const svcTableHtml = svcRows.length
         ? '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
           svcRows.map((r, i) => {
-            const mins = showTime ? GSEstimatedTime.svcMinutes(r.sku, r.lvl, serviceTimesCache) : null;
+            const baseMins = showTime ? GSEstimatedTime.svcMinutes(r.sku, r.lvl, serviceTimesCache) : null;
+            const mins = baseMins != null ? baseMins * (Number(r.qty) || 1) : null;
             return '<tr' + (i < svcRows.length - 1 ? ' style="border-bottom:1px solid var(--border)"' : '') + '>' +
             '<td style="padding:8px 12px 8px 0;color:var(--gold-dk);font-weight:600;width:36%">' + r.cat + '</td>' +
             '<td style="padding:8px 8px 8px 0;width:32%">' + r.name + '</td>' +
@@ -1216,7 +1217,8 @@ if (client) {
      texto legible -- esas se muestran igual que siempre. */
   function isSkuFormat(sub) { return /^\d{3}-\d+$/.test(String(sub || '')); }
   function svcSubLabel(s) {
-    return isSkuFormat(s.SubOption) ? (s.Level || '') : (s.SubOption || '');
+    if (isSkuFormat(s.SubOption)) return s.Level || (s.Quantity ? 'Qty: ' + s.Quantity : '');
+    return s.SubOption || '';
   }
 
   /* ===== Tracker dinamico: un punto por cada evento REAL relevante,
