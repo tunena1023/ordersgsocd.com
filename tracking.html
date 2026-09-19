@@ -278,6 +278,16 @@
   .btn-add-client-photo { width: 100%; background: none; border: 1.5px solid var(--border); color: var(--black); padding: 11px; font-size: 11px; font-family: 'Inter', sans-serif; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; cursor: pointer; }
   .btn-add-client-photo:hover { border-color: var(--gold); }
 
+  /* Camarita por renglon de servicio en "Services Requested" -- mismo
+     estilo exacto que Admin/Tech (svc-row-cam), a peticion del dueno
+     (18/09/2026): la foto se liga al servicio via el nombre del
+     archivo (ver upload-client-service-photo.js), no hay tabla nueva. */
+  .svc-row-cam { flex-shrink: 0; width: 28px; height: 28px; border-radius: 6px; border: 1.5px solid var(--border);
+    background: var(--white); color: var(--gray); cursor: pointer; display: inline-flex; align-items: center;
+    justify-content: center; transition: border-color .15s, color .15s; position: relative; vertical-align: middle; }
+  .svc-row-cam:hover { border-color: var(--gold); color: var(--gold-dk); }
+  .svc-row-cam svg { width: 13px; height: 13px; }
+
   @media (max-width: 860px) {
     nav { padding: 0 20px; }
     .portal-header { padding: 14px 20px; }
@@ -1022,7 +1032,7 @@ if (client) {
                 (s.NotCompletedReason ? ': ' + esc(s.NotCompletedReason) : '') + '</b>' : '';
           const label = svcSubLabel(s);
           const subText = (label ? esc(label) : '') + ncText;
-          svcRows.push({ cat: i === 0 ? cat : '', name: esc(s.ServiceName || ''), sub: (label || nc) ? subText : '', sku: s.SubOption, lvl: s.Level, qty: s.Quantity });
+          svcRows.push({ cat: i === 0 ? cat : '', name: esc(s.ServiceName || ''), sub: (label || nc) ? subText : '', sku: s.SubOption, lvl: s.Level, qty: s.Quantity, catReal: cat, svcNameRaw: s.ServiceName || '' });
         });
       });
       const showTime = !!client.showEstimatedTime;
@@ -1031,11 +1041,16 @@ if (client) {
           svcRows.map((r, i) => {
             const baseMins = showTime ? GSEstimatedTime.svcMinutes(r.sku, r.lvl, serviceTimesCache) : null;
             const mins = baseMins != null ? baseMins * (Number(r.qty) || 1) : null;
+            const camBtn = '<button type="button" class="svc-row-cam" title="Add a photo for this service" ' +
+              'onclick="startClientServicePhoto(\'' + jsStr(orderId) + '\',\'' + jsStr(r.svcNameRaw) + '\')">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>' +
+              '</button>';
             return '<tr' + (i < svcRows.length - 1 ? ' style="border-bottom:1px solid var(--border)"' : '') + '>' +
             '<td style="padding:8px 12px 8px 0;color:var(--gold-dk);font-weight:600;width:36%">' + r.cat + '</td>' +
             '<td style="padding:8px 8px 8px 0;width:32%">' + r.name + '</td>' +
             '<td style="padding:8px 0;color:' + (r.sub ? 'var(--black)' : 'var(--gray)') + '">' + (r.sub || '—') + '</td>' +
             (showTime ? '<td style="padding:8px 0 8px 8px;color:#8C6F2A;font-weight:600;white-space:nowrap;text-align:right">' + (mins != null ? esc(GSEstimatedTime.fmtDuration(mins)) : '') + '</td>' : '') +
+            '<td style="padding:8px 0 8px 8px;width:1%;text-align:right">' + camBtn + '</td>' +
             '</tr>';
           }).join('') +
           '</table>'
@@ -1145,26 +1160,17 @@ if (client) {
   }
 
   /* ===== Fotos del cliente -- cámara propia (camera-capture.html),
-     con cola offline real. El panel "Request a change" de aqui tiene
-     picker de servicios + notas, mas fecha de entrada, fecha de
-     entrega, ventana de servicio y descripcion libre -- se guarda
-     TODO antes de salir a la camara. ===== */
+     con cola offline real. El panel "Request a change" de aqui SOLO
+     tiene fecha de entrada, fecha de entrega, ventana de servicio y
+     descripcion libre (ya no picker de servicios, ver toggleChangePanel)
+     -- se guarda eso antes de salir a la camara desde el boton general
+     "Add Photo" de la tarjeta, para no perderlo si el panel seguia
+     abierto a medio llenar. ===== */
   function saveOcChangeSnapshot() {
     if (!(openPanelOrderId && openPanelType === 'change')) return;
     const orderId = openPanelOrderId;
-    let removedNotes = {};
-    if (ocChangeCtrl && ocChangeCtrl.picker) {
-      const diff = ocChangeCtrl.getDiff();
-      diff.removed.forEach((name, i) => {
-        const ta = document.querySelector('#oc-diff-mount-' + orderId + ' textarea[data-removed-index="' + i + '"]');
-        if (ta && ta.value.trim()) removedNotes[name] = ta.value;
-      });
-    }
     sessionStorage.setItem('tracking_oc_change_snapshot', JSON.stringify({
       orderId: orderId,
-      selected: ocChangeCtrl && ocChangeCtrl.picker ? ocChangeCtrl.picker.getSelected() : null,
-      levels: ocChangeCtrl && ocChangeCtrl.picker ? ocChangeCtrl.picker.getLevels() : null,
-      removedNotes: removedNotes,
       description: (document.getElementById('panel-change-text') || {}).value || '',
       entry: (document.getElementById('panel-change-entry') || {}).value || '',
       due: (document.getElementById('panel-change-due') || {}).value || '',
@@ -1186,16 +1192,6 @@ if (client) {
     if (body) body.classList.add('open');
     await toggleChangePanel(snap.orderId);
 
-    if (snap.selected && ocChangeCtrl && ocChangeCtrl.picker) {
-      ocChangeCtrl.picker.setSelected(snap.selected, snap.levels);
-      ocChangeCtrl.renderDiff();
-      const diff = ocChangeCtrl.getDiff();
-      diff.removed.forEach((name, i) => {
-        if (!snap.removedNotes[name]) return;
-        const ta = document.querySelector('#oc-diff-mount-' + snap.orderId + ' textarea[data-removed-index="' + i + '"]');
-        if (ta) ta.value = snap.removedNotes[name];
-      });
-    }
     const setVal = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
     setVal('panel-change-text', snap.description);
     setVal('panel-change-entry', snap.entry);
@@ -1208,6 +1204,18 @@ if (client) {
     saveOcChangeSnapshot();
     location.href = 'camera-capture.html?context=tracking-photo&orderId=' + encodeURIComponent(orderId) +
       '&return=' + encodeURIComponent('tracking.html?openOrder=' + orderId) + '&label=' + encodeURIComponent('Order ' + orderId);
+  }
+
+  /* Camarita por renglon de servicio en "Services Requested" -- misma
+     idea que ya usa Admin (Active > Edit) y Supervisor (tech.gsocd.com,
+     Update Services), adaptada aqui para el cliente. La foto queda
+     ligada al servicio via el nombre del archivo (ver
+     upload-client-service-photo.js), sin ninguna columna nueva. */
+  function startClientServicePhoto(orderId, serviceName) {
+    saveOcChangeSnapshot();
+    location.href = 'camera-capture.html?context=service-photo&orderId=' + encodeURIComponent(orderId) +
+      '&serviceName=' + encodeURIComponent(serviceName) +
+      '&return=' + encodeURIComponent('tracking.html?openOrder=' + orderId) + '&label=' + encodeURIComponent(serviceName);
   }
 
   /* Catalogo nuevo: SubOption ya es el SKU interno (ej. "222-68"), no
@@ -1917,7 +1925,15 @@ return html;
     openPanelType = null;
   }
 
-  /* ===== Change request ===== */
+  /* ===== Change request =====
+     A peticion del dueno (18/09/2026): este panel es SOLO para fecha
+     de entrada, fecha limite y ventana de servicio -- YA NO deja
+     agregar/quitar servicios aqui (eso viene de un bug real: el
+     picker no populaba bien el diff). Para servicios, "Edit Order"
+     (solo visible en Received) manda al cliente a New Order
+     precargado -- ese es el camino correcto. La camarita por servicio
+     vive directo en la tabla "Services Requested" de la tarjeta
+     (startClientServicePhoto), no aqui. */
   async function toggleChangePanel(orderId) {
     if (openPanelOrderId === orderId && openPanelType === 'change') { closeOpenPanel(); return; }
     closeOpenPanel();
@@ -1947,23 +1963,10 @@ return html;
     const icoCal = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>';
     const icoClock = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
 
-    /* Servicios de la orden (cacheados al abrir la tarjeta) -- misma
-       lista + selector + diff que Recurring y Admin, via
-       gsocd-shared/service-change-panel. La nota y la foto de cada
-       renglon actual NO se ligan a un servicio especifico: la nota se
-       junta a la descripcion, la camara reusa la subida de fotos de la
-       orden. Quitar un servicio exige nota; nada se aplica hasta que la
-       oficina apruebe. */
-    const ocSvcs = ((orderDetailCache[orderId] || {}).services || []).filter(s => s && s.ServiceName);
-    const ocListHtml = GSServiceChangePanel.currentListHtml(ocSvcs, { listId: 'oc-svc-list-' + orderId, stack: true, notePlaceholder: 'Note about this service (optional)' });
-
     panel.innerHTML = `
       <p class="detail-label" style="margin-bottom:4px">Request a change</p>
       <p style="font-size:12px;color:var(--gray);margin-bottom:18px;line-height:1.6">Tell us what you'd like to change about order ${esc(orderId)}. Our office will review your request and contact you.</p>
-      ${ocListHtml ? '<p class="field-caption" style="margin-bottom:6px">Currently on this order</p><div style="margin-bottom:14px">' + ocListHtml + '</div>' : ''}
-      <div id="oc-picker-mount-${escAttr(orderId)}"></div>
-      <div id="oc-diff-mount-${escAttr(orderId)}"></div>
-      ${GSOrderFormPremium.textFieldHtml('panel-change-text', '', icoEdit, 'Describe the change (optional if you changed services above)', { textarea: true, placeholder: 'e.g. I need to reschedule the entry date...' })}
+      ${GSOrderFormPremium.textFieldHtml('panel-change-text', '', icoEdit, 'Describe the change (optional)', { textarea: true, placeholder: 'e.g. I need to reschedule the entry date...' })}
       <div class="gs-ofp-unitrow" style="margin-top:20px">
         ${GSOrderFormPremium.textFieldHtml('panel-change-entry', '', icoCal, 'New entry date', { raw: GSDateTimePicker.dateHtml('panel-change-entry', entryVal, null, { min: todayISO() }) })}
         ${GSOrderFormPremium.textFieldHtml('panel-change-due', '', icoCal, 'New due date', { raw: GSDateTimePicker.dateHtml('panel-change-due', dueVal, null, { min: todayISO() }) })}
@@ -1982,47 +1985,21 @@ return html;
        pudiendo comparar "lo toco o no" sin tocar esa logica. */
     $('panel-change-entry').dataset.original = entryVal;
     $('panel-change-due').dataset.original = dueVal;
-
-    GSServiceChangePanel.wireList($('oc-svc-list-' + orderId), ocSvcs, {
-      onCamera: function () { startClientPhoto(orderId); }
-    });
-    await ocMountChangePicker(orderId, ocSvcs);
-  }
-
-  let ocChangeCtrl = null;
-  async function ocMountChangePicker(orderId, svcs) {
-    let catalog = (window.__ocCatalog || null);
-    if (!catalog || !catalog.length) {
-      try { const data = await GS.api('/get-services', { method: 'GET' }); catalog = data.catalog || []; window.__ocCatalog = catalog; } catch (e) { catalog = []; }
-    }
-    /* Puede que el cliente ya haya cerrado el panel mientras cargaba */
-    if (!$('oc-picker-mount-' + orderId)) return;
-    const o = (ordersCache || []).find(x => x.OrderID === orderId) || {};
-    ocChangeCtrl = GSServiceChangePanel.mount({
-      instanceId: 'oc-change-' + orderId,
-      pickerMount: 'oc-picker-mount-' + orderId,
-      diffMount: 'oc-diff-mount-' + orderId,
-      catalog: catalog,
-      division: o.Division || 'Janitorial',
-      propertyType: (svcs[0] && svcs[0].Category) || 'Commercial',
-      currentServices: svcs
-    });
   }
 
   async function submitChangePanel(orderId) {
-    const ocSvcs = ((orderDetailCache[orderId] || {}).services || []).filter(s => s && s.ServiceName);
-    const diff = ocChangeCtrl ? ocChangeCtrl.collect() : { ok: true, services: [], removedNotes: [] };
-    if (!diff.ok) { $('panel-change-error').textContent = 'Please add a note for each removed service.'; return; }
-    const noteParts = GSServiceChangePanel.collectNotes($('oc-svc-list-' + orderId), ocSvcs);
     const typed = $('panel-change-text').value.trim();
-    if (typed) noteParts.push(typed);
-    const txt = noteParts.join('\n');
-    if (!txt && !diff.services.length && !diff.removedNotes.length) { $('panel-change-error').textContent = 'Please describe the change, or add or remove a service.'; return; }
 
     const entryEl = $('panel-change-entry'), dueEl = $('panel-change-due');
     const entryDate = entryEl.value !== (entryEl.dataset.original || '') ? entryEl.value : '';
     const dueDate   = dueEl.value !== (dueEl.dataset.original || '') ? dueEl.value : '';
     const serviceWindow = $('panel-change-window').value;
+
+    if (!typed && !entryDate && !dueDate && !serviceWindow) {
+      $('panel-change-error').textContent = 'Please describe the change, or update a date/window below.';
+      return;
+    }
+    $('panel-change-error').textContent = '';
 
     if (entryDate && dueDate && entryDate > dueDate) {
       $('panel-change-error').textContent = 'The due date cannot be earlier than the entry date.';
@@ -2033,9 +2010,8 @@ return html;
     btn.disabled = true; btn.textContent = 'Sending…';
     try {
       await GS.api('/request-change', { method: 'POST', body: {
-        orderId: orderId, type: 'change', description: txt,
-        entryDate: entryDate, dueDate: dueDate, serviceWindow: serviceWindow,
-        services: diff.services, removedNotes: diff.removedNotes
+        orderId: orderId, type: 'change', description: typed,
+        entryDate: entryDate, dueDate: dueDate, serviceWindow: serviceWindow
       } });
       closeOpenPanel();
       showToast('Your request was sent. Our office will review it and you will receive the confirmed dates by email.');
@@ -2339,6 +2315,12 @@ return html;
   /* ===== Helpers ===== */
   function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
   function escAttr(s) { return esc(s).replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+  /* Para embeber un valor dentro de un onclick="...('valor')" con
+     comillas simples -- mismo patron que ya usa admin.html/
+     supervisor.html para startServicePhoto(). escAttr() protege el
+     atributo HTML pero no una comilla simple DENTRO del string de JS
+     que arma el propio onclick. */
+  function jsStr(s) { return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
   function fmtDate(iso) {
     if (!iso) return '—';
     return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });

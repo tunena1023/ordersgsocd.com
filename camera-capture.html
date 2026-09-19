@@ -116,10 +116,11 @@
   const client = GS.requireSession();
 
   const params = new URLSearchParams(location.search);
-  const context = params.get('context');        // 'recurring-photo' | 'tracking-photo' | 'new-order-photo'
+  const context = params.get('context');        // 'recurring-photo' | 'tracking-photo' | 'new-order-photo' | 'service-photo'
   const orderId = params.get('orderId');
   const recurringServiceId = params.get('recurringServiceId');
   const draftKey = params.get('draftKey');       // solo new-order-photo -- ver mas abajo
+  const serviceName = params.get('serviceName'); // solo service-photo
   const label = params.get('label');
   const returnTo = params.get('return') || 'tracking.html';
   const MAX_PHOTOS = 10;
@@ -205,6 +206,14 @@
       if (context === 'recurring-photo') {
         endpoint = '/upload-client-recurring-photo';
         body = { recurringServiceId: recurringServiceId, imageBase64: imageBase64 };
+      } else if (context === 'service-photo') {
+        /* Camarita por renglon de servicio (Processing) -- mismo
+           mecanismo que Admin/Tech, ver upload-client-service-photo.js.
+           La orden aqui YA existe siempre (se abre desde una orden
+           real en Processing, nunca desde New Order), asi que a
+           diferencia de new-order-photo no hace falta notReady. */
+        endpoint = '/upload-client-service-photo';
+        body = { orderId: orderId, serviceName: serviceName, imageBase64: imageBase64 };
       } else if (context === 'new-order-photo') {
         /* La orden todavia no existe -- se guarda igual (regla de oro,
            sin excepcion), pero no debe intentar subir sola hasta que
