@@ -633,7 +633,13 @@
   #panel-recurring .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
   #panel-recurring .gallery-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; }
   #panel-recurring .main-view.hidden { display: none; }
-  #panel-recurring @keyframes toastIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+  /* @keyframes toastIn ya existe global (línea 328) -- este duplicado
+     con prefijo #panel-recurring era invalido en CSS (un @keyframes no
+     se puede prefijar con un selector) y le rompia el parseo a TODO lo
+     que viniera despues en la hoja de estilos. Quitado 19/09/2026 --
+     verificado con un parser de CSS real que esto era la causa de que
+     .svc-row (mucho mas abajo) nunca se aplicara, en cualquier
+     dispositivo o ancho de pantalla. */
   @media (max-width: 768px) {
     #panel-recurring .wrap, #panel-recurring .gallery-view { padding: 24px 20px 60px; }
   }
@@ -762,7 +768,9 @@
     width: 100%; padding: 36px 32px; margin: auto;
     animation: dialogIn .3s cubic-bezier(.22,.9,.28,1) both;
   }
-  #panel-profile @keyframes dialogIn { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
+  /* @keyframes dialogIn ya existe global (linea 501) -- este duplicado
+     con prefijo #panel-profile era invalido y rompia el parseo.
+     Quitado 19/09/2026. */
   #panel-profile .dialog-panel h3 { font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 600; margin-bottom: 20px; }
   #panel-profile .field { margin-bottom: 16px; }
   #panel-profile .field label { display: block; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--gray); font-weight: 600; margin-bottom: 8px; }
@@ -783,7 +791,8 @@
     display: none; animation: toastIn .35s cubic-bezier(.22,.9,.28,1) both;
   }
   #panel-profile .toast.show { display: block; }
-  #panel-profile @keyframes toastIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+  /* @keyframes toastIn ya existe global (linea 328) -- mismo bug,
+     quitado 19/09/2026. */
   #panel-profile footer { background: var(--black); padding: 24px 48px; display: flex; align-items: center; justify-content: space-between; }
   #panel-profile footer p { font-size: 13px; color: var(--white); letter-spacing: .06em; }
   #panel-profile footer span { color: var(--gold); }
@@ -881,7 +890,12 @@
     #panel-processing .order-2col.open .col-right, #panel-history .order-2col.open .col-right {border-top:1px solid var(--border)}
   }
   #panel-processing .order-card-body.open, #panel-history .order-card-body.open { display: block; animation: bodyIn .3s ease both; }
-  #panel-processing @keyframes bodyIn, #panel-history @keyframes bodyIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+  /* @keyframes no se puede prefijar con un selector (#panel-processing,
+     #panel-history) -- eso es lo que rompia el parseo de CSS mas abajo
+     en el archivo (incluido .svc-row). No existe una version global de
+     bodyIn, asi que aqui SI hace falta mantenerla -- solo corregida a
+     sintaxis valida. 19/09/2026. */
+  @keyframes bodyIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
   #panel-processing .detail-label, #panel-history .detail-label { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--gray); margin-bottom: 10px; }
   #panel-processing .svc-line, #panel-history .svc-line { font-size: 12px; color: var(--black); line-height: 1.9; }
   #panel-processing .svc-line b, #panel-history .svc-line b { color: var(--gold-dk); }
@@ -943,7 +957,8 @@
   #panel-processing .contact-panel h2, #panel-history .contact-panel h2 { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 600; text-align: center; margin-bottom: 6px; }
   #panel-processing .contact-panel .contact-sub, #panel-history .contact-panel .contact-sub { font-size: 12px; color: var(--gray); text-align: center; margin-bottom: 24px; line-height: 1.6; }
     font-family: 'Inter', sans-serif; outline: none; background: #fff; }
-  #panel-processing @keyframes dialogIn, #panel-history @keyframes dialogIn { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
+  /* @keyframes dialogIn ya existe global (linea 501) -- duplicado
+     invalido quitado 19/09/2026. */
   #panel-processing .dialog-panel h3, #panel-history .dialog-panel h3 { font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 600; margin-bottom: 8px; }
   #panel-processing .dialog-panel p, #panel-history .dialog-panel p { font-size: 13px; color: var(--gray); line-height: 1.7; margin-bottom: 20px; }
   #panel-processing .btn-ghost:hover, #panel-history .btn-ghost:hover { border-color: var(--gold); }
@@ -956,7 +971,10 @@
   #panel-processing .dialog-btns .btn-danger, #panel-history .dialog-btns .btn-danger { background: #B33A3A; color: var(--white); }
   #panel-processing .dialog-btns .btn-danger:hover, #panel-history .dialog-btns .btn-danger:hover { background: #8F2D2D; }
   #panel-processing .dialog-error, #panel-history .dialog-error { font-size: 11px; color: #B33A3A; margin-top: 10px; min-height: 14px; }
-  #panel-processing @keyframes toastIn, #panel-history @keyframes toastIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+  /* @keyframes toastIn ya existe global (linea 328) -- duplicado
+     invalido quitado 19/09/2026. Esta era la ULTIMA de las 6 reglas
+     @keyframes con prefijo de selector (invalidas) que habia en el
+     archivo -- las 6 quedaron arregladas. */
   #panel-processing .client-photos-box, #panel-history .client-photos-box { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
   #panel-processing .client-photos-label, #panel-history .client-photos-label { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gray); margin-bottom: 4px; }
   #panel-processing .client-photos-sub, #panel-history .client-photos-sub { font-size: 11px; color: var(--gray); margin-bottom: 10px; }
@@ -978,7 +996,7 @@
   .field-sub { font-size: 11px; color: var(--gray); margin: 3px 0 8px; line-height: 1.5; }
   .field label { display: block; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--gray); font-weight: 600; margin-bottom: 8px; }
   .field { margin-bottom: 18px; }
-  .field select { width: 100%; border: 1.5px solid var(--border); padding: 13px 14px; font-size: 14px;
+  .field select { width: 100%; border: 1.5px solid var(--border); padding: 13px 14px; font-size: 14px; }
   .field select:focus { border-color: var(--gold); }
   .field input, .field textarea { width: 100%; border: 1.5px solid var(--border); padding: 13px 14px; font-size: 14px; font-family: 'Inter', sans-serif; outline: none; transition: border-color .2s; }
   .field input:focus, .field textarea:focus { border-color: var(--gold); }
@@ -4684,31 +4702,38 @@ if (client) {
         });
       });
       const showTime = !!client.showEstimatedTime;
-      /* Reconstruido (19/09/2026) para usar el patron real .svc-row ya
-         en produccion en Admin (Active) y Tech (Active Orders) -- el
-         intento anterior con <table>/data-label (svcreq-table) se veia
-         mal en movil (fuente/tamano incorrectos, boton de camara
-         aplastado). Aqui no hace falta nota editable (eso es
-         herramienta de staff, no algo que el cliente edite) --
-         .svc-row-notewrap muestra categoria/detalle/tiempo como texto,
-         misma posicion visual que la nota editable de Admin. */
+      /* Reconstruido OTRA VEZ (19/09/2026), ahora con estilo 100% inline
+         en vez de las clases .svc-row/.svc-row-name/.svc-row-cam: los
+         dos intentos anteriores (tabla+data-label, luego .svc-row via
+         clases CSS) seguian viendose mal en el celular real del dueno
+         sin causa clara en el CSS externo -- para no seguir adivinando,
+         cada fila trae su propio estilo puesto directo en el elemento,
+         y el SVG trae su propio width/height como atributo (no solo
+         CSS), asi no depende de que ninguna hoja de estilos le pegue
+         bien. Ademas: r.cat ahora se escapa (esc()) antes de imprimir
+         -- no lo estaba antes, aunque no era la causa de este bug en
+         particular. Se usan template literals (backticks) en vez de
+         concatenar comillas a mano, para no repetir el bug de escapado
+         que tumbo el intento anterior (ba9d4bc). */
       const svcTableHtml = svcRows.length
-        ? '<div>' +
-          svcRows.map(r => {
+        ? '<div>' + svcRows.map(r => {
             const baseMins = showTime ? GSEstimatedTime.svcMinutes(r.sku, r.lvl, trackingServiceTimesCache) : null;
             const mins = baseMins != null ? baseMins * (Number(r.qty) || 1) : null;
-            const detailParts = [r.cat, r.sub, (mins != null ? esc(GSEstimatedTime.fmtDuration(mins)) : '')].filter(Boolean);
-            const camBtn = '<button type="button" class="svc-row-cam" title="Add a photo for this service" ' +
-              'onclick="startClientServicePhoto(\'' + jsStr(orderId) + '\',\'' + jsStr(r.svcNameRaw) + '\')">' +
-              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>' +
-              '</button>';
-            return '<div class="svc-row">' +
-              '<div class="svc-row-name">' + r.name + '</div>' +
-              '<div class="svc-row-notewrap"><span class="svc-row-detail">' + (detailParts.join(' · ') || '&nbsp;') + '</span></div>' +
-              camBtn +
-              '</div>';
-          }).join('') +
-          '</div>'
+            const detailParts = [esc(r.cat), r.sub, (mins != null ? esc(GSEstimatedTime.fmtDuration(mins)) : '')].filter(Boolean);
+            const detailText = detailParts.join(' · ');
+            const detailLine = detailText
+              ? `<div style="font-size:12px;color:var(--gray);margin-top:2px;line-height:1.4">${detailText}</div>`
+              : '';
+            return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:600;color:var(--black);line-height:1.4">${r.name}</div>
+                ${detailLine}
+              </div>
+              <button type="button" title="Add a photo for this service" onclick="startClientServicePhoto('${jsStr(orderId)}','${jsStr(r.svcNameRaw)}')" style="flex-shrink:0;width:32px;height:32px;padding:0;border-radius:6px;border:1.5px solid var(--border);background:var(--white);color:var(--gray);cursor:pointer;display:flex;align-items:center;justify-content:center">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
+              </button>
+            </div>`;
+          }).join('') + '</div>'
         : '<div style="font-size:12px;padding:10px 0">No services recorded.</div>';
       const svcHeaderHtml =
         '<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">' +
