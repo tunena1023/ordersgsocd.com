@@ -976,33 +976,44 @@
   .field textarea { resize: vertical; min-height: 90px; }
   .dialog-panel .field { margin-bottom: 18px; }
 
-  /* "Services Requested" -- reconstruido (18/09/2026) usando el
-     patron real ya probado y funcionando en Admin (Active > Selected
-     for this order: .svc-row/.svc-row-name/.svc-row-cam), copiado
-     exacto de admin.html en vez del intento anterior con <table>/
-     data-label (svcreq-table) que el dueño confirmo que se veia mal
-     en mobile -- fuente y tamaño incorrectos, boton de camara
-     aplastado, no estaba usando la pieza real compartida. Aqui no
-     hay nota editable (.svc-row-notewrap se usa para texto de
-     categoria/detalle/tiempo, no un <textarea> -- eso es una
-     herramienta de staff en Admin, el cliente aqui solo ve/agrega
-     foto). Camarita ligada al servicio via el nombre del archivo
-     (ver upload-client-service-photo.js), no hay tabla nueva en
-     SharePoint. */
-  .svc-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
-  .svc-row:last-child { border-bottom: none; }
-  .svc-row-name { flex: 0 0 auto; max-width: 240px; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .svc-row-notewrap { flex: 1; min-width: 0; }
-  .svc-row-detail { font-size: 12.5px; color: var(--gray); }
-  .svc-row-cam { flex-shrink: 0; width: 32px; height: 32px; border-radius: 6px; border: 1.5px solid var(--border);
-    background: var(--white); color: var(--gray); cursor: pointer; display: flex; align-items: center;
-    justify-content: center; transition: border-color .15s, color .15s; position: relative; }
-  .svc-row-cam:hover { border-color: var(--gold); color: var(--gold-dk); }
-  .svc-row-cam svg { width: 14px; height: 14px; }
-  @media (max-width: 640px) {
-    .svc-row { flex-wrap: wrap; }
-    .svc-row-name { max-width: none; flex-basis: 100%; white-space: normal; }
+  /* "Services Requested" -- tabla real (<table><thead>) con camarita
+     por servicio (svc-row-cam), a peticion del dueno (18/09/2026): la
+     foto se liga al servicio via el nombre del archivo (ver
+     upload-client-service-photo.js), no hay tabla nueva en SharePoint.
+
+     BUG REAL encontrado por el dueno (captura real de movil, 2 vueltas):
+     el primer intento (celda ancho fijo) y el segundo (filas flex con
+     flex-wrap) NO arreglaban el choque de verdad. El dueno senalo la
+     tecnica correcta, ya probada y aprobada en Admin
+     (#panel-developer .staff-table / .sched-table, mismo patron):
+     en escritorio es una <table> normal con <thead>; en movil
+     (<=768px, mismo breakpoint que el resto de la app) se fuerza
+     display:block en tabla/fila/celda (se rompe el layout nativo de
+     tabla a proposito), se esconde el <thead>, cada <tr> se vuelve
+     tarjeta con borde, y cada <td data-label="X"> imprime su propia
+     etiqueta arriba via content:attr(data-label) -- sin nada de JS
+     extra, sin depender de que el padre tenga un ancho definido. */
+  .svcreq-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .svcreq-table td { padding: 8px 0; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .svcreq-table th { padding: 6px 0; text-align: left; border-bottom: 2px solid var(--border); font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--gray); }
+  .svcreq-table tr:last-child td { border-bottom: none; }
+  @media (max-width: 768px) {
+    .svcreq-table, .svcreq-table thead, .svcreq-table tbody,
+    .svcreq-table tr, .svcreq-table td { display: block; width: auto !important; }
+    .svcreq-table thead { display: none; }
+    .svcreq-table tr { border: 1px solid var(--border); border-radius: 6px; margin-bottom: 10px; padding: 12px; background: var(--white); }
+    .svcreq-table tr:last-child { margin-bottom: 0; }
+    .svcreq-table td { border: none; padding: 5px 0; }
+    .svcreq-table td[data-label]:not([data-label=""])::before {
+      content: attr(data-label); display: block; font-size: 10px; text-transform: uppercase;
+      letter-spacing: .05em; color: var(--gray); font-weight: 700; margin-bottom: 2px;
+    }
   }
+  .svc-row-cam { flex-shrink: 0; width: 28px; height: 28px; min-width: 28px; min-height: 28px; box-sizing: border-box; border-radius: 6px; border: 1.5px solid var(--border);
+    background: var(--white); color: var(--gray); cursor: pointer; display: inline-flex; align-items: center;
+    justify-content: center; transition: border-color .15s, color .15s; position: relative; vertical-align: middle; }
+  .svc-row-cam:hover { border-color: var(--gold); color: var(--gold-dk); }
+  .svc-row-cam svg { width: 13px; height: 13px; flex-shrink: 0; }
 </style>
 </head>
 <body>
@@ -4671,32 +4682,37 @@ if (client) {
         });
       });
       const showTime = !!client.showEstimatedTime;
-      /* Reconstruido (18/09/2026) para usar el patron real .svc-row ya
-         probado en Admin (Active > Selected for this order) -- el
-         intento anterior con <table>/data-label (svcreq-table) no
-         estaba usando ese patron compartido y se veia mal en mobile
-         (fuente/tamano incorrectos, boton de camara aplastado). Aqui
-         no hace falta nota editable (eso es una herramienta de staff,
-         no algo que el cliente edite) -- el espacio de en medio
-         (.svc-row-notewrap) muestra categoria/detalle/tiempo como
-         texto, misma posicion visual que la nota de Admin. */
+      /* Tabla real (<table><thead>...) con data-label por columna --
+         mismo patron EXACTO ya probado y aprobado en Admin
+         (#panel-developer .staff-table / .sched-table, ver su CSS: en
+         movil se fuerza display:block en tabla/fila/celda, se esconde
+         el thead, y cada <td data-label="X"> imprime su propia
+         etiqueta arriba via content:attr(data-label) -- asi cada
+         <tr> se convierte en tarjeta sin JS extra. El dueno senalo
+         directo esta tecnica (18/09/2026) en vez del intento anterior
+         con flex-wrap, que no arreglaba el choque real. */
       const svcTableHtml = svcRows.length
-        ? '<div>' +
+        ? '<table class="svcreq-table"><thead><tr>' +
+          '<th>Category</th><th>Service</th><th>Detail</th>' +
+          (showTime ? '<th>Time</th>' : '') +
+          '<th></th>' +
+          '</tr></thead><tbody>' +
           svcRows.map(r => {
             const baseMins = showTime ? GSEstimatedTime.svcMinutes(r.sku, r.lvl, trackingServiceTimesCache) : null;
             const mins = baseMins != null ? baseMins * (Number(r.qty) || 1) : null;
-            const detailParts = [r.cat, r.sub, (mins != null ? esc(GSEstimatedTime.fmtDuration(mins)) : '')].filter(Boolean);
-            const camBtn = '<button type=\"button\" class=\"svc-row-cam\" title=\"Add a photo for this service\" ' +
-              'onclick=\"startClientServicePhoto(\\'' + jsStr(orderId) + '\\',\\'' + jsStr(r.svcNameRaw) + '\\')\">' +
-              '<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"><path d=\"M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z\"/><circle cx=\"12\" cy=\"13\" r=\"3.5\"/></svg>' +
+            const camBtn = '<button type="button" class="svc-row-cam" title="Add a photo for this service" ' +
+              'onclick="startClientServicePhoto(\'' + jsStr(orderId) + '\',\'' + jsStr(r.svcNameRaw) + '\')">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>' +
               '</button>';
-            return '<div class=\"svc-row\">' +
-              '<div class=\"svc-row-name\">' + r.name + '</div>' +
-              '<div class=\"svc-row-notewrap\"><span class=\"svc-row-detail\">' + (detailParts.join(' · ') || '&nbsp;') + '</span></div>' +
-              camBtn +
-              '</div>';
+            return '<tr>' +
+            '<td data-label="Category">' + r.cat + '</td>' +
+            '<td data-label="Service">' + r.name + '</td>' +
+            '<td data-label="Detail" style="color:' + (r.sub ? 'var(--black)' : 'var(--gray)') + '">' + (r.sub || '—') + '</td>' +
+            (showTime ? '<td data-label="Time">' + (mins != null ? esc(GSEstimatedTime.fmtDuration(mins)) : '') + '</td>' : '') +
+            '<td data-label="">' + camBtn + '</td>' +
+            '</tr>';
           }).join('') +
-          '</div>'
+          '</tbody></table>'
         : '<div style="font-size:12px;padding:10px 0">No services recorded.</div>';
       const svcHeaderHtml =
         '<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">' +
