@@ -57,17 +57,47 @@ exports.handler = async (event) => {
       return jsonResponse(400, { error: 'This only applies to Renovations or Janitorial orders.' });
     }
 
-    await Promise.all([
-      updateListItemByItemId(ORDERS_LIST, orderItem.id, { UnitOccupied: occupied }),
-      createListItem(ORDER_HISTORY_LIST, {
+    await updateListItemByItemId(ORDERS_LIST, orderItem.id, { UnitOccupied: occupied });
+
+    /* Fusionar en vez de duplicar si esto es un vaivén rápido del
+       mismo switch (el cliente lo prende y se arrepiente al toque,
+       o al revés) -- mismo patrón ya usado en set-materials-ready.js
+       (Materials Ready) para "prender + hora llegando por separado".
+       Ahí se basa en estado (ya estaba prendido); aquí no hay un
+       estado intermedio equivalente, así que se usa una ventana de
+       tiempo corta: si el último "Occupied Unit Reported" de esta
+       orden se guardó hace menos de MERGE_WINDOW_MS, se actualiza
+       ESE renglón (nueva nota + hora) en vez de crear uno nuevo. Dos
+       reportes genuinamente separados en el tiempo (días u horas
+       aparte) siguen guardándose como dos eventos reales -- esto
+       solo colapsa el "clic, me arrepentí, clic otra vez" que se ve
+       como dos líneas contradictorias con el mismo minuto. A pedido
+       del dueño (19/09/2026), tras ver GS-1001-1007-PO5000 con dos
+       renglones opuestos al mismo minuto. */
+    const MERGE_WINDOW_MS = 2 * 60 * 1000; // 2 minutos
+    const now = new Date();
+    const notes = occupied ? 'Client reported someone is currently living in the unit.' : 'Client reported the unit is not occupied.';
+
+    const histRows = await fetchByField(ORDER_HISTORY_LIST, 'OrderID', orderId);
+    const latestOccupied = histRows
+      .filter(it => it.fields && it.fields.ChangeType === 'Occupied Unit Reported')
+      .sort((a, b) => String(b.fields.ChangeDate || '').localeCompare(String(a.fields.ChangeDate || '')))[0];
+
+    const isRecentFlip = latestOccupied && latestOccupied.fields.ChangeDate &&
+      (now.getTime() - new Date(latestOccupied.fields.ChangeDate).getTime()) < MERGE_WINDOW_MS;
+
+    if (isRecentFlip) {
+      await updateListItemByItemId(ORDER_HISTORY_LIST, latestOccupied.id, { Notes: notes, ChangeDate: now.toISOString() });
+    } else {
+      await createListItem(ORDER_HISTORY_LIST, {
         Title: orderId + '-occupied',
         OrderID: orderId,
         ChangeType: 'Occupied Unit Reported',
         ChangedBy: clientId,
-        ChangeDate: new Date().toISOString(),
-        Notes: occupied ? 'Client reported someone is currently living in the unit.' : 'Client reported the unit is not occupied.'
-      })
-    ]);
+        ChangeDate: now.toISOString(),
+        Notes: notes
+      });
+    }
 
     return jsonResponse(200, { success: true });
 
