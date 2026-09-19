@@ -18,7 +18,7 @@
 
 const {
   ORDERS_LIST, ORDER_HISTORY_LIST,
-  createListItem, updateListItemByItemId,
+  createListItem, updateListItemByItemId, deleteListItem,
   graphFetch, siteListPath,
   jsonResponse
 } = require('./lib/graph');
@@ -77,8 +77,32 @@ exports.handler = async (event) => {
     const now = new Date().toISOString();
 
     if (materialsReady) {
-      const notes = 'Ready for entry at ' + entryTime + '.';
+      /* Si el cliente eligio la fecha justo antes (mismo gesto de
+         prender el switch: fecha, luego hora), save-expected-ready-date.js
+         ya creo su propio renglon "Expected Ready Date" -- y ya guardo
+         la fecha en ExpectedReadyDate, asi que f.ExpectedReadyDate aqui
+         ya la trae. A peticion del dueno (19/09/2026, mismo caso que
+         GS-1001-1006-PO5000: "Ready Date & Time" y "Materials Ready" a
+         un minuto de diferencia, deberia ser un solo evento): si ese
+         renglon de fecha se creo hace menos de MERGE_WINDOW_MS, se
+         BORRA y su fecha se absorbe en la nota de "Materials Ready"
+         (fecha + hora juntas). Una fecha puesta como aviso previo, sin
+         hora, dias antes (fuera de la ventana) sigue siendo su propio
+         renglon informativo real -- no se toca. */
+      const MERGE_WINDOW_MS = 2 * 60 * 1000; // 2 minutos
+      const histRows = await fetchByField(ORDER_HISTORY_LIST, 'OrderID', orderId);
+      const latestReadyDate = histRows
+        .filter(it => it.fields && it.fields.ChangeType === 'Expected Ready Date')
+        .sort((a, b) => String(b.fields.ChangeDate || '').localeCompare(String(a.fields.ChangeDate || '')))[0];
+      const readyDateIsRecent = latestReadyDate && latestReadyDate.fields.ChangeDate &&
+        (new Date(now).getTime() - new Date(latestReadyDate.fields.ChangeDate).getTime()) < MERGE_WINDOW_MS;
+
+      const notes = f.ExpectedReadyDate
+        ? 'Ready for entry on ' + f.ExpectedReadyDate + ' at ' + entryTime + '.'
+        : 'Ready for entry at ' + entryTime + '.';
       const orderPatch = { MaterialsReady: true, MaterialsReadySeen: false, EntryTime: entryTime };
+
+      const mergeTasks = readyDateIsRecent ? [deleteListItem(ORDER_HISTORY_LIST, latestReadyDate.id)] : [];
 
       if (!wasReady) {
         /* Primera vez que se prende en este ciclo -- un renglon nuevo. */
@@ -91,7 +115,8 @@ exports.handler = async (event) => {
             ChangedBy: clientId,
             ChangeDate: now,
             Notes: notes
-          })
+          }),
+          ...mergeTasks
         ]);
       } else {
         /* Ya estaba prendido -- esto es nomas la hora llegando por
@@ -101,12 +126,11 @@ exports.handler = async (event) => {
            historial que ya existe en vez de crear uno duplicado. Si
            por lo que sea no hay un renglon anterior que actualizar
            (no deberia pasar, pero por si acaso), se crea uno. */
-        const histRows = await fetchByField(ORDER_HISTORY_LIST, 'OrderID', orderId);
         const latestReady = histRows
           .filter(it => it.fields && it.fields.ChangeType === 'Materials Ready')
           .sort((a, b) => String(b.fields.ChangeDate || '').localeCompare(String(a.fields.ChangeDate || '')))[0];
 
-        const tasks = [updateListItemByItemId(ORDERS_LIST, orderItem.id, orderPatch)];
+        const tasks = [updateListItemByItemId(ORDERS_LIST, orderItem.id, orderPatch), ...mergeTasks];
         if (latestReady) {
           tasks.push(updateListItemByItemId(ORDER_HISTORY_LIST, latestReady.id, { Notes: notes, ChangeDate: now }));
         } else {
