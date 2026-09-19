@@ -1034,6 +1034,21 @@
     .svc-row { flex-wrap: wrap; }
     .svc-row-name { max-width: none; flex-basis: 100%; white-space: normal; }
   }
+
+  /* Shimmer dorado breve cuando el live-refresh actualiza la
+     pantalla sola (19/09/2026) -- mismo efecto que Admin, para que
+     se vea igual en toda la marca. */
+  @keyframes gsLiveFlash {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  body.gs-live-flash::before {
+    content: ''; position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 9999;
+    background: linear-gradient(90deg, transparent, var(--gold-lt), var(--gold), var(--gold-lt), transparent);
+    background-size: 200% 100%;
+    animation: gsLiveFlash 0.9s ease-out;
+    pointer-events: none;
+  }
 </style>
 </head>
 <body>
@@ -1425,6 +1440,7 @@
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.24/order-form-premium/order-form-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/order-history/order-history.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.10/camera-queue/camera-queue.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.29.0/live-refresh/live-refresh.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.0.0/lightbox/lightbox.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/gallery-groups/gallery-groups.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.26.0/photo-hover-preview/photo-hover-preview.js"></script>
@@ -6134,6 +6150,68 @@ return html;
     }
   });
   window.doSignout = doSignout;
+
+  /* ============================================================
+     ACTUALIZACION AUTOMATICA -- pedido del dueno (19/09/2026),
+     mismo mecanismo que Admin (GSLiveRefresh, gsocd-shared): revisa
+     /get-orders cada 30s en el fondo y, si algo cambio de verdad,
+     recarga la lista sola -- sin boton, sin preguntar -- y pinta un
+     shimmer + toast. Confirmado con el dueno: refresca TODO,
+     incluidas las tarjetas que esten abiertas ahorita mismo (la
+     unica proteccion es interna a GSLiveRefresh: si el usuario esta
+     escribiendo en un campo de texto justo en ese momento, ese ciclo
+     se salta solo).
+
+     loadOrders() reconstruye TODAS las tarjetas en estado cerrado
+     (asi es como ya funcionaba antes de esto) -- para que una
+     tarjeta que el cliente tenia abierta no se le cierre de golpe
+     debajo de sus manos, se anota que IDs estaban abiertos (en el
+     orden que aparecen en el DOM, de afuera hacia adentro -- eso ya
+     cubre el caso de una unidad abierta DENTRO de un PO tambien
+     abierto) y se vuelven a abrir solas despues del refresh, con
+     datos frescos de verdad (expandOrder/toggleBatchCard ya hacen su
+     propio fetch real, no readornan nada viejo). */
+  function buildOrderActivitySignature(orders) {
+    const sig = new Map();
+    (orders || []).forEach(o => sig.set(o.OrderID, (o.Status || '') + '|' + (o.lastModifiedDateTime || '')));
+    return sig;
+  }
+  function hasNewActivity(oldSig, newSig) {
+    for (const [id, val] of newSig) {
+      if (!oldSig.has(id) || oldSig.get(id) !== val) return true;
+    }
+    return false;
+  }
+  function flashLiveUpdate() {
+    document.body.classList.add('gs-live-flash');
+    setTimeout(() => document.body.classList.remove('gs-live-flash'), 900);
+  }
+  async function reloadOrdersLive() {
+    const openIds = Array.from(document.querySelectorAll('#processing-container .order-card-body.open, #history-container .order-card-body.open'))
+      .map(body => body.closest('.order-card') && body.closest('.order-card').dataset.order)
+      .filter(Boolean);
+    await loadOrders();
+    openIds.forEach(id => {
+      const card = document.querySelector('.order-card[data-order="' + CSS.escape(id) + '"]');
+      const header = card && card.querySelector('.order-card-header');
+      if (!header) return;
+      if (id.indexOf('batch-') === 0) toggleBatchCard(header, id);
+      else expandOrder(header, id);
+    });
+  }
+  GSLiveRefresh.watch({
+    intervalMs: 30000,
+    checkFn: async () => {
+      const res = await GS.api('/get-orders', { method: 'POST', body: { clientId: client.clientId } });
+      return buildOrderActivitySignature(res.orders || []);
+    },
+    hasChanged: hasNewActivity,
+    onChange: async () => {
+      await reloadOrdersLive();
+      flashLiveUpdate();
+      showToast('Updated with the latest info.');
+    }
+  });
 }
 </script>
 </body>
