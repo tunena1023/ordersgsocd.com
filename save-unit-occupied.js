@@ -11,7 +11,7 @@
 
 const {
   ORDERS_LIST, ORDER_HISTORY_LIST,
-  updateListItemByItemId, createListItem,
+  updateListItemByItemId, createListItem, deleteListItem,
   graphFetch, siteListPath,
   jsonResponse
 } = require('./lib/graph');
@@ -27,6 +27,9 @@ async function fetchByField(listName, fieldName, value) {
   }
   return out;
 }
+
+const NOTE_TRUE = 'Client reported someone is currently living in the unit.';
+const NOTE_FALSE = 'Client reported the unit is not occupied.';
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
@@ -57,17 +60,57 @@ exports.handler = async (event) => {
       return jsonResponse(400, { error: 'This only applies to Renovations or Janitorial orders.' });
     }
 
-    await Promise.all([
-      updateListItemByItemId(ORDERS_LIST, orderItem.id, { UnitOccupied: occupied }),
-      createListItem(ORDER_HISTORY_LIST, {
+    await updateListItemByItemId(ORDERS_LIST, orderItem.id, { UnitOccupied: occupied });
+
+    /* Fusionar/cancelar en vez de duplicar si esto es un vaivén rápido
+       del mismo switch -- mismo espiritu que set-materials-ready.js
+       (Materials Ready) para "prender + hora llegando por separado",
+       adaptado aqui con una ventana de tiempo corta en vez de estado
+       (aqui no hay paso intermedio equivalente).
+
+       A peticion del dueno (19/09/2026), tras ver GS-1001-1007-PO5000
+       con dos renglones opuestos al mismo minuto -- y un ajuste mas,
+       pedido despues de probar: si el vaiven regresa exactamente al
+       valor que ya decia el renglon pendiente, no debe quedar NINGUN
+       renglon (ni el fusionado) -- un clic por error que se corrige
+       al toque no es un reporte real, es ruido. Si el nuevo valor
+       coincide con lo que ya decia el renglon pendiente, solo se
+       refresca la fecha (mismo reporte, llego de nuevo). Un reporte
+       genuinamente separado en el tiempo (fuera de la ventana) sigue
+       creando su propio renglon nuevo, como siempre. */
+    const MERGE_WINDOW_MS = 2 * 60 * 1000; // 2 minutos
+    const now = new Date();
+    const notes = occupied ? NOTE_TRUE : NOTE_FALSE;
+
+    const histRows = await fetchByField(ORDER_HISTORY_LIST, 'OrderID', orderId);
+    const latestOccupied = histRows
+      .filter(it => it.fields && it.fields.ChangeType === 'Occupied Unit Reported')
+      .sort((a, b) => String(b.fields.ChangeDate || '').localeCompare(String(a.fields.ChangeDate || '')))[0];
+
+    const isRecentFlip = latestOccupied && latestOccupied.fields.ChangeDate &&
+      (now.getTime() - new Date(latestOccupied.fields.ChangeDate).getTime()) < MERGE_WINDOW_MS;
+
+    if (isRecentFlip) {
+      const pendingWasTrue = latestOccupied.fields.Notes === NOTE_TRUE;
+      if (occupied === pendingWasTrue) {
+        /* Mismo valor que ya estaba pendiente -- solo refrescar cuando
+           se reportó, no es un cambio nuevo. */
+        await updateListItemByItemId(ORDER_HISTORY_LIST, latestOccupied.id, { ChangeDate: now.toISOString() });
+      } else {
+        /* Cancela exactamente lo que decía el renglón pendiente --
+           vaivén que regresó al estado de antes. No queda registro. */
+        await deleteListItem(ORDER_HISTORY_LIST, latestOccupied.id);
+      }
+    } else {
+      await createListItem(ORDER_HISTORY_LIST, {
         Title: orderId + '-occupied',
         OrderID: orderId,
         ChangeType: 'Occupied Unit Reported',
         ChangedBy: clientId,
-        ChangeDate: new Date().toISOString(),
-        Notes: occupied ? 'Client reported someone is currently living in the unit.' : 'Client reported the unit is not occupied.'
-      })
-    ]);
+        ChangeDate: now.toISOString(),
+        Notes: notes
+      });
+    }
 
     return jsonResponse(200, { success: true });
 
