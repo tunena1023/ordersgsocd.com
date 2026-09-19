@@ -282,11 +282,11 @@
      estilo exacto que Admin/Tech (svc-row-cam), a peticion del dueno
      (18/09/2026): la foto se liga al servicio via el nombre del
      archivo (ver upload-client-service-photo.js), no hay tabla nueva. */
-  .svc-row-cam { flex-shrink: 0; width: 28px; height: 28px; border-radius: 6px; border: 1.5px solid var(--border);
+  .svc-row-cam { flex-shrink: 0; width: 28px; height: 28px; min-width: 28px; min-height: 28px; box-sizing: border-box; border-radius: 6px; border: 1.5px solid var(--border);
     background: var(--white); color: var(--gray); cursor: pointer; display: inline-flex; align-items: center;
     justify-content: center; transition: border-color .15s, color .15s; position: relative; vertical-align: middle; }
   .svc-row-cam:hover { border-color: var(--gold); color: var(--gold-dk); }
-  .svc-row-cam svg { width: 13px; height: 13px; }
+  .svc-row-cam svg { width: 13px; height: 13px; flex-shrink: 0; }
 
   @media (max-width: 860px) {
     nav { padding: 0 20px; }
@@ -1050,7 +1050,7 @@ if (client) {
             '<td style="padding:8px 8px 8px 0;width:32%">' + r.name + '</td>' +
             '<td style="padding:8px 0;color:' + (r.sub ? 'var(--black)' : 'var(--gray)') + '">' + (r.sub || '—') + '</td>' +
             (showTime ? '<td style="padding:8px 0 8px 8px;color:#8C6F2A;font-weight:600;white-space:nowrap;text-align:right">' + (mins != null ? esc(GSEstimatedTime.fmtDuration(mins)) : '') + '</td>' : '') +
-            '<td style="padding:8px 0 8px 8px;width:1%;text-align:right">' + camBtn + '</td>' +
+            '<td style="padding:8px 0 8px 8px;width:36px;white-space:nowrap;text-align:right">' + camBtn + '</td>' +
             '</tr>';
           }).join('') +
           '</table>'
