@@ -5305,17 +5305,28 @@ if (client) {
     const safe = e.detail.fieldId.slice('readyDate-'.length);
     const orderId = orderIdBySafe[safe];
     if (!orderId) return;
-    saveExpectedReadyDate(orderId, e.detail.value);
     const timeVal = GSDateTimePicker.getTime('entryTime-' + safe);
-    if (timeVal) {
-      /* La hora ya estaba puesta -- con esto ya se completaron los 2,
-         activar de verdad (mismo camino que ya usaba el handler de
-         hora). */
-      pendingActivation[safe] = false;
-      const cb = $('readyToggle-' + safe);
-      if (cb) cb.checked = true;
-      setMaterialsReady(orderId, true, timeVal, '').catch(() => {});
+    if (!timeVal) {
+      /* Falta la hora -- no se guarda nada todavia, ni siquiera la
+         fecha sola (a peticion del dueno, 19/09/2026: la hora es
+         obligatoria junto con la fecha, sin excepcion -- antes esto
+         SI guardaba la fecha de una vez, sin esperar la hora, y por
+         eso podia quedar un renglon "Expected Ready Date" suelto en
+         el historial si el cliente tardaba en elegir la hora o
+         nunca la elegia. Ahora es simetrico con el flujo de "hora
+         primero", que ya esperaba a los 2 campos). Se vuelve a pedir
+         cuando el cliente elija tambien la hora. */
+      showToast('Pick a time too, so we know when to expect you.');
+      return;
     }
+    /* Los 2 campos ya estan completos -- se guardan juntos, en el
+       mismo instante, no en 2 pasos separados por lo que tarde el
+       cliente en elegir cada uno. */
+    pendingActivation[safe] = false;
+    const cb = $('readyToggle-' + safe);
+    if (cb) cb.checked = true;
+    saveExpectedReadyDate(orderId, e.detail.value);
+    setMaterialsReady(orderId, true, timeVal, '').catch(() => {});
   });
 
   document.addEventListener('gs-time-picked', (e) => {
