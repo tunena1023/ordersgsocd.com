@@ -980,6 +980,30 @@
      estilo exacto que Admin/Tech (svc-row-cam), a peticion del dueno
      (18/09/2026): la foto se liga al servicio via el nombre del
      archivo (ver upload-client-service-photo.js), no hay tabla nueva. */
+  /* Camarita por renglon de servicio en "Services Requested" -- mismo
+     estilo exacto que Admin/Tech (svc-row-cam), a peticion del dueno
+     (18/09/2026): la foto se liga al servicio via el nombre del
+     archivo (ver upload-client-service-photo.js), no hay tabla nueva.
+
+     BUG REAL encontrado por el dueno (captura real de movil): esta
+     seccion era un <table>, y las tablas NO se acomodan bien en
+     pantallas angostas -- cada <td> se queda fijo en su fila, sin
+     poder envolver como un flex-wrap, asi que la columna de la camara
+     terminaba comprimida. Reconstruido como filas flex (svcreq-row),
+     mismo patron ya probado que usa Admin para .svc-row: en movil
+     (max-width:640px) el bloque principal pasa a ocupar toda la fila
+     y el resto (tiempo + camara) baja a su propia linea, en vez de
+     apretarse todos en una sola fila fija. */
+  .svcreq-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+  .svcreq-main { flex: 1 1 auto; min-width: 0; }
+  .svcreq-cat { display: block; color: var(--gold-dk); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; margin-bottom: 2px; }
+  .svcreq-name { font-size: 13px; }
+  .svcreq-sub { font-size: 12px; margin-top: 2px; }
+  .svcreq-time { flex-shrink: 0; color: #8C6F2A; font-weight: 600; font-size: 12px; white-space: nowrap; }
+  @media (max-width: 640px) {
+    .svcreq-row { flex-wrap: wrap; }
+    .svcreq-main { flex-basis: 100%; }
+  }
   .svc-row-cam { flex-shrink: 0; width: 28px; height: 28px; min-width: 28px; min-height: 28px; box-sizing: border-box; border-radius: 6px; border: 1.5px solid var(--border);
     background: var(--white); color: var(--gray); cursor: pointer; display: inline-flex; align-items: center;
     justify-content: center; transition: border-color .15s, color .15s; position: relative; vertical-align: middle; }
@@ -4654,23 +4678,23 @@ if (client) {
       });
       const showTime = !!client.showEstimatedTime;
       const svcTableHtml = svcRows.length
-        ? '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
-          svcRows.map((r, i) => {
+        ? svcRows.map((r, i) => {
             const baseMins = showTime ? GSEstimatedTime.svcMinutes(r.sku, r.lvl, trackingServiceTimesCache) : null;
             const mins = baseMins != null ? baseMins * (Number(r.qty) || 1) : null;
             const camBtn = '<button type="button" class="svc-row-cam" title="Add a photo for this service" ' +
               'onclick="startClientServicePhoto(\'' + jsStr(orderId) + '\',\'' + jsStr(r.svcNameRaw) + '\')">' +
               '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>' +
               '</button>';
-            return '<tr' + (i < svcRows.length - 1 ? ' style="border-bottom:1px solid var(--border)"' : '') + '>' +
-            '<td style="padding:8px 12px 8px 0;color:var(--gold-dk);font-weight:600;width:36%">' + r.cat + '</td>' +
-            '<td style="padding:8px 8px 8px 0;width:32%">' + r.name + '</td>' +
-            '<td style="padding:8px 0;color:' + (r.sub ? 'var(--black)' : 'var(--gray)') + '">' + (r.sub || '—') + '</td>' +
-            (showTime ? '<td style="padding:8px 0 8px 8px;color:#8C6F2A;font-weight:600;white-space:nowrap;text-align:right">' + (mins != null ? esc(GSEstimatedTime.fmtDuration(mins)) : '') + '</td>' : '') +
-            '<td style="padding:8px 0 8px 8px;width:36px;white-space:nowrap;text-align:right">' + camBtn + '</td>' +
-            '</tr>';
-          }).join('') +
-          '</table>'
+            return '<div class="svcreq-row"' + (i < svcRows.length - 1 ? ' style="border-bottom:1px solid var(--border)"' : '') + '>' +
+            '<div class="svcreq-main">' +
+              (r.cat ? '<span class="svcreq-cat">' + r.cat + '</span>' : '') +
+              '<div class="svcreq-name">' + r.name + '</div>' +
+              '<div class="svcreq-sub" style="color:' + (r.sub ? 'var(--black)' : 'var(--gray)') + '">' + (r.sub || '—') + '</div>' +
+            '</div>' +
+            (showTime ? '<span class="svcreq-time">' + (mins != null ? esc(GSEstimatedTime.fmtDuration(mins)) : '') + '</span>' : '') +
+            camBtn +
+            '</div>';
+          }).join('')
         : '<div style="font-size:12px;padding:10px 0">No services recorded.</div>';
       const svcHeaderHtml =
         '<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">' +
