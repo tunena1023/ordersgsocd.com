@@ -856,7 +856,16 @@
   #panel-processing .status-incomplete, #panel-history .status-incomplete { background: #F0EFEA; color: #6B6B6B; }
   #panel-processing .status-confirmed, #panel-history .status-confirmed { background: #F0FAF0; color: #2A7A2A; }
   #panel-processing .order-card-body, #panel-history .order-card-body { padding: 20px; display: none; }
+  /* min-width:0 en TODAS las columnas del grid (19/09/2026) -- .col-right
+     y .col-tracker-actions ya lo tenian, pero la primera columna (sin
+     clase, donde vive "Services Requested") se quedo sin el mismo
+     arreglo. Sin esto, un grid track "1fr" no se encoge mas alla del
+     contenido que trae dentro (min-width:auto por default en grid
+     items) -- eso es lo que probablemente aplastaba el boton de camara
+     al aplicar el wrap de movil mas abajo, con varias tarjetas
+     anidadas de por medio. */
   #panel-processing .order-2col, #panel-history .order-2col {display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  #panel-processing .order-2col > div, #panel-history .order-2col > div {min-width:0}
   #panel-processing .order-2col.open, #panel-history .order-2col.open {grid-template-columns:1fr 1fr 1fr}
   #panel-processing .col-tracker-actions, #panel-history .col-tracker-actions {grid-column:1 / span 2;min-width:0}
   #panel-processing .col-right, #panel-history .col-right {display:none;min-width:0;padding:18px;background:var(--off);grid-row:1;grid-column:-2 / -1}
