@@ -350,13 +350,17 @@ exports.handler = async (event) => {
         Object.assign({}, orderFields, { OrderID: orderId, Status: newStatus })
       );
 
-      try {
-        await updateListItemByItemId(DRAFTS_LIST, draftHeader.id, {
-          Status:  'Order',
-          OrderID: orderId
-        });
-      } catch (e) { console.error('Draft header update failed:', e.message); }
-
+      /* BUG REAL encontrado (18/09/2026, reportado por el dueno): el
+         header del draft nunca se borraba, solo se "marcaba" con
+         Status:'Order' -- se quedaba huerfano en Drafts para SIEMPRE,
+         una fila muerta por cada orden creada desde un borrador. Nada
+         en el sistema busca filas de Drafts con Status:'Order' (ni
+         get-orders.js ni delete-draft.js -- ambos solo filtran por
+         Status==='Draft'), asi que ese "marcado" no cumplia ningun
+         proposito real. Ahora se borra de una vez junto con las filas
+         de servicio, en el mismo Promise.all -- mismo criterio que ya
+         usa el flujo de Multiple Units (ver submitOrder() en
+         customer.html) para limpiar un borrador que no se uso. */
       try {
         await Promise.all([
           ...svcSource.map(s =>
@@ -384,7 +388,9 @@ exports.handler = async (event) => {
       } catch (e) { console.error('Post-order write failed:', e.message); }
 
       try {
-        await Promise.all(draftServiceRows.map(row => deleteListItem(DRAFTS_LIST, row.id)));
+        await Promise.all(
+          myDraftRows.map(row => deleteListItem(DRAFTS_LIST, row.id))
+        );
       } catch (e) { console.error('Draft cleanup failed:', e.message); }
 
       return jsonResponse(200, { success: true, orderId, id: result.id });
