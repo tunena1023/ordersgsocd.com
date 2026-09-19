@@ -504,3 +504,40 @@ y el que tuvo el caso más complicado de los 3.
   `if(){}` no hace hoist al scope global sola, a diferencia de una
   `function` normal).
 
+## Cómo funciona el soporte mobile en este repo (18/09/2026)
+
+Igual que en Admin (ver `Admingsocd.com/NOTES.md`), no hay un archivo CSS
+aparte para mobile ni ningún framework -- todo vive inline dentro de
+`<style>` en el mismo HTML, con `@media (max-width: ...)`. El breakpoint
+más usado en este repo también es **768px**, aunque hay varios otros
+sueltos (600, 640, 700, 720, 768, 860, 900px) según lo que cada quien
+sintió que hacía falta en su momento -- no hay una sola constante.
+
+**Técnica real para tablas de datos (Category/Service/Detail, y
+parecidas): tabla → tarjetas con `data-label`.** Exactamente la misma
+técnica que ya existía en Admin (`#panel-developer .staff-table` /
+`.sched-table`) -- el dueño mismo señaló copiarla de ahí, después de 2
+intentos fallidos (celda con ancho fijo, filas flex con `flex-wrap`) que
+no resolvían el choque de verdad en pantallas angostas.
+
+- En escritorio: `<table>` normal, con `<thead>` real.
+- En mobile (`@media max-width: 768px`): se fuerza `display:block` en
+  tabla/fila/celda (se rompe el layout nativo de tabla a propósito), se
+  esconde el `<thead>`, cada `<tr>` se vuelve una tarjeta con borde, y
+  cada `<td data-label="X">` imprime su propia etiqueta arriba usando
+  `content: attr(data-label)` -- sin JavaScript extra.
+- Implementado real en: **`.svcreq-table`** (la tabla "Services
+  Requested" que se ve al abrir una orden en Processing/History/Tracking)
+  -- CSS completo en `customer.html` justo antes de `</style>` del bloque
+  principal (buscar `.svcreq-table` para ubicarlo). El comentario ahí
+  mismo documenta los 2 intentos previos que no funcionaron, por si se
+  vuelve a tocar esa tabla.
+
+**Antes de asumir que una tabla "nunca tuvo versión mobile" en este
+repo:** buscar primero si ya existe (`grep -n "data-label"` /
+`grep -n "@media"` en el archivo real) -- puede que otra sesión ya lo
+haya arreglado y solo falte confirmar que el deploy esté al día, como
+pasó exactamente con esta misma tabla (se encontró, al investigar un
+reporte del dueño, que el arreglo YA estaba hecho y desplegado por otra
+sesión en paralelo -- la confusión inicial fue por trabajar con una
+copia local desactualizada del repo, no por un bug real sin resolver).
