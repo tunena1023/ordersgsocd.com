@@ -1049,6 +1049,18 @@
     animation: gsLiveFlash 0.9s ease-out;
     pointer-events: none;
   }
+
+  /* Destello dorado elegante en la tarjeta especifica de una orden
+     nueva (19/09/2026, a peticion del dueno) -- distinto del shimmer
+     de arriba (que avisa "algo cambio en general"), este marca la(s)
+     tarjeta(s) que son nuevas de verdad. Un resplandor suave que
+     crece y se apaga solo, sin parpadear ni brincar. */
+  @keyframes gsNewOrderGlow {
+    0% { box-shadow: 0 0 0 0 rgba(201,168,76,.6); border-color: var(--gold); }
+    55% { box-shadow: 0 0 18px 5px rgba(201,168,76,.32); border-color: var(--gold); }
+    100% { box-shadow: 0 0 0 0 rgba(201,168,76,0); }
+  }
+  .gs-new-order { animation: gsNewOrderGlow 2.6s ease-out; }
 </style>
 </head>
 <body>
@@ -1440,7 +1452,7 @@
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.24/order-form-premium/order-form-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/order-history/order-history.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.10/camera-queue/camera-queue.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.29.0/live-refresh/live-refresh.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.29.1/live-refresh/live-refresh.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.0.0/lightbox/lightbox.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/gallery-groups/gallery-groups.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.26.0/photo-hover-preview/photo-hover-preview.js"></script>
@@ -2683,9 +2695,13 @@ if (client) {
          aparecia en Processing hasta que el usuario refrescara la
          pagina a mano, o hasta el siguiente ciclo del watcher (hasta
          30s despues). Se recarga la lista de una vez -- sin toast ni
-         shimmer aqui (la propia pantalla de confirmacion ya avisa
-         que se creo bien, un segundo aviso encima seria redundante). */
-      loadOrders().catch(() => {});
+         shimmer general aqui (la propia pantalla de confirmacion ya
+         avisa que se creo bien, un segundo aviso encima seria
+         redundante) -- pero SI con el destello dorado en la(s)
+         tarjeta(s) especifica(s) recien creada(s) ("que se vea padre
+         cuando cambia la info", pedido del dueno). */
+      const newOrderIds = result.batchId ? (result.orderIds || []) : [result.orderId || order.OrderID];
+      loadOrders().then(() => newOrderIds.forEach(flashNewOrder)).catch(() => {});
     } catch (err) {
       console.error(err);
       alert('Error submitting order: ' + err.message);
@@ -6196,6 +6212,20 @@ return html;
     document.body.classList.add('gs-live-flash');
     setTimeout(() => document.body.classList.remove('gs-live-flash'), 900);
   }
+  /* IDs que estan en el snapshot nuevo pero NO en el anterior -- son
+     ordenes/lotes nuevos de verdad, no una que solo cambio de status.
+     Solo esas reciben el destello dorado (a peticion del dueno). */
+  function findNewIds(prevSig, newSig) {
+    const ids = [];
+    for (const [id] of newSig) { if (!prevSig.has(id)) ids.push(id); }
+    return ids;
+  }
+  function flashNewOrder(orderId) {
+    const card = document.querySelector('.order-card[data-order="' + CSS.escape(orderId) + '"]');
+    if (!card) return;
+    card.classList.add('gs-new-order');
+    setTimeout(() => card.classList.remove('gs-new-order'), 2700);
+  }
   async function reloadOrdersLive() {
     const openIds = Array.from(document.querySelectorAll('#processing-container .order-card-body.open, #history-container .order-card-body.open'))
       .map(body => body.closest('.order-card') && body.closest('.order-card').dataset.order)
@@ -6216,9 +6246,11 @@ return html;
       return buildOrderActivitySignature(res.orders || []);
     },
     hasChanged: hasNewActivity,
-    onChange: async () => {
+    onChange: async (newSig, prevSig) => {
+      const newIds = findNewIds(prevSig, newSig);
       await reloadOrdersLive();
       flashLiveUpdate();
+      newIds.forEach(flashNewOrder);
       showToast('Updated with the latest info.');
     }
   });
