@@ -278,33 +278,38 @@
   .btn-add-client-photo { width: 100%; background: none; border: 1.5px solid var(--border); color: var(--black); padding: 11px; font-size: 11px; font-family: 'Inter', sans-serif; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; cursor: pointer; }
   .btn-add-client-photo:hover { border-color: var(--gold); }
 
-  /* Camarita por renglon de servicio en "Services Requested" -- mismo
-     estilo exacto que Admin/Tech (svc-row-cam), a peticion del dueno
-     (18/09/2026): la foto se liga al servicio via el nombre del
-     archivo (ver upload-client-service-photo.js), no hay tabla nueva. */
-  /* Camarita por renglon de servicio en "Services Requested" -- mismo
-     estilo exacto que Admin/Tech (svc-row-cam), a peticion del dueno
-     (18/09/2026): la foto se liga al servicio via el nombre del
-     archivo (ver upload-client-service-photo.js), no hay tabla nueva.
+  /* "Services Requested" -- tabla real (<table><thead>) con camarita
+     por servicio (svc-row-cam), a peticion del dueno (18/09/2026): la
+     foto se liga al servicio via el nombre del archivo (ver
+     upload-client-service-photo.js), no hay tabla nueva en SharePoint.
 
-     BUG REAL encontrado por el dueno (captura real de movil): esta
-     seccion era un <table>, y las tablas NO se acomodan bien en
-     pantallas angostas -- cada <td> se queda fijo en su fila, sin
-     poder envolver como un flex-wrap, asi que la columna de la camara
-     terminaba comprimida. Reconstruido como filas flex (svcreq-row),
-     mismo patron ya probado que usa Admin para .svc-row: en movil
-     (max-width:640px) el bloque principal pasa a ocupar toda la fila
-     y el resto (tiempo + camara) baja a su propia linea, en vez de
-     apretarse todos en una sola fila fija. */
-  .svcreq-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
-  .svcreq-main { flex: 1 1 auto; min-width: 0; }
-  .svcreq-cat { display: block; color: var(--gold-dk); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; margin-bottom: 2px; }
-  .svcreq-name { font-size: 13px; }
-  .svcreq-sub { font-size: 12px; margin-top: 2px; }
-  .svcreq-time { flex-shrink: 0; color: #8C6F2A; font-weight: 600; font-size: 12px; white-space: nowrap; }
-  @media (max-width: 640px) {
-    .svcreq-row { flex-wrap: wrap; }
-    .svcreq-main { flex-basis: 100%; }
+     BUG REAL encontrado por el dueno (captura real de movil, 2 vueltas):
+     el primer intento (celda ancho fijo) y el segundo (filas flex con
+     flex-wrap) NO arreglaban el choque de verdad. El dueno senalo la
+     tecnica correcta, ya probada y aprobada en Admin
+     (#panel-developer .staff-table / .sched-table, mismo patron):
+     en escritorio es una <table> normal con <thead>; en movil
+     (<=768px, mismo breakpoint que el resto de la app) se fuerza
+     display:block en tabla/fila/celda (se rompe el layout nativo de
+     tabla a proposito), se esconde el <thead>, cada <tr> se vuelve
+     tarjeta con borde, y cada <td data-label="X"> imprime su propia
+     etiqueta arriba via content:attr(data-label) -- sin nada de JS
+     extra, sin depender de que el padre tenga un ancho definido. */
+  .svcreq-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .svcreq-table td { padding: 8px 0; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .svcreq-table th { padding: 6px 0; text-align: left; border-bottom: 2px solid var(--border); font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--gray); }
+  .svcreq-table tr:last-child td { border-bottom: none; }
+  @media (max-width: 768px) {
+    .svcreq-table, .svcreq-table thead, .svcreq-table tbody,
+    .svcreq-table tr, .svcreq-table td { display: block; width: auto !important; }
+    .svcreq-table thead { display: none; }
+    .svcreq-table tr { border: 1px solid var(--border); border-radius: 6px; margin-bottom: 10px; padding: 12px; background: var(--white); }
+    .svcreq-table tr:last-child { margin-bottom: 0; }
+    .svcreq-table td { border: none; padding: 5px 0; }
+    .svcreq-table td[data-label]:not([data-label=""])::before {
+      content: attr(data-label); display: block; font-size: 10px; text-transform: uppercase;
+      letter-spacing: .05em; color: var(--gray); font-weight: 700; margin-bottom: 2px;
+    }
   }
   .svc-row-cam { flex-shrink: 0; width: 28px; height: 28px; min-width: 28px; min-height: 28px; box-sizing: border-box; border-radius: 6px; border: 1.5px solid var(--border);
     background: var(--white); color: var(--gray); cursor: pointer; display: inline-flex; align-items: center;
@@ -1056,28 +1061,41 @@ if (client) {
                 (s.NotCompletedReason ? ': ' + esc(s.NotCompletedReason) : '') + '</b>' : '';
           const label = svcSubLabel(s);
           const subText = (label ? esc(label) : '') + ncText;
-          svcRows.push({ cat: i === 0 ? cat : '', name: esc(s.ServiceName || ''), sub: (label || nc) ? subText : '', sku: s.SubOption, lvl: s.Level, qty: s.Quantity, catReal: cat, svcNameRaw: s.ServiceName || '' });
+          svcRows.push({ cat: cat, name: esc(s.ServiceName || ''), sub: (label || nc) ? subText : '', sku: s.SubOption, lvl: s.Level, qty: s.Quantity, catReal: cat, svcNameRaw: s.ServiceName || '' });
         });
       });
       const showTime = !!client.showEstimatedTime;
+      /* Tabla real (<table><thead>...) con data-label por columna --
+         mismo patron EXACTO ya probado y aprobado en Admin
+         (#panel-developer .staff-table / .sched-table, ver su CSS: en
+         movil se fuerza display:block en tabla/fila/celda, se esconde
+         el thead, y cada <td data-label="X"> imprime su propia
+         etiqueta arriba via content:attr(data-label) -- asi cada
+         <tr> se convierte en tarjeta sin JS extra. El dueno senalo
+         directo esta tecnica (18/09/2026) en vez del intento anterior
+         con flex-wrap, que no arreglaba el choque real. */
       const svcTableHtml = svcRows.length
-        ? svcRows.map((r, i) => {
+        ? '<table class="svcreq-table"><thead><tr>' +
+          '<th>Category</th><th>Service</th><th>Detail</th>' +
+          (showTime ? '<th>Time</th>' : '') +
+          '<th></th>' +
+          '</tr></thead><tbody>' +
+          svcRows.map(r => {
             const baseMins = showTime ? GSEstimatedTime.svcMinutes(r.sku, r.lvl, serviceTimesCache) : null;
             const mins = baseMins != null ? baseMins * (Number(r.qty) || 1) : null;
             const camBtn = '<button type="button" class="svc-row-cam" title="Add a photo for this service" ' +
               'onclick="startClientServicePhoto(\'' + jsStr(orderId) + '\',\'' + jsStr(r.svcNameRaw) + '\')">' +
               '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>' +
               '</button>';
-            return '<div class="svcreq-row"' + (i < svcRows.length - 1 ? ' style="border-bottom:1px solid var(--border)"' : '') + '>' +
-            '<div class="svcreq-main">' +
-              (r.cat ? '<span class="svcreq-cat">' + r.cat + '</span>' : '') +
-              '<div class="svcreq-name">' + r.name + '</div>' +
-              '<div class="svcreq-sub" style="color:' + (r.sub ? 'var(--black)' : 'var(--gray)') + '">' + (r.sub || '—') + '</div>' +
-            '</div>' +
-            (showTime ? '<span class="svcreq-time">' + (mins != null ? esc(GSEstimatedTime.fmtDuration(mins)) : '') + '</span>' : '') +
-            camBtn +
-            '</div>';
-          }).join('')
+            return '<tr>' +
+            '<td data-label="Category">' + r.cat + '</td>' +
+            '<td data-label="Service">' + r.name + '</td>' +
+            '<td data-label="Detail" style="color:' + (r.sub ? 'var(--black)' : 'var(--gray)') + '">' + (r.sub || '—') + '</td>' +
+            (showTime ? '<td data-label="Time">' + (mins != null ? esc(GSEstimatedTime.fmtDuration(mins)) : '') + '</td>' : '') +
+            '<td data-label="">' + camBtn + '</td>' +
+            '</tr>';
+          }).join('') +
+          '</tbody></table>'
         : '<div style="font-size:12px;padding:10px 0">No services recorded.</div>';
       const svcHeaderHtml =
         '<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">' +
