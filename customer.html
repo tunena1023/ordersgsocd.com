@@ -2676,6 +2676,16 @@ if (client) {
       }
       draftOrderId = null;
       refreshOrdersCount();
+      /* BUG REAL reportado por el dueno (19/09/2026): esto solo
+         actualizaba el contador del sidebar -- ordersCache (lo que
+         de verdad pinta Processing) se quedaba con los datos de
+         cuando se cargo la pagina, asi que la orden recien creada no
+         aparecia en Processing hasta que el usuario refrescara la
+         pagina a mano, o hasta el siguiente ciclo del watcher (hasta
+         30s despues). Se recarga la lista de una vez -- sin toast ni
+         shimmer aqui (la propia pantalla de confirmacion ya avisa
+         que se creo bien, un segundo aviso encima seria redundante). */
+      loadOrders().catch(() => {});
     } catch (err) {
       console.error(err);
       alert('Error submitting order: ' + err.message);
