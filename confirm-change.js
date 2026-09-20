@@ -38,7 +38,7 @@ const {
    este es el otro punto real donde un cambio propuesto (de oficina o
    de un supervisor, reenviado al cliente) se aplica por primera vez:
    cuando el cliente le da Confirm. */
-const { resolveOrderDivision, divisionChangeNotes } = require('gsocd-shared/lib/division-rules');
+const { resolveOrderDivision, divisionChangeHistoryPayload } = require('gsocd-shared/lib/division-rules');
 
 /* Mismo parser que ya usa admin-approve-order.js (lastRequestedSnapshot)
    y gsocd-shared/order-history.js (parseServicesPayload) del lado
@@ -194,6 +194,11 @@ exports.handler = async (event) => {
       const divisionResult = resolveOrderDivision(division, proposed.services, divisionCatalog);
       if (divisionResult) {
         writes.push(updateListItemByItemId(ORDERS_LIST, orderItem.id, { Division: divisionResult.newDivision }));
+        /* BUG REAL arreglado (20/09/2026, ver el comentario completo
+           en admin-update-order.js de Admingsocd.com, misma
+           revision): Notes vacio, el/los servicios que causaron el
+           cambio van en NewValue como payload estructurado --
+           order-history.js v1.35.0+ lo dibuja en el mismo detalle. */
         writes.push(createListItem(ORDER_HISTORY_LIST, {
           Title:        orderId,
           OrderID:      orderId,
@@ -201,9 +206,9 @@ exports.handler = async (event) => {
           FieldChanged: 'Division',
           ChangedBy:    actor,
           ChangeDate:   new Date().toISOString(),
-          Notes:        divisionChangeNotes(divisionResult),
+          Notes:        '',
           OldValue:     divisionResult.previousDivision,
-          NewValue:     divisionResult.newDivision
+          NewValue:     JSON.stringify(divisionChangeHistoryPayload(divisionResult))
         }));
       }
 
