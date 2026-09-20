@@ -433,7 +433,7 @@
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.24/order-form-premium/order-form-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/service-picker/service-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/service-change-panel/service-change-panel.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/order-history/order-history.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.33.0/order-history/order-history.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.10/camera-queue/camera-queue.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.8.0/order-badges/order-badges.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.30.0/order-card-header/order-card-header.js"></script>
@@ -765,6 +765,20 @@ if (client) {
     return false;
   }
 
+  /* El renglon completo (no solo el booleano) -- de aqui se lee el
+     NewValue con la propuesta real (servicios/nivel) para mostrarsela
+     al cliente ANTES de que confirme. Mismo fix que customer.html,
+     20/09/2026. */
+  function pendingConfirmationRow(history) {
+    for (let i = (history || []).length - 1; i >= 0; i--) {
+      const h = history[i];
+      if (String(h.ChangeType || '') === 'Change Requested' && String(h.FieldChanged || '') === 'Client Confirmation') {
+        return h;
+      }
+    }
+    return null;
+  }
+
   /* Una orden que la oficina mando a reactivar (boton "Reactivate" en
      History, del lado admin) tambien llega aqui como Change Requested
      -- pero no es ni un cambio propio del cliente (Undo Request) ni
@@ -1080,8 +1094,17 @@ if (client) {
     try {
            const data = await GS.api('/get-order-detail', { method: 'POST', body: { orderId: orderId, clientId: client.clientId } });
       const o = data.order || {};
-      const services = data.services || [];
       const history = data.history || [];
+      /* Si hay un cambio esperando confirmacion del cliente, mostrar
+         los servicios PROPUESTOS (del snapshot en el historial), no
+         los reales de la orden -- esos siguen siendo los viejos hasta
+         que se confirme. Mismo parser compartido (gsocd-shared/
+         order-history v1.33.0+). */
+      const pendingRow = pendingConfirmationRow(history);
+      const proposedPayload = pendingRow && window.GSOrderHistory && GSOrderHistory.parseServicesPayload
+        ? GSOrderHistory.parseServicesPayload(pendingRow.NewValue) : null;
+      const isPendingProposal = !!(proposedPayload && Array.isArray(proposedPayload.services) && proposedPayload.services.length);
+      const services = isPendingProposal ? proposedPayload.services : (data.services || []);
       const contactsForSummary = await ensureContactsCache();
       await serviceTimesPromise; // no-op si showEstimatedTime esta apagado
 
@@ -1138,9 +1161,10 @@ if (client) {
         : '<div style="font-size:12px;padding:10px 0">No services recorded.</div>';
       const svcHeaderHtml =
         '<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">' +
+        (isPendingProposal ? '<p style="font-size:12px;color:var(--gold-dk);font-weight:600;margin:0;padding:8px 12px;background:rgba(201,168,76,0.12)">This is the proposed change — confirm below to apply it</p>' : '') +
         '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;cursor:pointer;padding:10px 12px;background:var(--off)" ' +
         'onclick="var d=document.getElementById(\'' + svcDetailId + '\');d.style.display=d.style.display===\'none\'?\'block\':\'none\'">' +
-        '<p class="detail-label" style="margin:0">Services Requested</p>' +
+        '<p class="detail-label" style="margin:0">' + (isPendingProposal ? 'Services (Proposed)' : 'Services Requested') + '</p>' +
         '<span style="font-size:10px;color:var(--gold-dk);white-space:nowrap">&#9660; ' + svcRows.length + ' service' + (svcRows.length === 1 ? '' : 's') + '</span>' +
         '</div>' +
         '<div id="' + svcDetailId + '" style="display:none;padding:0 12px">' + svcTableHtml + (showTime ? GSEstimatedTime.boxHtml(services, serviceTimesCache) : '') + '</div>' +

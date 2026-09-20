@@ -1,23 +1,60 @@
 /* ============================================================
    confirm-change.js — el cliente confirma un cambio que la oficina
-   ya aplico y le mando a revisar (boton "Request Confirmation" en
-   Active, del lado admin). Los servicios/fechas ya quedaron
-   guardados en el momento en que la oficina lo mando (ver
-   admin-update-order.js, modo requestOnly + sendToClient); aqui
-   solo se regresa el Status a como estaba antes de la solicitud y
-   se deja constancia en el historial de que el cliente confirmo.
+   le mando a revisar (boton "Request Confirmation" en Active, o
+   "Send to Customer" en Review para una sugerencia de supervisor).
+
+   CAMBIO DE DISEÑO (20/09/2026, confirmado con el dueño): antes este
+   archivo asumia que los servicios/fechas YA estaban aplicados desde
+   que la oficina mando la solicitud, y solo regresaba el Status al
+   que tenia antes. ESO YA NO ES CIERTO -- desde que se unifico el
+   criterio de "nada del lado real se toca hasta que se aprueba"
+   (mismo patron que ya usan Reassign/Reschedule en
+   admin-approve-order.js y submit-supervisor-update.js en
+   tech.gsocd.com), lo que el cliente ve para confirmar es solo un
+   SNAPSHOT en el historial (el renglon 'Client Confirmation') -- los
+   servicios reales de la orden siguen siendo los VIEJOS hasta este
+   momento. Asi que aqui es donde de verdad hay que aplicarlos.
+
+   Tambien el estatus destino cambio: ya no regresa al que tenia antes
+   (eso dejaba la orden en Active sin que nadie la revisara con el
+   cambio ya puesto) -- ahora se manda a 'Received', para que salga
+   "Mark as Seen" en Active y la oficina la revise una vez mas con los
+   datos ya confirmados (y para que tech.gsocd.com tambien vea el
+   cambio real, no solo quedara en el historial).
 
    Contraparte de undo-request.js: esa deshace un cambio restaurando
-   los datos previos; esta acepta el cambio ya aplicado sin tocar
-   servicios ni fechas, solo el estatus.
+   los datos previos SIN aplicar nada; esta aplica el cambio propuesto
+   de verdad y avanza el estatus.
 ============================================================ */
 
 const {
-  ORDERS_LIST, ORDER_HISTORY_LIST,
-  updateListItemByItemId, createListItem,
+  ORDERS_LIST, ORDER_SERVICES_LIST, ORDER_HISTORY_LIST,
+  updateListItemByItemId, createListItem, deleteListItem,
   graphFetch, siteListPath,
   jsonResponse
 } = require('./lib/graph');
+
+/* Mismo parser que ya usa admin-approve-order.js (lastRequestedSnapshot)
+   y gsocd-shared/order-history.js (parseServicesPayload) del lado
+   navegador -- este archivo corre en el servidor, sin acceso a
+   window, asi que se repite aqui igual que ya esta repetido en
+   admin-approve-order.js. */
+function parseServicesPayload(value) {
+  const raw = String(value == null ? '' : value).trim();
+  if (!raw) return null;
+  const body = raw.indexOf('SERVICES:') === 0 ? raw.slice('SERVICES:'.length) : raw;
+  if (body.charAt(0) !== '[' && body.charAt(0) !== '{') return null;
+  try {
+    const obj = JSON.parse(body);
+    if (Array.isArray(obj)) return { services: obj };
+    if (obj && Array.isArray(obj.services)) return obj;
+    return null;
+  } catch (e) { return null; }
+}
+
+function truthy(v) {
+  return v === true || v === 'true' || v === 1 || v === '1';
+}
 
 async function fetchByField(listName, fieldName, value) {
   const filter = encodeURIComponent(`fields/${fieldName} eq '${value}'`);
@@ -29,30 +66,6 @@ async function fetchByField(listName, fieldName, value) {
     url = data['@odata.nextLink'] || null;
   }
   return out;
-}
-
-/* Un OldValue que es un snapshot de servicios ('SERVICES:...') o un JSON
-   de fechas ('{...}') no es un estatus real -- hay que seguir buscando
-   hacia atras. Mismo criterio que usa undo-request.js.
-
-   BUG FIX: tampoco es un estatus real un OldValue que es literalmente
-   el NOMBRE de una solicitud ('Change Requested', 'Cancellation
-   Requested', etc.) -- eso solo dice "aqui empezo una solicitud", no
-   dice a que estatus regresar. Sin esta exclusion, el evento "Change
-   Approved by [Nombre]" (OldValue: 'Change Requested', NewValue:
-   'Assigned') se leia como si 'Change Requested' fuera un estatus
-   valido al que volver, dejando la orden pegada en 'Change Requested'
-   otra vez justo despues de que el cliente ya la habia confirmado --
-   el boton "Confirm" volvia a aparecer en vez de pasar a Edit/Cancel.
-   Mismo criterio que ya usa previousStatus() en admin-approve-order.js. */
-const REQUEST_STATUS_LABELS = ['Change Requested', 'Cancellation Requested', 'Reschedule Requested', 'Change Requested by Client', 'Updated'];
-function looksLikeStatus(v) {
-  const s = String(v == null ? '' : v).trim();
-  if (!s) return false;
-  if (s.indexOf('SERVICES:') === 0) return false;
-  if (s.charAt(0) === '{') return false;
-  if (REQUEST_STATUS_LABELS.indexOf(s) !== -1) return false;
-  return true;
 }
 
 exports.handler = async (event) => {
@@ -115,20 +128,26 @@ exports.handler = async (event) => {
       return jsonResponse(409, { error: 'This request was not sent for your confirmation.' });
     }
 
-    /* Los servicios y fechas ya se guardaron cuando la oficina mando el
-       cambio -- aqui solo se busca a que estatus regresar (el que tenia
-       la orden justo antes de esta solicitud). */
-    let prevStatus = null;
+    /* El renglon 'Client Confirmation' mas reciente trae la propuesta
+       real (servicios/nivel/notas) en su NewValue -- aqui es donde se
+       aplica de verdad, igual que ya hace Reassign/Reschedule del
+       lado admin. */
+    let confirmationRow = null;
     for (let i = history.length - 1; i >= 0; i--) {
-      if (looksLikeStatus(history[i].fields.OldValue)) {
-        prevStatus = String(history[i].fields.OldValue).trim();
+      const h = history[i].fields;
+      if (String(h.ChangeType || '') === 'Change Requested' && String(h.FieldChanged || '') === 'Client Confirmation') {
+        confirmationRow = h;
         break;
       }
     }
-    const newStatus = prevStatus || 'Assigned';
+    const proposed = confirmationRow ? parseServicesPayload(confirmationRow.NewValue) : null;
     const actor = (clientId && String(clientId).trim()) || f.ClientID || '';
+    /* Ya no regresa al estatus previo -- se manda a 'Received' para
+       que salga "Mark as Seen" en Active y la oficina revise el
+       cambio ya confirmado una vez mas. */
+    const newStatus = 'Received';
 
-    await Promise.all([
+    const writes = [
       updateListItemByItemId(ORDERS_LIST, orderItem.id, { Status: newStatus }),
       createListItem(ORDER_HISTORY_LIST, {
         Title:        orderId,
@@ -141,7 +160,48 @@ exports.handler = async (event) => {
         OldValue:     currentStatus,
         NewValue:     newStatus
       })
-    ]);
+    ];
+
+    if (proposed && Array.isArray(proposed.services) && proposed.services.length) {
+      const division = f.Division || '';
+      const svcRows = await fetchByField(ORDER_SERVICES_LIST, 'OrderID', orderId);
+      if (svcRows.length) {
+        writes.push(Promise.all(svcRows.map(r => deleteListItem(ORDER_SERVICES_LIST, r.id))).then(() =>
+          Promise.all(proposed.services.map(s =>
+            createListItem(ORDER_SERVICES_LIST, {
+              Title:              s.ServiceName || '',
+              OrderID:            orderId,
+              Category:           s.Category    || '',
+              ServiceName:        s.ServiceName || '',
+              SubOption:          s.SubOption   || '',
+              Division:           s.Division    || division,
+              Level:              s.Level       || '',
+              NotCompleted:       truthy(s.NotCompleted),
+              NotCompletedReason: truthy(s.NotCompleted) ? (s.NotCompletedReason || '') : ''
+            })
+          ))
+        ));
+      } else {
+        writes.push(Promise.all(proposed.services.map(s =>
+          createListItem(ORDER_SERVICES_LIST, {
+            Title:              s.ServiceName || '',
+            OrderID:            orderId,
+            Category:           s.Category    || '',
+            ServiceName:        s.ServiceName || '',
+            SubOption:          s.SubOption   || '',
+            Division:           s.Division    || division,
+            Level:              s.Level       || '',
+            NotCompleted:       truthy(s.NotCompleted),
+            NotCompletedReason: truthy(s.NotCompleted) ? (s.NotCompletedReason || '') : ''
+          })
+        )));
+      }
+    }
+    if (proposed && proposed.dirtLevel) {
+      writes.push(updateListItemByItemId(ORDERS_LIST, orderItem.id, { DirtLevel: proposed.dirtLevel }));
+    }
+
+    await Promise.all(writes);
 
     return jsonResponse(200, { success: true, status: newStatus });
 
