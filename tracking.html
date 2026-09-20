@@ -1563,23 +1563,14 @@ if (client) {
       return Object.assign(step, { resultStage: stage, isRegression: isRegression, isMilestone: isMilestone });
     });
 
-    /* CORREGIDO (18/09/2026, ver customer.html para el detalle
-       completo): la version anterior protegia solo el primer punto
-       ('Created') -- cualquier OTRO evento que si avanzo la orden de
-       verdad se perdia si el siguiente evento neutral caia en la
-       misma etapa por casualidad. Ahora solo se colapsan 2 eventos
-       NEUTRALES seguidos entre si -- un evento que de verdad movio el
-       icono (isMilestone, en cualquier direccion) nunca se pierde. */
-    const merged = [];
-    stepsWithStage.forEach(step => {
-      const last = merged[merged.length - 1];
-      if (last && !last.isMilestone && !step.isMilestone && last.resultStage === step.resultStage) {
-        merged[merged.length - 1] = step;
-        return;
-      }
-      merged.push(step);
-    });
-    return merged;
+    /* CAMBIO DE DISEÑO (20/09/2026, ver customer.html para el detalle
+       completo, confirmado con el dueño): ya NO se colapsan eventos
+       neutrales seguidos -- el tracker debe llevar un punto por CADA
+       paso real del historial, igual que la tabla "Change History"
+       del PDF. El triangulo solo avanza en los que de verdad mueven la
+       etapa, pero un evento neutral sigue siendo su propio punto,
+       nunca desaparece. */
+    return stepsWithStage;
   }
 
   /* Uno por orden -- si la pantalla llega a mostrar varias tarjetas
