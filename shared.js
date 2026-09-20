@@ -36,7 +36,12 @@ const GS = {
     const res = await fetch('/api' + path, {
       method: opts.method || 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined
+      body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+      /* Opcional -- solo lo pasan las llamadas que necesitan poder
+         cancelar una peticion en vuelo (ver saveDraft() en
+         customer.html, 20/09/2026). Si nadie lo manda, undefined no
+         cambia el comportamiento de fetch de toda la vida. */
+      signal: opts.signal
     });
     let data = {};
     try { data = await res.json(); } catch (e) { /* body no-JSON */ }
