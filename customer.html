@@ -5211,43 +5211,23 @@ if (client) {
       return Object.assign(step, { resultStage: stage, isRegression: isRegression, isMilestone: isMilestone });
     });
 
-    /* BUG REAL encontrado y arreglado (18/09/2026, reportado por el
-       dueño): las 3 fusiones de arriba (events2/events2b/events3) solo
-       cubren 3 combinaciones puntuales que ya sabiamos que se
-       duplicaban por como escribe el backend. Cualquier OTRA secuencia
-       de eventos "neutrales" seguidos (Change Requested seguido de
-       Change Rejected, dos Services Updated seguidos, etc.) igual
-       generaba un punto nuevo por cada evento -- con el MISMO
-       resultStage que el punto anterior, mostrando el mismo triangulo
-       repetido varias veces seguidas. Regla general en vez de ir
-       parchando combinacion por combinacion: si dos pasos consecutivos
-       terminan en la MISMA etapa (ninguno de los dos avanzo ni
-       retrocedio la orden de verdad), se colapsan en uno solo -- se
-       queda el mas reciente, que es el que de verdad importa ver.
-
-       CORREGIDO el mismo dia, antes de desplegar: la primera version
-       de esta regla protegia solo el primer punto ('Created') --
-       cualquier OTRO evento que si avanzo la orden de verdad (Order
-       Assigned, Materials Ready, etc.) se perdia si el siguiente
-       evento neutral caia en la misma etapa por casualidad (ej.
-       'Order Assigned' seguido de 'Reschedule Requested', los 2 en
-       etapa 2 -- se borraba 'Order Assigned', un momento real que el
-       cliente si necesita ver). Ahora solo se colapsan 2 eventos
-       NEUTRALES seguidos entre si (isMilestone false en ambos) -- un
-       evento que de verdad movio el icono (isMilestone true, en
-       cualquier direccion) nunca se pierde, sin importar que evento
-       neutral le siga despues. Confirmado con el dueño simulando el
-       ciclo completo de una orden real antes de subir esto. */
-    const merged = [];
-    stepsWithStage.forEach(step => {
-      const last = merged[merged.length - 1];
-      if (last && !last.isMilestone && !step.isMilestone && last.resultStage === step.resultStage) {
-        merged[merged.length - 1] = step;
-        return;
-      }
-      merged.push(step);
-    });
-    return merged;
+    /* CAMBIO DE DISEÑO (20/09/2026, confirmado con el dueño, revierte
+       la regla del 18/09/2026 de aqui abajo): antes, dos eventos
+       "neutrales" seguidos (ninguno de los dos avanza ni retrocede la
+       etapa -- Services Updated, Order Details Set, Change Requested,
+       etc.) se colapsaban en uno solo, quedandose nomas con el mas
+       reciente -- el evento viejo desaparecia del tracker por
+       completo, no solo se quedaba "quieto" visualmente. El dueño
+       aclaro que el tracker debe llevar un punto por CADA paso real
+       del historial, igual que la tabla "Change History" del PDF --
+       el triangulo (icono) solo avanza en los que de verdad mueven la
+       etapa, pero un evento que no avanza la etapa sigue siendo un
+       punto propio en la fila, nunca se pierde. Por eso ya NO se
+       colapsa aqui -- stepsWithStage se regresa tal cual, uno por cada
+       evento (despues de las 3 fusiones de arriba, que son legitimas:
+       esas juntan renglones que el backend escribe por separado para
+       UNA SOLA accion real, no eventos distintos). */
+    return stepsWithStage;
   }
 
   /* Uno por orden -- si la pantalla llega a mostrar varias tarjetas
