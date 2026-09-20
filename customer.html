@@ -1585,6 +1585,25 @@ if (client) {
   let draftOrderId = null;
   let draftPendingData = null;
   let saveTimer = null;
+  /* BUG REAL encontrado y arreglado (20/09/2026, reportado por el
+     dueño): el draft autoguardado se quedaba huerfano DESPUES de
+     mandar la orden. clearTimeout(saveTimer) en submitOrder() solo
+     cancela el temporizador si TODAVIA no disparo -- si el guardado
+     de los ultimos 3 segundos ya salio (fetch en vuelo) justo cuando
+     el cliente le dio Submit, sigue corriendo en paralelo. Ademas,
+     save-draft.js NUNCA busca por el OrderID que le mandan -- busca
+     "el draft que este cliente ya tenga para esta division" -- asi
+     que si esa peticion en vuelo responde DESPUES de que submit-order.js
+     ya borro los renglones del draft, no encuentra nada, entra al
+     camino de "no existe" y crea uno NUEVO, sin que nada del lado del
+     cliente sepa que existe (draftOrderId ya se puso en null tras el
+     envio exitoso) -- se queda huerfano para siempre en "Unfinished
+     Drafts". orderSubmitted + draftSaveAbort (ver submitOrder() y
+     saveDraft()) cierran las 2 ventanas de la carrera: cualquier
+     guardado que dispare despues de dar Submit se descarta solo, y el
+     que ya estaba en vuelo se cancela de verdad. */
+  let orderSubmitted = false;
+  let draftSaveAbort = null;
   let multiUnitsOn = false;
   let unitCardCounter = 0;
 
@@ -2199,6 +2218,7 @@ if (client) {
 
   async function saveDraft() {
     saveTimer = null;
+    if (orderSubmitted) return;
     const snap = formSnapshot();
     if (!snapshotHasContent(snap)) return;
 
@@ -2228,11 +2248,15 @@ if (client) {
       payload.OrderID = draftOrderId;
     }
 
+    const controller = new AbortController();
+    draftSaveAbort = controller;
     try {
       const res = await GS.api('/save-draft', {
         method: 'POST',
-        body: payload
+        body: payload,
+        signal: controller.signal
       });
+      if (orderSubmitted) return; /* la orden se mando mientras esta peticion seguia en vuelo -- ignorar la respuesta */
       /* Apenas nos responde el servidor con el éxito, guardamos el orderId que generó (o actualizó) */
       if (res.orderId) {
         draftOrderId = res.orderId;
@@ -2247,8 +2271,10 @@ if (client) {
          la lista apenas el guardado responde exito, para que aparezca
          de inmediato sin tener que recargar toda la pagina. */
       loadOrders();
-    } catch (e) { 
-      console.error('Draft save failed:', e); 
+    } catch (e) {
+      if (e.name !== 'AbortError') console.error('Draft save failed:', e);
+    } finally {
+      if (draftSaveAbort === controller) draftSaveAbort = null;
     }
   }
 
@@ -2550,7 +2576,10 @@ if (client) {
        autoguardado se ejecuta SOLO despues de que la orden ya se creo
        de verdad, generando un draft huerfano (con un ID temporal que
        nadie mas conoce) que se queda para siempre. Se cancela aqui,
-       justo al entrar, antes de cualquier otra cosa. */
+       justo al entrar, antes de cualquier otra cosa. La otra mitad de
+       este fix (peticion de guardado que ya salio, no solo el
+       temporizador) esta justo antes del envio real, mas abajo -- ver
+       el comentario junto a orderSubmitted/draftSaveAbort. */
     clearTimeout(saveTimer);
 
     const svcCount = Object.values(selected).reduce((n, o) => n + Object.keys(o).length, 0);
@@ -2640,6 +2669,16 @@ if (client) {
     const originalText = btn.textContent;
     btn.disabled = true; btn.textContent = editOrderId ? 'Saving…' : 'Submitting…';
 
+    /* Ya pasaron todas las validaciones -- de aqui para adelante la
+       orden SI se va a mandar. Se activa orderSubmitted (para que un
+       guardado en vuelo que responda tarde se ignore solo) y se
+       cancela de verdad con AbortController el que ya haya salido.
+       Se resetea en el catch de abajo si el envio de verdad falla --
+       ahi la orden NO se creo, el cliente puede seguir editando y el
+       autoguardado debe seguir protegiendo su trabajo. */
+    orderSubmitted = true;
+    if (draftSaveAbort) { draftSaveAbort.abort(); draftSaveAbort = null; }
+
     try {
       const result = await GS.api('/submit-order', { method: 'POST', body: order });
       if (editOrderId) {
@@ -2663,6 +2702,7 @@ if (client) {
       draftOrderId = null;
       refreshOrdersCount();
     } catch (err) {
+      orderSubmitted = false; /* el envio fallo -- la orden no se creo, el autoguardado debe seguir protegiendo el trabajo */
       console.error(err);
       alert('Error submitting order: ' + err.message);
     } finally {
