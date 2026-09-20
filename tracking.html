@@ -1899,7 +1899,7 @@ return html;
         if (act === 'undo') undoRequest(o.OrderID);
         if (act === 'confirm-change') confirmChange(o.OrderID);
         if (act === 'confirm-reactivation') confirmReactivation(o.OrderID);
-        if (act === 'print') openOrderDocument(o.OrderID);
+        if (act === 'print') openOrderDocument(o.OrderID, o.Status === 'Completed' ? 'completion' : undefined);
         if (act === 'printhist') printOrder(o.OrderID);
         if (act === 'notifications') toggleNotifPanel(o);
       });
@@ -2312,8 +2312,10 @@ return html;
   /* ===== PDF guardado de la orden =====
      Nunca se genera aqui: se abre el archivo que ya vive en SharePoint,
      idéntico al que el cliente recibió por correo. */
-  function openOrderDocument(orderId) {
-    window.open('/api/get-order-document?orderId=' + encodeURIComponent(orderId), '_blank');
+  function openOrderDocument(orderId, kind) {
+    const url = '/api/get-order-document?orderId=' + encodeURIComponent(orderId)
+      + (kind ? '&kind=' + encodeURIComponent(kind) : '');
+    window.open(url, '_blank');
   }
 
   /* ===== Print PDF (History) — CONECTADO al botón de las Completed.
