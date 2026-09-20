@@ -6,7 +6,16 @@
    revision). Si no existe, la orden no ha sido aprobada y se
    responde 404 para que el front deshabilite el boton.
 
+   Con ?kind=completion sirve ese documento en su lugar (mismo
+   mecanismo, distinto patron de archivo) -- sin kind, el
+   comportamiento de siempre (el documento oficial de la orden).
+   A peticion del dueño (19/09/2026): antes este endpoint SIEMPRE
+   servia el documento base, aunque la orden ya estuviera Completed --
+   el cliente veia un documento distinto al que ve el staff en Admin
+   para esa misma orden (que si abre el de completion, con fotos).
+
    GET /api/get-order-document?orderId=GS-6062-1010
+   GET /api/get-order-document?orderId=GS-6062-1010&kind=completion
 ============================================================ */
 const {
   ORDERS_LIST, graphFetch, siteListPath, downloadById, jsonResponse
@@ -14,6 +23,7 @@ const {
 const { latestOrderPdf } = require('./lib/orderpdf');
 
 const MAX_BYTES = 4.5 * 1024 * 1024;
+const ALLOWED_KINDS = ['completion'];
 
 async function findOrder(orderId) {
   const filter = encodeURIComponent(`fields/OrderID eq '${orderId}'`);
@@ -29,16 +39,20 @@ exports.handler = async (event) => {
   }
   const p = event.queryStringParameters || {};
   const orderId = String(p.orderId || '').trim();
+  const kindParam = String(p.kind || '').trim();
+  const kind = ALLOWED_KINDS.includes(kindParam) ? kindParam : undefined;
   if (!orderId) return jsonResponse(400, { error: 'orderId is required' });
 
   try {
     const order = await findOrder(orderId);
     if (!order) return jsonResponse(404, { error: 'Order not found.' });
 
-    const found = await latestOrderPdf(Object.assign({}, order, { OrderID: orderId }));
+    const found = await latestOrderPdf(Object.assign({}, order, { OrderID: orderId }), kind);
     if (!found) {
       return jsonResponse(404, {
-        error: 'No document available yet. It is created once the order is approved.'
+        error: kind === 'completion'
+          ? 'No completion document available yet.'
+          : 'No document available yet. It is created once the order is approved.'
       });
     }
 
