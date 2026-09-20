@@ -5557,11 +5557,14 @@ if (client) {
       html += `<button class="btn-action" data-act="change">Request Change</button>`;
       if (reachedAssignment) html += `<button class="btn-action danger" data-act="cancel">Cancel Request</button>`;
     }
-    /* El PDF es el documento GUARDADO de la orden, el mismo que llega por
-       correo. Existe desde que la oficina aprueba la orden, no solo al
-       terminarla; antes de eso el boton se ve pero no se puede usar. */
-    if (storedDoc) {
-      html += `<button class="btn-action" data-act="print" title="Open ${escAttr(storedDoc.name || '')}">Print PDF</button>`;
+    /* A peticion del dueño (19/09/2026): el boton se habilita desde que
+       la orden ya se asigno (reachedAssignment) -- ya NO depende de que
+       exista un archivo guardado en ese momento. get-order-document.js
+       ahora genera uno sobre la marcha si hace falta (no existe, o la
+       orden cambio despues del ultimo guardado), asi que "no hay
+       archivo todavia" ya no es razon para deshabilitar el boton. */
+    if (reachedAssignment) {
+      html += `<button class="btn-action" data-act="print" title="${storedDoc ? 'Open ' + escAttr(storedDoc.name || '') : 'Open the order document'}">Print PDF</button>`;
     } else {
       html += `<span class="print-wrap"><button class="btn-action" data-act="print" disabled
         title="Available once the order is approved">Print PDF</button>
