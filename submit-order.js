@@ -461,9 +461,18 @@ exports.handler = async (event) => {
         (it.fields.ChangeType === 'Change Requested' || it.fields.ChangeType === 'Cancellation Requested')
       ).length;
 
-      /* Servicios nuevos que el cliente seleccionó */
+      /* Servicios nuevos que el cliente seleccionó.
+         BUG REAL arreglado (20/09/2026, reportado por el dueño): este
+         .map() le quitaba Level y Quantity al servicio, aunque
+         resolveServices() (linea de arriba) ya los traia bien
+         calculados -- un servicio de cantidad (Renovations) que el
+         cliente agregaba/editaba desde "Edit Order" se guardaba en el
+         snapshot de la solicitud SIN su cantidad, perdida para
+         siempre en cuanto se aplicara de verdad (admin-approve-
+         order.js, Reassign/Reschedule). */
       const newServices = resolveServices(b.Services, b.Division).map(s => ({
-        Category: s.Category, ServiceName: s.ServiceName, SubOption: s.SubOption, Division: s.Division
+        Category: s.Category, ServiceName: s.ServiceName, SubOption: s.SubOption, Division: s.Division,
+        Level: s.Level || '', Quantity: s.Quantity || ''
       }));
 
       await createListItem(ORDER_HISTORY_LIST, {
