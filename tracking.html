@@ -433,14 +433,14 @@
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.24/order-form-premium/order-form-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/service-picker/service-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/service-change-panel/service-change-panel.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.35.0/order-history/order-history.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.36.0/order-history/order-history.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.10/camera-queue/camera-queue.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.8.0/order-badges/order-badges.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.30.0/order-card-header/order-card-header.js"></script>
 <!-- Pendiente: gsocd-shared tagea TODO el repo junto (no por componente), y ya va
      en v1.11.0 -- el siguiente tag real seria v1.12.0. Este componente todavia
      solo vive en local, sin subir ni tagear; ajustar el numero cuando se suba. -->
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.15.0/order-tracker/order-tracker.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.36.0/order-tracker/order-tracker.js"></script>
 <!-- Pendiente: gsocd-shared va en v1.15.0, el siguiente tag real seria v1.16.0
      (componente nuevo, todavia solo vive en local). Ajustar cuando se suba. -->
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/estimated-time/estimated-time.js"></script>
@@ -1452,6 +1452,16 @@ if (client) {
   const S_STAGE = 5;             // Completada
   const TRIANGLE_MAX_STAGE = 4;  // Material listo -- el triangulo llega al 100% aqui
 
+  /* A peticion del dueño (20/09/2026, con captura real): al hacer
+     clic en un paso del tracker, el detalle de abajo solo decia
+     "fecha - quien" -- no lo que de verdad paso en ese paso (servicio
+     agregado/quitado, cambio de tiempo estimado), aunque esa misma
+     informacion ya se calcula y se ve en History para el mismo
+     renglon. Se reusa GSOrderHistory.detailLines(h, catalog) (publico
+     desde v1.36.0) -- MISMAS lineas, no una version aparte. catalog
+     es serviceTimesCache (ya cargado mas arriba) solo si
+     showEstimatedTime esta prendido para este cliente -- igual que ya
+     hace el resto del archivo con el tiempo estimado. */
   function stepFrom(h) {
     const meta = STEP_META[h.ChangeType] || { label: h.ChangeType || 'Update', stage: h.ChangeType || 'Update' };
     const who = h.ChangedBy ? ' — ' + esc(h.ChangedBy) : '';
@@ -1459,6 +1469,7 @@ if (client) {
       label: meta.label,
       stage: meta.stage,
       detail: fmtDate(h.ChangeDate) + who,
+      detailLines: window.GSOrderHistory ? GSOrderHistory.detailLines(h, client.showEstimatedTime ? serviceTimesCache : null) : [],
       changeType: h.ChangeType || ''
     };
   }
