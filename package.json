@@ -5,6 +5,6 @@
   "dependencies": {
     "xlsx": "0.18.5",
     "heic-convert": "2.1.0",
-    "gsocd-shared": "github:tunena1023/gsocd-shared#v1.34.0"
+    "gsocd-shared": "github:tunena1023/gsocd-shared#v1.35.0"
   }
 }
