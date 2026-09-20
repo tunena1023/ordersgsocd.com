@@ -428,6 +428,7 @@
 
 <script src="shared.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.6/nav-premium/nav-premium.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@1d6b9bec7abf230d470a015aeb3f662e46286fb6/print-button/print-button.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/date-time-picker/date-time-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.24/order-form-premium/order-form-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/service-picker/service-picker.js"></script>
@@ -1875,17 +1876,12 @@ if (client) {
       html += `<button class="btn-action" data-act="change">Request Change</button>`;
       if (reachedAssignment) html += `<button class="btn-action danger" data-act="cancel">Cancel Request</button>`;
     }
-    /* A peticion del dueño (19/09/2026): el boton se habilita desde que
-       la orden ya se asigno (reachedAssignment) -- ya NO depende de que
-       exista un archivo guardado en ese momento (get-order-document.js
-       genera uno sobre la marcha si hace falta). */
-    if (reachedAssignment) {
-      html += `<button class="btn-action" data-act="print" title="${storedDoc ? 'Open ' + escAttr(storedDoc.name || '') : 'Open the order document'}">Print PDF</button>`;
-    } else {
-      html += `<span class="print-wrap"><button class="btn-action" data-act="print" disabled
-        title="Available once the order is approved">Print PDF</button>
-        <span class="print-hint">Available once the order is approved</span></span>`;
-    }
+    /* A peticion del dueño (19/09/2026, "eso debe ser una funcion en
+       shared para que todos impriman igual"): GSPrintButton
+       (gsocd-shared), no logica propia -- mismas reglas que Admin. */
+    html += window.GSPrintButton
+      ? GSPrintButton.html(o, { label: 'Print PDF', className: 'btn-action', storedDoc: storedDoc })
+      : '<button class="btn-action" disabled>Print PDF</button>';
     html += `<button class="btn-action" data-act="notifications">Notifications</button>`;
 return html;
   }
