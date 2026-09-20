@@ -10,18 +10,6 @@ const {
   jsonResponse
 } = require('./lib/graph');
 
-/* BUG REAL encontrado y arreglado (20/09/2026, ver el comentario
-   completo en confirm-change.js, misma revision): borrar un renglon
-   de servicio que ya no existe tiraba 'Item not found' y tumbaba todo
-   el undo por un solo renglon que de por si ya no estaba. */
-async function deleteListItemIfExists(listName, itemId) {
-  try {
-    await deleteListItem(listName, itemId);
-  } catch (e) {
-    if (!/item not found/i.test(e.message || '')) throw e;
-  }
-}
-
 async function fetchByField(listName, fieldName, value) {
   const filter = encodeURIComponent(`fields/${fieldName} eq '${value}'`);
   let url = siteListPath(listName) + `?$expand=fields&$top=200&$filter=${filter}`;
@@ -109,7 +97,7 @@ exports.handler = async (event) => {
 
         /* Borrar servicios actuales */
         const svcRows = await fetchByField(ORDER_SERVICES_LIST, 'OrderID', orderId);
-        await Promise.all(svcRows.map(row => deleteListItemIfExists(ORDER_SERVICES_LIST, row.id)));
+        await Promise.all(svcRows.map(row => deleteListItem(ORDER_SERVICES_LIST, row.id)));
 
         /* Recrear servicios del snapshot + actualizar DirtLevel en paralelo */
         const patch = {};

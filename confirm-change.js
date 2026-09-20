@@ -77,19 +77,6 @@ async function fetchServicesCatalogForDivisionCheck() {
   return out.filter(it => it.fields).map(it => ({ sku: it.fields.SKU || '', division: it.fields.Division || '' }));
 }
 
-/* BUG REAL encontrado y arreglado (20/09/2026, reportado por el
-   dueño con una orden real): borrar un renglon de servicio que ya no
-   existe (ej. de un guardado anterior que fallo a medias) tiraba
-   'Item not found' y tumbaba toda la confirmacion por un solo
-   renglon que de por si ya no estaba. */
-async function deleteListItemIfExists(listName, itemId) {
-  try {
-    await deleteListItem(listName, itemId);
-  } catch (e) {
-    if (!/item not found/i.test(e.message || '')) throw e;
-  }
-}
-
 async function fetchByField(listName, fieldName, value) {
   const filter = encodeURIComponent(`fields/${fieldName} eq '${value}'`);
   let url = siteListPath(listName) + `?$expand=fields&$top=200&$filter=${filter}`;
@@ -227,7 +214,7 @@ exports.handler = async (event) => {
 
       const svcRows = await fetchByField(ORDER_SERVICES_LIST, 'OrderID', orderId);
       if (svcRows.length) {
-        writes.push(Promise.all(svcRows.map(r => deleteListItemIfExists(ORDER_SERVICES_LIST, r.id))).then(() =>
+        writes.push(Promise.all(svcRows.map(r => deleteListItem(ORDER_SERVICES_LIST, r.id))).then(() =>
           Promise.all(proposed.services.map(s =>
             createListItem(ORDER_SERVICES_LIST, {
               Title:              s.ServiceName || '',
