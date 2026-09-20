@@ -433,7 +433,7 @@
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.24/order-form-premium/order-form-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/service-picker/service-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/service-change-panel/service-change-panel.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.37.0/order-history/order-history.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.38.0/order-history/order-history.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.10/camera-queue/camera-queue.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.8.0/order-badges/order-badges.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.30.0/order-card-header/order-card-header.js"></script>
@@ -1465,11 +1465,20 @@ if (client) {
   function stepFrom(h) {
     const meta = STEP_META[h.ChangeType] || { label: h.ChangeType || 'Update', stage: h.ChangeType || 'Update' };
     const who = h.ChangedBy ? ' — ' + esc(h.ChangedBy) : '';
+    /* _mergedRows (ver events4 arriba): cuando 2 renglones crudos se
+       fusionaron en un solo paso, se calcula el detalle de los 2 y se
+       juntan -- mismo patron que ya usa order-history.js para sus
+       propios grupos (g.rows.reduce(...)). */
+    const rows = h._mergedRows || [h];
+    const catalogForDetail = client.showEstimatedTime ? serviceTimesCache : null;
+    const detailLines = window.GSOrderHistory
+      ? rows.reduce((acc, row) => acc.concat(GSOrderHistory.detailLines(row, catalogForDetail)), [])
+      : [];
     return {
       label: meta.label,
       stage: meta.stage,
       detail: fmtDate(h.ChangeDate) + who,
-      detailLines: window.GSOrderHistory ? GSOrderHistory.detailLines(h, client.showEstimatedTime ? serviceTimesCache : null) : [],
+      detailLines: detailLines,
       changeType: h.ChangeType || ''
     };
   }
@@ -1548,7 +1557,38 @@ if (client) {
       events3.push(h);
     });
 
-    if (!events3.length) {
+    /* A peticion del dueño (20/09/2026, con captura real): 'Expected
+       Ready Date' y 'Materials Ready' son 2 llamadas separadas al
+       backend (fecha y hora se escogen por separado en el picker),
+       pero para el cliente es una sola accion -- deben salir como UN
+       SOLO paso del tracker, no 2 iconos aparte. Mismo criterio que
+       order-history.js (mergeMaterialsReadyWithDate, gsocd-shared
+       v1.37.0), aqui repetido porque el tracker arma sus pasos por su
+       cuenta, no via GSOrderHistory. A diferencia de los merges de
+       arriba (que solo se quedan con el ultimo renglon, perdiendo el
+       otro), aqui se guardan LOS 2 renglones crudos en _mergedRows
+       para que stepFrom() calcule el detalle de ambos junto, no solo
+       del que se quedo como representante. */
+    const events4 = [];
+    events3.forEach(h => {
+      const last = events4[events4.length - 1];
+      const type = String(h.ChangeType || '');
+      const lastType = last && String(last.ChangeType || '');
+      const isPair = (type === 'Materials Ready' && lastType === 'Expected Ready Date') ||
+        (type === 'Expected Ready Date' && lastType === 'Materials Ready');
+      const sameActor = last && String(last.ChangedBy || '') === String(h.ChangedBy || '');
+      const closeInTime = last &&
+        Math.abs(new Date(h.ChangeDate) - new Date(last.ChangeDate)) < GROUP_WINDOW_MS;
+      if (isPair && sameActor && closeInTime) {
+        const mergedRows = (last._mergedRows || [last]).concat(h);
+        const rep = type === 'Materials Ready' ? h : (lastType === 'Materials Ready' ? last : h);
+        events4[events4.length - 1] = Object.assign({}, rep, { _mergedRows: mergedRows });
+        return;
+      }
+      events4.push(h);
+    });
+
+    if (!events4.length) {
       return [{ label: 'Received', stage: 'Order received', detail: fmtDateTime(o.createdDateTime), resultStage: 1, isRegression: false }];
     }
 
@@ -1556,7 +1596,7 @@ if (client) {
        -- resultStage de cada paso es la etapa en la que quedo la orden
        DESPUES de ese evento especifico, no un conteo que solo sube. */
     let stage = 0;
-    const stepsWithStage = events3.map(h => {
+    const stepsWithStage = events4.map(h => {
       const step = stepFrom(h);
       const advanceTo = STAGE_ADVANCE[step.changeType];
       const regressTo = STAGE_REGRESS[step.changeType];

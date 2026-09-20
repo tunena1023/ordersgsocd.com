@@ -53,13 +53,22 @@ exports.handler = async (event) => {
 
     await Promise.all([
       updateListItemByItemId(ORDERS_LIST, orderItem.id, { ExpectedReadyDate: expectedReadyDate }),
+      /* BUG REAL arreglado (20/09/2026, reportado por el dueño con
+         captura real): antes Notes traia la oracion completa, que se
+         veia como texto suelto en el historial, feo comparado con el
+         resto (que usa cajas con icono). Ahora NewValue trae la
+         fecha real -- order-history.js v1.38.0+ la formatea bonito
+         (📅 Ready date: ...) en la misma caja expandible que ya usa
+         todo lo demas. Notes vacio a proposito (ya no hace falta,
+         toda la info vive en NewValue). */
       createListItem(ORDER_HISTORY_LIST, {
         Title: orderId + '-readydate',
         OrderID: orderId,
         ChangeType: 'Expected Ready Date',
         ChangedBy: clientId,
         ChangeDate: new Date().toISOString(),
-        Notes: expectedReadyDate ? ('Expected ready date set to ' + expectedReadyDate + '.') : 'Expected ready date cleared.'
+        Notes: '',
+        NewValue: expectedReadyDate
       })
     ]);
 
