@@ -4303,9 +4303,8 @@ if (client) {
     const body = headerEl.nextElementSibling;
     const context = body.closest('#processing-container') ? 'processing' : 'history';
     const st = cardOpenState(context);
-    if (st.pinned[groupOrderId]) return;
-    if (body.classList.contains('open')) { body.classList.remove('open'); if (st.open === groupOrderId) st.open = null; return; }
-    closeOtherCards(context, groupOrderId);
+    if (body.classList.contains('open')) { body.classList.remove('open'); if (st.open === groupOrderId) st.open = null; delete st.pinned[groupOrderId]; return; }
+    if (!st.pinned[groupOrderId]) closeOtherCards(context, groupOrderId);
     body.classList.add('open');
     st.open = groupOrderId;
   }
@@ -4589,16 +4588,36 @@ if (client) {
      ahora vienen de GSOrderBadges (gsocd-shared) -- una sola pieza
      compartida entre Admin/Tech/Orders. */
 
+  /* Fecha de la orden (Entry/Due/Created) -- lo que orderSummaryLine()
+     no cubre el header compartido (Division/Unit/bd-ba SI los cubre
+     GSOrderCardHeader, asi que ya no se repiten aqui). */
+  function orderDateLine(o) {
+    const parts = [];
+    if (o.EntryDate) parts.push('Entry ' + fmtDate(o.EntryDate));
+    if (o.DueDate) parts.push('Due ' + fmtDate(o.DueDate));
+    if (o.createdDateTime) parts.push('Created ' + fmtDateTime(o.createdDateTime));
+    return parts.join(' · ');
+  }
+
   function renderActiveCard(o) {
     const status = displayStatus(o);
     return `
       <div class="order-card" data-order="${escAttr(o.OrderID)}">
         <div class="order-card-header" onclick="expandOrder(this, '${escAttr(o.OrderID)}')" ondblclick="pinOrder(this,'${escAttr(o.OrderID)}','processing')">
           <div>
-            <div class="order-num">Order #${esc(o.OrderID || '')}${GSOrderBadges.occupied(o)}${GSOrderBadges.officeNeed(o)}<span class="order-pin"></span></div>
-            <div class="order-date">${orderSummaryLine(o)}</div>
+            ${GSOrderCardHeader.html({
+              name: o.OrderID,
+              orderId: o.OrderID,
+              division: o.Division,
+              unitNumber: o.UnitNumber,
+              bedrooms: o.Bedrooms,
+              bathrooms: o.Bathrooms,
+              extraLine: orderDateLine(o)
+            })}
           </div>
-          <div style="display:flex;align-items:center;gap:16px">
+          <div style="display:flex;align-items:center;gap:16px;flex-shrink:0">
+            ${GSOrderBadges.occupied(o)}${GSOrderBadges.officeNeed(o)}
+            <span class="order-pin"></span>
             <span class="order-status ${statusClass(status)}">${esc(status)}</span>
             <span style="font-size:11px;color:var(--gray)">▼</span>
           </div>
@@ -4613,10 +4632,20 @@ if (client) {
       <div class="order-card" data-order="${escAttr(o.OrderID)}">
         <div class="order-card-header" onclick="expandOrder(this, '${escAttr(o.OrderID)}')" ondblclick="pinOrder(this,'${escAttr(o.OrderID)}','history')">
           <div>
-            <div class="order-num">Order #${esc(o.OrderID || '')}${GSOrderBadges.occupied(o)}${GSOrderBadges.officeNeed(o)}<span class="order-pin"></span></div>
-            <div class="order-date">${orderSummaryLine(o)}</div>
+            ${GSOrderCardHeader.html({
+              name: o.OrderID,
+              orderId: o.OrderID,
+              division: o.Division,
+              unitNumber: o.UnitNumber,
+              bedrooms: o.Bedrooms,
+              bathrooms: o.Bathrooms,
+              completedDateText: o.CompletedDate ? fmtDate(o.CompletedDate) : '',
+              extraLine: orderDateLine(o)
+            })}
           </div>
-          <div style="display:flex;align-items:center;gap:16px">
+          <div style="display:flex;align-items:center;gap:16px;flex-shrink:0">
+            ${GSOrderBadges.occupied(o)}${GSOrderBadges.officeNeed(o)}
+            <span class="order-pin"></span>
             <span class="order-status ${statusClass(status)}">${esc(status)}</span>
             <span style="font-size:11px;color:var(--gray)">▼</span>
           </div>
@@ -4657,14 +4686,26 @@ if (client) {
       '</p>';
   }
 
+  /* Mismo fix (19/09/2026, reportado por el dueño en Admin -- mismo
+     patron aqui): un clic sencillo siempre puede cerrar (y desfijar)
+     la que este abierta, en vez de ignorarse por completo si estaba
+     fijada con doble clic. */
   async function expandOrder(headerEl, orderId) {
     const body = headerEl.nextElementSibling;
     const context = body.closest('#processing-container') ? 'processing' : 'history';
     const st = cardOpenState(context);
-    if (st.pinned[orderId]) return; // fijada: solo el doble clic la mueve
 
-    if (body.classList.contains('open')) { body.classList.remove('open'); if (st.open === orderId) st.open = null; return; }
-    closeOtherCards(context, orderId);
+    if (body.classList.contains('open')) {
+      body.classList.remove('open');
+      if (st.open === orderId) st.open = null;
+      if (st.pinned[orderId]) {
+        delete st.pinned[orderId];
+        const pinEl = headerEl.querySelector('.order-pin');
+        if (pinEl) pinEl.innerHTML = '';
+      }
+      return;
+    }
+    if (!st.pinned[orderId]) closeOtherCards(context, orderId);
     body.classList.add('open');
     st.open = orderId;
 
@@ -6057,14 +6098,18 @@ return html;
     const body = el.nextElementSibling;
     const context = body.closest('#processing-container') ? 'processing' : 'history';
     const st = cardOpenState(context);
-    if (st.pinned[orderId]) return; // fijada: solo el doble clic la mueve
     const isOpen = body.classList.contains('open');
     if (isOpen) {
       body.classList.remove('open');
       if (st.open === orderId) st.open = null;
+      if (st.pinned[orderId]) {
+        delete st.pinned[orderId];
+        const pinEl = el.querySelector('.order-pin');
+        if (pinEl) pinEl.innerHTML = '';
+      }
       return;
     }
-    closeOtherCards(context, orderId);
+    if (!st.pinned[orderId]) closeOtherCards(context, orderId);
     body.classList.add('open');
     st.open = orderId;
   };
