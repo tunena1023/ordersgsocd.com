@@ -1422,6 +1422,7 @@
      (componente nuevo, todavia solo vive en local). Ajustar cuando se suba. -->
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/estimated-time/estimated-time.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.6/nav-premium/nav-premium.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.32.0/print-button/print-button.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.24/order-form-premium/order-form-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/order-history/order-history.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.10/camera-queue/camera-queue.js"></script>
@@ -5557,19 +5558,16 @@ if (client) {
       html += `<button class="btn-action" data-act="change">Request Change</button>`;
       if (reachedAssignment) html += `<button class="btn-action danger" data-act="cancel">Cancel Request</button>`;
     }
-    /* A peticion del dueño (19/09/2026): el boton se habilita desde que
-       la orden ya se asigno (reachedAssignment) -- ya NO depende de que
-       exista un archivo guardado en ese momento. get-order-document.js
-       ahora genera uno sobre la marcha si hace falta (no existe, o la
-       orden cambio despues del ultimo guardado), asi que "no hay
-       archivo todavia" ya no es razon para deshabilitar el boton. */
-    if (reachedAssignment) {
-      html += `<button class="btn-action" data-act="print" title="${storedDoc ? 'Open ' + escAttr(storedDoc.name || '') : 'Open the order document'}">Print PDF</button>`;
-    } else {
-      html += `<span class="print-wrap"><button class="btn-action" data-act="print" disabled
-        title="Available once the order is approved">Print PDF</button>
-        <span class="print-hint">Available once the order is approved</span></span>`;
-    }
+    /* A peticion del dueño (19/09/2026, "eso debe ser una funcion en
+       shared para que todos impriman igual" -- Admin y Orders tenian
+       cada quien su propia copia de esta logica, arreglar la regla en
+       un lado se le olvido al otro): ya no se arma a mano aqui, se usa
+       GSPrintButton (gsocd-shared) -- mismo boton, mismas reglas, en
+       los 2 portales. Trae su propio onclick resuelto, no depende de
+       data-act/bindActions. */
+    html += window.GSPrintButton
+      ? GSPrintButton.html(o, { label: 'Print PDF', className: 'btn-action', storedDoc: storedDoc })
+      : '<button class="btn-action" disabled>Print PDF</button>';
     html += `<button class="btn-action" data-act="notifications">Notifications</button>`;
 return html;
   }
