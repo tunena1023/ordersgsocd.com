@@ -151,6 +151,8 @@ exports.handler = async (event) => {
         date: f.EntryDate || f.DispatchDate || f.createdDateTime || '',
         bedrooms: f.Bedrooms || '',
         bathrooms: f.Bathrooms || '',
+        unitNumber: f.UnitNumber || '',
+        completedDate: f.CompletedDate || '',
         photos: photos.map(p => {
           const info = captions[p.name];
           return {
