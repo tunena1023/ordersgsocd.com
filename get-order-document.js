@@ -1,40 +1,40 @@
 /* ============================================================
-   get-order-document.js — entrega la version MAS RECIENTE del PDF
-   de una orden.
+   get-order-document.js — genera y entrega SIEMPRE la version mas
+   reciente del PDF de una orden.
 
-   A peticion del dueño (19/09/2026: "el boton de Print debe imprimir
-   la version mas reciente de la orden -- si la orden cambio desde
-   que se genero el primer documento, se genera uno nuevo, y esas son
-   las revisiones") -- este endpoint regenera sobre la marcha (lo
-   guarda igual que siempre, con la revision que le toque, y lo sirve
-   de inmediato) en 2 casos:
-     1. No existe ningun documento guardado todavia.
-     2. Si existe uno, pero la orden se modifico DESPUES de que ese
-        archivo se creo (compara lastModifiedDateTime del renglon de
-        la orden contra la fecha de creacion del PDF) -- ese PDF ya
-        quedo desactualizado.
-   Fuera de esos 2 casos, sirve el archivo ya guardado tal cual.
+   A peticion del dueño (19/09/2026: "si el PDF que existe es
+   igualito, se toma el existente -- pero si hay una sola linea de
+   informacion que el PDF que existe NO tenga, se hace uno nuevo").
+   Se intento primero comparar por fecha (lastModifiedDateTime de la
+   orden contra la fecha de creacion del PDF guardado), pero eso solo
+   detecta si la ORDEN cambio -- no detecta cuando el FORMATO del
+   documento cambia (ej. un dia como hoy, con un monton de cambios al
+   PDF mientras ninguna orden en si se toco): el PDF viejo se seguia
+   sirviendo, incompleto, sin que nada lo detectara.
 
-   Con ?kind=completion aplica lo mismo para ese documento en su
-   lugar. Mismo mecanismo que Admingsocd.com/get-order-document.js --
-   antes este endpoint SIEMPRE servia (o de plano nunca generaba)
-   sin importar el estatus ni que tan viejo estuviera el archivo, asi
-   que el cliente podia ver un documento distinto (o desactualizado)
-   contra el que ve el staff en Admin para esa misma orden.
+   Por eso este endpoint ya NO intenta detectar "cambio o no cambio"
+   -- siempre pide los datos frescos y genera un documento nuevo (lo
+   guarda con la revision que le toque, igual que siempre) en cada
+   peticion. Mismo mecanismo que Admingsocd.com/get-order-document.js
+   -- antes este endpoint SIEMPRE servia lo ya guardado, asi que el
+   cliente podia ver un documento distinto (o desactualizado) contra
+   el que ve el staff en Admin para esa misma orden.
+
+   Con ?kind=completion genera ese documento en su lugar (mismo
+   mecanismo, distinto patron de archivo).
 
    GET /api/get-order-document?orderId=GS-6062-1010
    GET /api/get-order-document?orderId=GS-6062-1010&kind=completion
 ============================================================ */
 const {
   ORDERS_LIST, ORDER_SERVICES_LIST, ORDER_HISTORY_LIST,
-  graphFetch, siteListPath, downloadById, jsonResponse
+  graphFetch, siteListPath, jsonResponse
 } = require('./lib/graph');
 const {
-  latestOrderPdf, generateAndSaveOrderPdf, generateAndSaveCompletionPdf,
+  generateAndSaveOrderPdf, generateAndSaveCompletionPdf,
   fetchOrderPhotoBuffers
 } = require('./lib/orderpdf');
 
-const MAX_BYTES = 4.5 * 1024 * 1024;
 const ALLOWED_KINDS = ['completion'];
 
 async function findOrder(orderId) {
@@ -42,8 +42,7 @@ async function findOrder(orderId) {
   const url = siteListPath(ORDERS_LIST) + `?$expand=fields&$top=5&$filter=${filter}`;
   const data = await graphFetch(url);
   const item = (data.value || []).find(it => it.fields);
-  if (!item) return null;
-  return Object.assign({}, item.fields, { _lastModified: item.lastModifiedDateTime || '' });
+  return item ? item.fields : null;
 }
 
 async function fetchByField(listName, fieldName, value) {
@@ -73,32 +72,6 @@ exports.handler = async (event) => {
     if (!order) return jsonResponse(404, { error: 'Order not found.' });
 
     const merged = Object.assign({}, order, { OrderID: orderId });
-    let found = await latestOrderPdf(merged, kind);
-
-    if (found && order._lastModified && found.createdDateTime) {
-      const orderModified = new Date(order._lastModified).getTime();
-      const pdfCreated = new Date(found.createdDateTime).getTime();
-      if (!isNaN(orderModified) && !isNaN(pdfCreated) && orderModified > pdfCreated) {
-        found = null;
-      }
-    }
-
-    if (found) {
-      const buffer = await downloadById(found.id);
-      if (!buffer || buffer.length > MAX_BYTES) {
-        return jsonResponse(413, { error: 'The document is too large to be served.' });
-      }
-      return {
-        statusCode: 200,
-        headers: {
-          'Content-Type': 'application/pdf',
-          'Content-Disposition': 'inline; filename="' + found.name + '"',
-          'Cache-Control': 'no-store'
-        },
-        body: buffer.toString('base64'),
-        isBase64Encoded: true
-      };
-    }
 
     let result;
     if (kind === 'completion') {
