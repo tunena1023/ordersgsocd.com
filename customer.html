@@ -1424,14 +1424,14 @@
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.6/nav-premium/nav-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.32.0/print-button/print-button.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.24/order-form-premium/order-form-premium.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.38.0/order-history/order-history.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.41.0/order-history/order-history.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.10/camera-queue/camera-queue.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.0.0/lightbox/lightbox.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.30.0/order-card-header/order-card-header.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.31.0/gallery-groups/gallery-groups.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.26.0/photo-hover-preview/photo-hover-preview.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.8.0/order-badges/order-badges.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.36.0/order-tracker/order-tracker.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.40.0/order-tracker/order-tracker.js"></script>
 <script>
 const client = GS.requireSession();
 if (client) {
@@ -5273,7 +5273,7 @@ if (client) {
        -- resultStage de cada paso es la etapa en la que quedo la orden
        DESPUES de ese evento especifico, no un conteo que solo sube. */
     let stage = 0;
-    const stepsWithStage = events4.map(h => {
+    const stepsWithStage = events4.reduce((acc, h) => {
       const step = stepFrom(h);
       const advanceTo = STAGE_ADVANCE[step.changeType];
       const regressTo = STAGE_REGRESS[step.changeType];
@@ -5287,9 +5287,22 @@ if (client) {
         isRegression = true;
         isMilestone = true;
       }
+      /* Mismo criterio que tracking.html, misma revision (20/09/2026,
+         con captura real): 'Order Approved' avanza la etapa pero no
+         crea su propio punto -- se le pega el avance al punto
+         anterior (Assigned, que si trae datos reales). Ver el
+         comentario grande en tracking.html para el detalle completo
+         de por que no aplica ventana de tiempo aqui. */
+      if (step.changeType === 'Order Approved' && acc.length) {
+        const prev = acc[acc.length - 1];
+        prev.resultStage = stage;
+        prev.isMilestone = prev.isMilestone || isMilestone;
+        return acc;
+      }
       // neutral (ninguno de los dos, o un avance que ya se habia alcanzado antes): stage sin cambio
-      return Object.assign(step, { resultStage: stage, isRegression: isRegression, isMilestone: isMilestone });
-    });
+      acc.push(Object.assign(step, { resultStage: stage, isRegression: isRegression, isMilestone: isMilestone }));
+      return acc;
+    }, []);
 
     /* CAMBIO DE DISEÑO (20/09/2026, confirmado con el dueño, revierte
        la regla del 18/09/2026 de aqui abajo): antes, dos eventos
