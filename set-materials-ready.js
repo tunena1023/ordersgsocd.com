@@ -77,7 +77,13 @@ exports.handler = async (event) => {
     const now = new Date().toISOString();
 
     if (materialsReady) {
-      const notes = 'Ready for entry at ' + entryTime + '.';
+      /* BUG REAL arreglado (20/09/2026, reportado por el dueño con
+         captura real): antes Notes traia la oracion completa, texto
+         suelto y feo comparado con el resto del historial (cajas con
+         icono). Ahora NewValue trae la hora real -- order-history.js
+         v1.38.0+ la formatea bonito (🕐 Ready for entry at: ...) en
+         la misma caja expandible que ya usa todo lo demas. Notes
+         vacio a proposito. */
       const orderPatch = { MaterialsReady: true, MaterialsReadySeen: false, EntryTime: entryTime };
 
       if (!wasReady) {
@@ -90,7 +96,8 @@ exports.handler = async (event) => {
             ChangeType: 'Materials Ready',
             ChangedBy: clientId,
             ChangeDate: now,
-            Notes: notes
+            Notes: '',
+            NewValue: entryTime
           })
         ]);
       } else {
@@ -108,7 +115,7 @@ exports.handler = async (event) => {
 
         const tasks = [updateListItemByItemId(ORDERS_LIST, orderItem.id, orderPatch)];
         if (latestReady) {
-          tasks.push(updateListItemByItemId(ORDER_HISTORY_LIST, latestReady.id, { Notes: notes, ChangeDate: now }));
+          tasks.push(updateListItemByItemId(ORDER_HISTORY_LIST, latestReady.id, { Notes: '', NewValue: entryTime, ChangeDate: now }));
         } else {
           tasks.push(createListItem(ORDER_HISTORY_LIST, {
             Title: orderId + '-ready',
@@ -116,7 +123,8 @@ exports.handler = async (event) => {
             ChangeType: 'Materials Ready',
             ChangedBy: clientId,
             ChangeDate: now,
-            Notes: notes
+            Notes: '',
+            NewValue: entryTime
           }));
         }
         await Promise.all(tasks);
