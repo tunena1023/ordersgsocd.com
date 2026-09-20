@@ -1424,7 +1424,7 @@
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.6/nav-premium/nav-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.32.0/print-button/print-button.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.24/order-form-premium/order-form-premium.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.42.0/order-history/order-history.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.43.0/order-history/order-history.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.10/camera-queue/camera-queue.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.0.0/lightbox/lightbox.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.30.0/order-card-header/order-card-header.js"></script>
@@ -2750,7 +2750,13 @@ if (client) {
     Object.entries(selected).forEach(([propType, svcs]) => {
       Object.entries(svcs).forEach(([svc, sku]) => {
         const lvl = svcLevel[svcKey(propType, svc)];
-        lines.push({ category: propType, name: svc, sub: lvl || '' });
+        /* BUG REAL arreglado (20/09/2026, reportado por el dueño):
+           esto solo leia svcLevel -- un servicio de cantidad
+           (Renovations, sin nivel) se veia sin nada en su columna de
+           sub-opcion en la pantalla de confirmacion, justo despues de
+           mandar la orden. */
+        const qty = svcQty[svcKey(propType, svc)];
+        lines.push({ category: propType, name: svc, sub: lvl || (qty ? 'Qty: ' + qty : '') });
       });
     });
     $('confirm-summary').innerHTML =
@@ -3243,7 +3249,7 @@ if (client) {
     if (!services || !services.length) return '<p class="empty-note" style="padding:0 0 14px">No services in this template.</p>';
     return services.map(s =>
       `<div class="tpl-svc-row"><span><span class="tpl-svc-cat">${esc(s.Category || '')}</span> — ${esc(s.ServiceName || '')}</span>` +
-      `<span class="tpl-svc-sub">${esc(s.Level || s.SubOption || '')}</span></div>`
+      `<span class="tpl-svc-sub">${esc(svcSubLabel(s))}</span></div>`
     ).join('');
   }
 
@@ -4548,10 +4554,15 @@ if (client) {
       if (!byCat[cat]) { byCat[cat] = []; catOrder.push(cat); }
       byCat[cat].push(s);
     });
+    /* BUG REAL arreglado (20/09/2026, reportado por el dueño): antes
+       juntaba SubOption+Level tal cual -- para el catalogo nuevo
+       (basado en SKU) eso mostraba el SKU crudo directo al cliente, y
+       nunca mostraba Quantity para nada. Mismo helper svcSubLabel que
+       ya usa el resto del archivo. */
     const rows = [];
     catOrder.forEach(cat => {
       byCat[cat].forEach((s, i) => {
-        const sub = [s.SubOption, s.Level].filter(Boolean).join(' · ');
+        const sub = svcSubLabel(s);
         rows.push({ cat: i === 0 ? cat : '', name: esc(s.ServiceName || ''), sub: sub ? esc(sub) : '' });
       });
     });

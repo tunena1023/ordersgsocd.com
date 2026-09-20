@@ -272,6 +272,19 @@ if (client) {
       </div>`).join('');
   }
 
+  /* BUG REAL arreglado (20/09/2026, reportado por el dueño): esto
+     mostraba el SKU crudo del catalogo nuevo (ej. "109-12") cuando el
+     servicio no tenia nivel -- el caso normal para servicios de
+     cantidad (Renovations). Un SKU nunca debe verse del lado del
+     cliente. Mismo helper exacto que ya usan customer.html/
+     tracking.html (isSkuFormat/svcSubLabel) -- este archivo no lo
+     tenia, se agrega igual. */
+  function isSkuFormat(sub) { return /^\d{3}-\d+$/.test(String(sub || '')); }
+  function svcSubLabel(s) {
+    if (isSkuFormat(s.SubOption)) return s.Level || (s.Quantity ? 'Qty: ' + s.Quantity : '');
+    return s.SubOption || '';
+  }
+
   /* Lista de solo lectura de lo que trae el template -- mismo criterio
      visual que "Services Requested" en las ordenes reales, agrupado
      por categoria. */
@@ -279,7 +292,7 @@ if (client) {
     if (!services || !services.length) return '<p class="empty-note" style="padding:0 0 14px">No services in this template.</p>';
     return services.map(s =>
       `<div class="tpl-svc-row"><span><span class="tpl-svc-cat">${esc(s.Category || '')}</span> — ${esc(s.ServiceName || '')}</span>` +
-      `<span class="tpl-svc-sub">${esc(s.Level || s.SubOption || '')}</span></div>`
+      `<span class="tpl-svc-sub">${esc(svcSubLabel(s))}</span></div>`
     ).join('');
   }
 

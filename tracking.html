@@ -433,7 +433,7 @@
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.24/order-form-premium/order-form-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/service-picker/service-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/service-change-panel/service-change-panel.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.42.0/order-history/order-history.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.43.0/order-history/order-history.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.10/camera-queue/camera-queue.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.8.0/order-badges/order-badges.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.30.0/order-card-header/order-card-header.js"></script>
@@ -855,10 +855,13 @@ if (client) {
       if (!byCat[cat]) { byCat[cat] = []; catOrder.push(cat); }
       byCat[cat].push(s);
     });
+    /* BUG REAL arreglado (20/09/2026, ver el comentario completo en
+       customer.html, misma revision): fuga de SKU crudo + nunca
+       mostraba Quantity. */
     const rows = [];
     catOrder.forEach(cat => {
       byCat[cat].forEach((s, i) => {
-        const sub = [s.SubOption, s.Level].filter(Boolean).join(' · ');
+        const sub = svcSubLabel(s);
         rows.push({ cat: i === 0 ? cat : '', name: esc(s.ServiceName || ''), sub: sub ? esc(sub) : '' });
       });
     });
