@@ -159,7 +159,11 @@ exports.handler = async (event) => {
       MaterialsReady: f.MaterialsReady === true || f.MaterialsReady === 'true',
       MaterialsReadySeen: f.MaterialsReadySeen === undefined ? true : (f.MaterialsReadySeen === true || f.MaterialsReadySeen === 'true'),
       EntryTime: f.EntryTime || '',
-      UnitOccupied: f.UnitOccupied === true || f.UnitOccupied === 'true'
+      UnitOccupied: f.UnitOccupied === true || f.UnitOccupied === 'true',
+      /* "Assign by service" -- loadForEdit() en customer.html la
+         necesita para decidir si dejar editar una orden que ya no
+         esta en Received (mismo criterio real que Admingsocd.com). */
+      AssignByService: f.AssignByService === true || f.AssignByService === 'true'
     };
 
     const services = svcRows

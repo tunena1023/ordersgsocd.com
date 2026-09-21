@@ -2470,7 +2470,15 @@ if (client) {
     try {
             const data = await GS.api('/get-order-detail', { method: 'POST', body: { orderId: orderId, clientId: client.clientId } });
       const o = data.order;
-        if (!o || (o.Status || 'Received') !== 'Received') {
+      /* "Assign by service" (21/09/2026, confirmado con el dueño):
+         una orden asi sigue editable por el cliente aunque ya haya
+         dejado 'Received' -- el chiste de este modelo es que sigue
+         evolucionando servicio por servicio durante toda su vida, no
+         solo antes de que se toque la primera vez. Cualquier otra
+         orden se queda con la regla de siempre (solo mientras sigue
+         en Received). */
+      const isAssignByService = o && (o.AssignByService === true || o.AssignByService === 'true');
+      if (!o || (!isAssignByService && (o.Status || 'Received') !== 'Received')) {
         alert('This order can no longer be edited directly.');
         location.href = 'tracking.html';
         return;

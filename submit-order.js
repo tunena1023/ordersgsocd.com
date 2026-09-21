@@ -8,7 +8,7 @@
 ============================================================ */
 
 const {
-  ORDERS_LIST, ORDER_SERVICES_LIST, ORDER_HISTORY_LIST, DRAFTS_LIST, CLIENT_ADDRESSES_LIST,
+  ORDERS_LIST, ORDER_SERVICES_LIST, ORDER_HISTORY_LIST, DRAFTS_LIST, CLIENT_ADDRESSES_LIST, SERVICE_ASSIGNMENTS_LIST,
   createListItem, updateListItemByItemId, deleteListItem,
   graphFetch, siteListPath, geocodeAddress,
   jsonResponse
@@ -36,12 +36,19 @@ async function fetchAllOrderIds() {
   return out;
 }
 
-async function fetchByOrderId(listName, orderId) {
+/* honorNonIndexed (opcional): ServiceAssignments (lista nueva de
+   "Assign by service") no tiene su columna OrderID indexada todavia
+   en SharePoint -- mismo arreglo puente ya usado en Admingsocd.com
+   (get-order-detail.js, etc.), el header que el propio error de
+   Graph sugiere. Las demas listas (ya indexadas de antes) no lo
+   necesitan y no se les pasa. */
+async function fetchByOrderId(listName, orderId, honorNonIndexed) {
   const filter = encodeURIComponent(`fields/OrderID eq '${orderId}'`);
   let url = siteListPath(listName) + `?$expand=fields&$top=200&$filter=${filter}`;
   const out = [];
+  const opts = honorNonIndexed ? { headers: { Prefer: 'HonorNonIndexedQueriesWarningMayFailRandomly' } } : {};
   while (url) {
-    const data = await graphFetch(url);
+    const data = await graphFetch(url, opts);
     out.push(...(data.value || []));
     url = data['@odata.nextLink'] || null;
   }
@@ -432,7 +439,11 @@ exports.handler = async (event) => {
         OrderID:   orderItem.fields.OrderID || orderItem.fields.Title || '',
         Status:    orderItem.fields.Status  || 'Pending',
         DirtLevel: orderItem.fields.DirtLevel || '',
-        Division:  orderItem.fields.Division || ''
+        Division:  orderItem.fields.Division || '',
+        /* "Assign by service" -- decide si el edit de aqui abajo
+           compara servicio por servicio (ver mas abajo) o en bloque
+           (comportamiento de siempre, sin tocar). */
+        AssignByService: orderItem.fields.AssignByService === true || orderItem.fields.AssignByService === 'true'
       };
 
       /* BUG REAL encontrado y arreglado (20/09/2026, reportado por el
@@ -494,6 +505,118 @@ exports.handler = async (event) => {
           OldValue:   JSON.stringify({ services: staleSnapshot }),
           NewValue:   JSON.stringify({ services: parsedServices })
         });
+
+        return jsonResponse(200, { success: true, orderId: existing.OrderID });
+      }
+
+      /* "Assign by service" (21/09/2026, confirmado con el dueño):
+         para estas ordenes, el edit NUNCA compara la lista de
+         servicios en bloque (eso mandaria TODO a Review de un jalon,
+         sin decir cual servicio especifico cambio, y sin poder
+         Approve un agregado trivial mientras algo mas se reasigna).
+         Se compara servicio por servicio (par Category+ServiceName,
+         mismo criterio que el resto del sistema) contra lo que ya
+         habia -- cada servicio que de verdad cambio se vuelve su
+         PROPIA solicitud pendiente en Review, resuelta una por una
+         (confirmado con el dueño: nunca agrupadas). */
+      if (existing.AssignByService) {
+        const keyOf = s => (s.Category || '') + '|' + (s.ServiceName || '');
+        const oldSvcs = stale.map(it => ({
+          Category: it.fields.Category || '', ServiceName: it.fields.ServiceName || '',
+          SubOption: it.fields.SubOption || '', Division: it.fields.Division || existing.Division,
+          Level: it.fields.Level || '', Quantity: it.fields.Quantity || '',
+          NotCompleted: it.fields.NotCompleted === true || it.fields.NotCompleted === 'true'
+        }));
+        const newSvcs = resolveServices(b.Services, b.Division);
+        const oldMap = {}; oldSvcs.forEach(s => { oldMap[keyOf(s)] = s; });
+        const newMap = {}; newSvcs.forEach(s => { newMap[keyOf(s)] = s; });
+
+        /* Un servicio YA Completed nunca se puede pedir quitar --
+           confirmado desde el mini ("solo se pueden borrar los que
+           no estan completados"). Si el cliente lo quito de su
+           seleccion de todos modos, se ignora en silencio -- se
+           queda como esta, no se genera ninguna solicitud por el.
+           completedKeys/scheduledKeys tambien deciden si un cambio de
+           Level/Quantity/SubOption necesita pasar por Review o no --
+           ver comentario junto a 'Modify' abajo. */
+        const assignmentRows = await fetchByOrderId(SERVICE_ASSIGNMENTS_LIST, requestedId, true);
+        const completedKeys = new Set(assignmentRows
+          .filter(it => it.fields && it.fields.WorkStatus === 'Completed')
+          .map(it => (it.fields.Category || '') + '|' + (it.fields.ServiceName || '')));
+        const scheduledKeys = new Set(assignmentRows
+          .filter(it => it.fields && it.fields.AssignedTo && it.fields.ScheduledDate)
+          .map(it => (it.fields.Category || '') + '|' + (it.fields.ServiceName || '')));
+
+        /* Servicios que cambiaron de Level/Quantity/SubOption pero
+           TODAVIA no tienen gente+fecha -- nada que proteger, se
+           aplican DIRECTO (igual que un servicio nuevo agregado antes
+           de tocar Scheduling), no generan una solicitud pendiente.
+           Confirmado con el dueño: el picker de reasignar en Review
+           solo aplica cuando el servicio YA esta programado. */
+        const directLevelChanges = [];
+        const changes = [];
+        newSvcs.forEach(s => {
+          const k = keyOf(s);
+          if (!oldMap[k]) {
+            changes.push({ subType: 'Add', category: s.Category, serviceName: s.ServiceName, newValue: s });
+          } else {
+            const o = oldMap[k];
+            const differs = (o.Level || '') !== (s.Level || '') || (o.Quantity || '') !== (s.Quantity || '') || (o.SubOption || '') !== (s.SubOption || '');
+            if (differs && scheduledKeys.has(k)) {
+              changes.push({ subType: 'Modify', category: s.Category, serviceName: s.ServiceName, newValue: { old: o, new: s } });
+            } else if (differs) {
+              directLevelChanges.push(s);
+            }
+          }
+        });
+        oldSvcs.forEach(o => {
+          const k = keyOf(o);
+          if (newMap[k] || o.NotCompleted) return; // sigue seleccionado, o ya estaba quitado de antes -- nada que pedir
+          if (completedKeys.has(k)) return; // no se puede pedir quitar algo completado
+          changes.push({ subType: 'Remove', category: o.Category, serviceName: o.ServiceName, newValue: o });
+        });
+
+        /* Cambios de Level/Quantity/SubOption sobre un servicio
+           TODAVIA no programado -- se aplican directo, actualizando
+           SOLO ese renglon real de OrderServices (no se toca ningun
+           otro -- a diferencia del edit de toda-la-orden, que borra y
+           vuelve a crear todos, aqui NO aplica: eso pisaria el estado
+           NotCompleted/etc. de servicios que no tienen nada que ver
+           con este cambio). */
+        if (directLevelChanges.length) {
+          await Promise.all(directLevelChanges.map(s => {
+            const row = stale.find(it => (it.fields.Category || '') === (s.Category || '') && (it.fields.ServiceName || '') === (s.ServiceName || ''));
+            if (!row) return Promise.resolve();
+            return updateListItemByItemId(ORDER_SERVICES_LIST, row.id, {
+              SubOption: s.SubOption, Level: s.Level || '', Quantity: numOrNull(s.Quantity)
+            });
+          }));
+          await createListItem(ORDER_HISTORY_LIST, {
+            Title:      existing.OrderID + '-svc-direct-' + Date.now(),
+            OrderID:    existing.OrderID,
+            ChangeType: 'Services Updated',
+            ChangedBy:  b.ClientID,
+            ChangeDate: new Date().toISOString(),
+            Notes:      '',
+            NewValue:   JSON.stringify({ services: directLevelChanges })
+          });
+        }
+
+        if (!changes.length) {
+          return jsonResponse(200, { success: true, orderId: existing.OrderID, noChanges: !directLevelChanges.length });
+        }
+
+        await updateListItemByItemId(ORDERS_LIST, existing.itemId, { Status: 'Change Requested' });
+        await Promise.all(changes.map((c, i) => createListItem(ORDER_HISTORY_LIST, {
+          Title:      existing.OrderID + '-svc-change-' + Date.now() + '-' + i,
+          OrderID:    existing.OrderID,
+          ChangeType: 'Service Change Requested',
+          FieldChanged: c.subType, // 'Add' | 'Modify' | 'Remove'
+          ChangedBy:  b.ClientID,
+          ChangeDate: new Date().toISOString(),
+          Notes:      '',
+          NewValue:   JSON.stringify({ category: c.category, serviceName: c.serviceName, detail: c.newValue })
+        })));
 
         return jsonResponse(200, { success: true, orderId: existing.OrderID });
       }
