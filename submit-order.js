@@ -435,6 +435,69 @@ exports.handler = async (event) => {
         Division:  orderItem.fields.Division || ''
       };
 
+      /* BUG REAL encontrado y arreglado (20/09/2026, reportado por el
+         dueño con una orden real): "Edit Order" SOLO se puede usar
+         cuando la orden sigue en 'Received' -- loadForEdit() en
+         customer.html ya lo garantiza (si no, ni deja cargarla para
+         editar). Pero el codigo de aqui abajo mandaba la orden a
+         'Change Requested' de todos modos, sin importar eso -- una
+         orden que JAMAS se habia tocado (sin supervisor, sin fecha,
+         sin nada asignado) terminaba en el tab Review de Admin, que
+         solo ofrece Reassign/Reschedule -- ninguno de los dos tiene
+         sentido para algo que nunca se asigno. Si de plano se le daba
+         clic a la unica opcion disponible, quedaba un evento
+         "Assigned" en el historial sin ningun dato real de asignacion
+         detras.
+
+         Si la orden sigue en 'Received', no hay nada que proteger --
+         el cambio se aplica DIRECTO (mismo criterio que antes del
+         "CAMBIO DE DISENO" de mas abajo, pero sin el problema que ese
+         cambio arreglaba: ahi si aplicaba a CUALQUIER estatus, incluso
+         ordenes ya asignadas). Sigue quedando un registro real en el
+         historial de que el cliente hizo el cambio -- solo que ya no
+         manda la orden a Review. */
+      if (existing.Status === 'Received') {
+        await updateListItemByItemId(ORDERS_LIST, existing.itemId, orderFields);
+
+        const parsedServices = resolveServices(b.Services, b.Division);
+        if (stale.length) {
+          await Promise.all(stale.map(it => deleteListItem(ORDER_SERVICES_LIST, it.id)));
+        }
+        await Promise.all(parsedServices.map(s =>
+          createListItem(ORDER_SERVICES_LIST, {
+            Title:       s.ServiceName || '',
+            OrderID:     existing.OrderID,
+            Category:    s.Category,
+            ServiceName: s.ServiceName,
+            SubOption:   s.SubOption,
+            Division:    s.Division,
+            Level:       s.Level || '',
+            Quantity:    numOrNull(s.Quantity)
+          })
+        ));
+
+        const staleSnapshot = stale.map(it => ({
+          Category:    it.fields.Category    || '',
+          ServiceName: it.fields.ServiceName || '',
+          SubOption:   it.fields.SubOption   || '',
+          Division:    it.fields.Division    || existing.Division,
+          Level:       it.fields.Level       || '',
+          Quantity:    it.fields.Quantity    || ''
+        }));
+        await createListItem(ORDER_HISTORY_LIST, {
+          Title:      existing.OrderID + '-edit-' + Date.now(),
+          OrderID:    existing.OrderID,
+          ChangeType: 'Services Updated',
+          ChangedBy:  b.ClientID,
+          ChangeDate: new Date().toISOString(),
+          Notes:      '',
+          OldValue:   JSON.stringify({ services: staleSnapshot }),
+          NewValue:   JSON.stringify({ services: parsedServices })
+        });
+
+        return jsonResponse(200, { success: true, orderId: existing.OrderID });
+      }
+
       const newStatus = b.Status || 'Pending';
 
       const snapshot = 'SERVICES:' + JSON.stringify({
