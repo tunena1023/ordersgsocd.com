@@ -6,17 +6,21 @@
 ============================================================ */
 
 const {
-  ORDERS_LIST, ORDER_SERVICES_LIST, ORDER_HISTORY_LIST, DRAFTS_LIST,
+  ORDERS_LIST, ORDER_SERVICES_LIST, ORDER_HISTORY_LIST, DRAFTS_LIST, SERVICE_ASSIGNMENTS_LIST,
   graphFetch, siteListPath, jsonResponse
 } = require('./lib/graph');
 const { latestOrderPdf } = require('./lib/orderpdf');
 
-async function fetchByField(listName, fieldName, value) {
+/* honorNonIndexed (opcional): ServiceAssignments no tiene su columna
+   OrderID indexada todavia en SharePoint -- mismo arreglo puente ya
+   usado en Admingsocd.com/submit-order.js para esto. */
+async function fetchByField(listName, fieldName, value, honorNonIndexed) {
   const filter = encodeURIComponent(`fields/${fieldName} eq '${value}'`);
   let url = siteListPath(listName) + `?$expand=fields&$top=200&$filter=${filter}`;
   const out = [];
+  const opts = honorNonIndexed ? { headers: { Prefer: 'HonorNonIndexedQueriesWarningMayFailRandomly' } } : {};
   while (url) {
-    const data = await graphFetch(url);
+    const data = await graphFetch(url, opts);
     out.push(...(data.value || []));
     url = data['@odata.nextLink'] || null;
   }
@@ -204,6 +208,22 @@ exports.handler = async (event) => {
         NewValue:   it.fields.NewValue   || ''
       }));
 
+    /* "Assign by service" -- estatus real por servicio para que el
+       cliente vea donde va cada uno (tracking.html), mismo dato que
+       ya usa Admin. Aislado en su propio try/catch, no fatal -- si
+       falla, el resto de la orden se sigue viendo normal, solo sin
+       esta parte (mismo criterio ya usado en Admingsocd.com/
+       get-order-detail.js). */
+    let serviceAssignments = [];
+    try {
+      const assignRows = await fetchByField(SERVICE_ASSIGNMENTS_LIST, 'OrderID', wanted, true);
+      serviceAssignments = assignRows.filter(it => it.fields).map(it => ({
+        Category: it.fields.Category || '', ServiceName: it.fields.ServiceName || '',
+        AssignedTo: it.fields.AssignedTo || '', ScheduledDate: it.fields.ScheduledDate || '',
+        WorkStatus: it.fields.WorkStatus || 'Not Started'
+      }));
+    } catch (e) { serviceAssignments = []; }
+
     /* PDF guardado: Imprimir NUNCA genera, solo descarga el que ya existe.
        Si no hay PDF, la orden todavia no ha sido aprobada. */
     let document = null;
@@ -219,7 +239,7 @@ exports.handler = async (event) => {
       }
     } catch (e) { document = null; }
 
-    return jsonResponse(200, { order, services, history, document });
+    return jsonResponse(200, { order, services, history, document, serviceAssignments });
 
   } catch (err) {
     return jsonResponse(500, { error: err.message });

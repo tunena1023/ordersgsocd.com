@@ -1108,6 +1108,15 @@ if (client) {
         ? GSOrderHistory.parseServicesPayload(pendingRow.NewValue) : null;
       const isPendingProposal = !!(proposedPayload && Array.isArray(proposedPayload.services) && proposedPayload.services.length);
       const services = isPendingProposal ? proposedPayload.services : (data.services || []);
+      /* "Assign by service" -- estatus real por servicio, mismo dato
+         que ya trae get-order-detail.js. Nunca se muestra durante
+         una propuesta pendiente (isPendingProposal) -- ahi los
+         "servicios" ni siquiera son los reales todavia, son el
+         snapshot de lo propuesto. */
+      const svcAssignByKey = {};
+      if (!isPendingProposal) {
+        (data.serviceAssignments || []).forEach(a => { svcAssignByKey[a.Category + '|' + a.ServiceName] = a; });
+      }
       const contactsForSummary = await ensureContactsCache();
       await serviceTimesPromise; // no-op si showEstimatedTime esta apagado
 
@@ -1139,10 +1148,19 @@ if (client) {
          <tr> se convierte en tarjeta sin JS extra. El dueno senalo
          directo esta tecnica (18/09/2026) en vez del intento anterior
          con flex-wrap, que no arreglaba el choque real. */
+      /* "Assign by service" -- columna de estatus extra, mismo criterio
+         real ya aprobado desde el mini para lo que el cliente ve:
+         Completed / Assigned (en cuanto tiene tecnico+fecha, sin
+         importar si es "su turno" -- mismo criterio ya confirmado del
+         lado de Admin) / Not started. El cliente nunca ve "Needs
+         scheduling" ni "In Active" -- esos son terminos internos de
+         oficina, sin sentido para el. */
+      const showSvcStatus = !!(o.AssignByService === true || o.AssignByService === 'true') && !isPendingProposal;
       const svcTableHtml = svcRows.length
         ? '<table class="svcreq-table"><thead><tr>' +
           '<th>Category</th><th>Service</th><th>Detail</th>' +
           (showTime ? '<th>Time</th>' : '') +
+          (showSvcStatus ? '<th>Status</th>' : '') +
           '<th></th>' +
           '</tr></thead><tbody>' +
           svcRows.map(r => {
@@ -1152,11 +1170,21 @@ if (client) {
               'onclick="startClientServicePhoto(\'' + jsStr(orderId) + '\',\'' + jsStr(r.svcNameRaw) + '\')">' +
               '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>' +
               '</button>';
+            let statusCellHtml = '';
+            if (showSvcStatus) {
+              const a = svcAssignByKey[r.catReal + '|' + r.svcNameRaw];
+              const isDone = a && a.WorkStatus === 'Completed';
+              const scheduled = !!(a && a.AssignedTo && a.ScheduledDate);
+              const label = isDone ? 'Completed' : (scheduled ? 'Assigned' : 'Not started');
+              const color = isDone ? '#3E7A4C' : (scheduled ? 'var(--gold-dk)' : 'var(--gray)');
+              statusCellHtml = '<td data-label="Status" style="color:' + color + ';font-weight:600">' + label + '</td>';
+            }
             return '<tr>' +
             '<td data-label="Category">' + r.cat + '</td>' +
             '<td data-label="Service">' + r.name + '</td>' +
             '<td data-label="Detail" style="color:' + (r.sub ? 'var(--black)' : 'var(--gray)') + '">' + (r.sub || '—') + '</td>' +
             (showTime ? '<td data-label="Time">' + (mins != null ? esc(GSEstimatedTime.fmtDuration(mins)) : '') + '</td>' : '') +
+            statusCellHtml +
             '<td data-label="">' + camBtn + '</td>' +
             '</tr>';
           }).join('') +
