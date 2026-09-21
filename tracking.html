@@ -1401,6 +1401,15 @@ if (client) {
     if (/ Changed$/.test(ct) &&
         ['Supervisor', 'Service Window', 'Dispatch Date', 'Due Date',
          'Inspection Date', 'Notes'].indexOf(fc) !== -1) return true;
+    /* "Assign by service" -- mismos 5 tipos internos que ya se
+       ocultan en el historial detallado (order-history.js v1.44.0,
+       ALWAYS_HIDDEN_TYPES), repetidos aqui porque el tracker tiene su
+       PROPIA lista de ocultos, separada. 'Service Change Resolved'
+       es un marcador puro de contabilidad (para que Review sepa que
+       ya se resolvio una solicitud) -- nunca tuvo sentido para
+       nadie fuera de eso. */
+    if (['Service Marked Done By Tech', 'Service Now Active', 'Service Needs Scheduling',
+         'Service Order Changed', 'Service Change Resolved'].indexOf(ct) !== -1) return true;
     return false;
   }
 
@@ -1440,7 +1449,12 @@ if (client) {
     'Services Change Requested':   { label: 'Change requested',   stage: 'Change requested (services)' },
     'Scheduling':                  { label: 'Scheduling',         stage: 'In Scheduling' },
     'Change Approved':             { label: 'Change approved',    stage: 'Change approved' },  // PENDING: does this advance a stage?
-    'Batch Created':               { label: 'Batch created',      stage: 'Order created in a batch' } // PENDING: same as 'Created'?
+    'Batch Created':               { label: 'Batch created',      stage: 'Order created in a batch' }, // PENDING: same as 'Created'?
+    /* "Assign by service" (21/09/2026, confirmado con el dueño): en
+       este modelo nunca se escribe el 'Order Assigned' de siempre --
+       este es su reemplazo real (mismo momento: se asigna el primer
+       servicio), mismo texto/etapa. */
+    'Order Moved To Active':       { label: 'Assigned',           stage: 'Order assigned' }
   };
 
   /* Etapas del ícono (confirmado con el usuario): el ícono avanza
@@ -1455,6 +1469,10 @@ if (client) {
     'Created': 1,
     'Order Assigned': 2,
     'Change Reassigned': 2,        // mismo trato que Order Assigned, confirmado
+    /* "Assign by service" -- confirmado con el dueño: es el
+       reemplazo real de 'Order Assigned' para este modelo, cuenta
+       igual para la etapa 2. */
+    'Order Moved To Active': 2,
     'Dates Confirmed': 3,
     'Order Approved': 3,
     'Sent to Scheduling': 3,
@@ -1619,7 +1637,37 @@ if (client) {
       events4.push(h);
     });
 
-    if (!events4.length) {
+    /* "Assign by service" (21/09/2026, confirmado con el dueño): el
+       tracker principal se queda con sus 5 eventos de siempre -- lo
+       que pasa a NIVEL DE SERVICIO (se programo, se agrego, se quito,
+       se completo un servicio en particular, o el cliente pidio un
+       cambio sobre uno) nunca crea su propio punto. En vez de eso, se
+       guarda dentro del detalle del punto "Assigned" real de esta
+       orden (Order Moved To Active) -- asi, al hacer clic ahi, se ve
+       el mini-historial completo de cada servicio, desde que se
+       asigno hasta que se completo, sin llenar la barra principal de
+       puntos identicos/repetidos. A diferencia de los merges de
+       arriba (ventana corta, misma accion), aqui no aplica limite de
+       tiempo -- un servicio se puede completar dias o semanas despues
+       de asignado. */
+    const PER_SERVICE_TYPES = ['Service Scheduled', 'Service Completed', 'Service Added', 'Service Removed', 'Service Change Requested'];
+    const events5 = [];
+    events4.forEach(h => {
+      const type = String(h.ChangeType || '');
+      if (PER_SERVICE_TYPES.indexOf(type) !== -1) {
+        for (let i = events5.length - 1; i >= 0; i--) {
+          if (String(events5[i].ChangeType || '') === 'Order Moved To Active') {
+            const mergedRows = (events5[i]._mergedRows || [events5[i]]).concat(h);
+            events5[i] = Object.assign({}, events5[i], { _mergedRows: mergedRows });
+            return;
+          }
+        }
+        // Todavia no hay 'Order Moved To Active' en el historial (no deberia pasar en la practica) -- se deja como su propio punto, mejor mostrarlo que perderlo.
+      }
+      events5.push(h);
+    });
+
+    if (!events5.length) {
       return [{ label: 'Received', stage: 'Order received', detail: fmtDateTime(o.createdDateTime), resultStage: 1, isRegression: false }];
     }
 
@@ -1627,7 +1675,7 @@ if (client) {
        -- resultStage de cada paso es la etapa en la que quedo la orden
        DESPUES de ese evento especifico, no un conteo que solo sube. */
     let stage = 0;
-    const stepsWithStage = events4.reduce((acc, h) => {
+    const stepsWithStage = events5.reduce((acc, h) => {
       const step = stepFrom(h);
       const advanceTo = STAGE_ADVANCE[step.changeType];
       const regressTo = STAGE_REGRESS[step.changeType];
