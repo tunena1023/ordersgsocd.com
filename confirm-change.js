@@ -77,6 +77,17 @@ async function fetchServicesCatalogForDivisionCheck() {
   return out.filter(it => it.fields).map(it => ({ sku: it.fields.SKU || '', division: it.fields.Division || '' }));
 }
 
+/* BUG REAL encontrado y arreglado (20/09/2026, ver el comentario
+   completo en Admingsocd.com/admin-approve-order.js, misma revision):
+   Quantity en OrderServices paso de Texto a Numero. Este archivo
+   nunca mandaba Quantity al confirmar un cambio -- se perdia por
+   completo, no solo se guardaba vacio. numOrNull() ademas limpia
+   cualquier valor invalido a null, valido para el campo Numero. */
+function numOrNull(v) {
+  const n = parseInt(v, 10);
+  return (n && n > 0) ? n : null;
+}
+
 async function fetchByField(listName, fieldName, value) {
   const filter = encodeURIComponent(`fields/${fieldName} eq '${value}'`);
   let url = siteListPath(listName) + `?$expand=fields&$top=200&$filter=${filter}`;
@@ -224,6 +235,7 @@ exports.handler = async (event) => {
               SubOption:          s.SubOption   || '',
               Division:           s.Division    || division,
               Level:              s.Level       || '',
+              Quantity:           numOrNull(s.Quantity),
               NotCompleted:       truthy(s.NotCompleted),
               NotCompletedReason: truthy(s.NotCompleted) ? (s.NotCompletedReason || '') : ''
             })
@@ -239,6 +251,7 @@ exports.handler = async (event) => {
             SubOption:          s.SubOption   || '',
             Division:           s.Division    || division,
             Level:              s.Level       || '',
+            Quantity:           numOrNull(s.Quantity),
             NotCompleted:       truthy(s.NotCompleted),
             NotCompletedReason: truthy(s.NotCompleted) ? (s.NotCompletedReason || '') : ''
           })
