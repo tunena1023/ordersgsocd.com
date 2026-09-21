@@ -2698,6 +2698,15 @@ if (client) {
       } else {
         await releaseNewOrderPhotos([result.orderId || order.OrderID]);
         showConfirmation(result.orderId || order.OrderID, order);
+        /* DIAGNOSTICO (20/09/2026, a peticion del dueño): antes, si un
+           servicio fallaba al guardarse, no habia ningun aviso -- la
+           orden se veia "confirmada" con normalidad y el servicio
+           faltante solo se notaba despues, revisando la orden de
+           nuevo. Ahora el backend manda el detalle exacto (que
+           servicio, por que) si algo no se pudo guardar -- se avisa
+           aqui encima de la confirmacion normal, sin bloquearla. */
+        if (result.warning) showToast(result.warning);
+        if (result.historyWarning) showToast(result.historyWarning);
       }
       draftOrderId = null;
       refreshOrdersCount();

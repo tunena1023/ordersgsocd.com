@@ -370,31 +370,47 @@ exports.handler = async (event) => {
          de servicio, en el mismo Promise.all -- mismo criterio que ya
          usa el flujo de Multiple Units (ver submitOrder() en
          customer.html) para limpiar un borrador que no se uso. */
+      /* DIAGNOSTICO (20/09/2026, a peticion del dueño): antes, si UN
+         solo servicio fallaba al crearse aqui, el catch de abajo se
+         lo tragaba entero (solo console.error, invisible para
+         cualquiera) -- la orden se creaba de todos modos con los
+         demas servicios que si alcanzaron a crearse en paralelo, sin
+         ningun aviso de que uno se perdio. Promise.allSettled en vez
+         de Promise.all: mismo resultado final (los que se pueden
+         crear se crean), pero ahora cada fallo queda etiquetado con
+         el servicio exacto y se manda de vuelta como warning en la
+         respuesta -- visible, no solo en un log de servidor. */
+      const svcResults = await Promise.allSettled(
+        svcSource.map(s =>
+          createListItem(ORDER_SERVICES_LIST, {
+            Title:       s.ServiceName || '',
+            OrderID:     orderId,
+            Category:    s.Category    || '',
+            ServiceName: s.ServiceName || '',
+            SubOption:   s.SubOption   || '',
+            Division:    s.Division    || b.Division,
+            Quantity:    numOrNull(s.Quantity)
+          }).catch(e => { throw new Error('[' + (s.ServiceName || '?') + '] ' + e.message); })
+        )
+      );
+      let svcWarning = null;
+      const svcFailures = svcResults.filter(r => r.status === 'rejected');
+      if (svcFailures.length) {
+        svcWarning = 'Some services could not be saved: ' + svcFailures.map(r => r.reason.message).join(' | ');
+        console.error('Post-order services write failed:', svcWarning);
+      }
       try {
-        await Promise.all([
-          ...svcSource.map(s =>
-            createListItem(ORDER_SERVICES_LIST, {
-              Title:       s.ServiceName || '',
-              OrderID:     orderId,
-              Category:    s.Category    || '',
-              ServiceName: s.ServiceName || '',
-              SubOption:   s.SubOption   || '',
-              Division:    s.Division    || b.Division,
-              Quantity:    numOrNull(s.Quantity)
-            })
-          ),
-          createListItem(ORDER_HISTORY_LIST, {
-            Title:      orderId,
-            OrderID:    orderId,
-            ChangeType: 'Created',
-            ChangedBy:  b.ClientID,
-            ChangeDate: new Date().toISOString(),
-            Notes:      'Submitted from draft.',
-            OldValue:   'Draft',
-            NewValue:   'SERVICES:' + JSON.stringify({ services: svcSource, dirtLevel: b.DirtLevel || '', entryDate: orderFields.EntryDate || '', dueDate: orderFields.DueDate || '' })
-          })
-        ]);
-      } catch (e) { console.error('Post-order write failed:', e.message); }
+        await createListItem(ORDER_HISTORY_LIST, {
+          Title:      orderId,
+          OrderID:    orderId,
+          ChangeType: 'Created',
+          ChangedBy:  b.ClientID,
+          ChangeDate: new Date().toISOString(),
+          Notes:      'Submitted from draft.',
+          OldValue:   'Draft',
+          NewValue:   'SERVICES:' + JSON.stringify({ services: svcSource, dirtLevel: b.DirtLevel || '', entryDate: orderFields.EntryDate || '', dueDate: orderFields.DueDate || '' })
+        });
+      } catch (e) { console.error('Post-order history write failed:', e.message); }
 
       try {
         await Promise.all(
@@ -402,7 +418,7 @@ exports.handler = async (event) => {
         );
       } catch (e) { console.error('Draft cleanup failed:', e.message); }
 
-      return jsonResponse(200, { success: true, orderId, id: result.id });
+      return jsonResponse(200, { success: true, orderId, id: result.id, warning: svcWarning });
     }
 
     /* ===== FLUJO B: Orden existente → edicion ===== */
@@ -658,9 +674,15 @@ exports.handler = async (event) => {
        SI se alcanzaba a crear bien antes de este error -- el bug
        era solo en la respuesta final, no en el guardado real. */
     let historyWarning = null;
+    let svcWarning = null;
     try {
     const parsedServices = resolveServices(b.Services, b.Division);
-    await Promise.all(parsedServices.map(s =>
+    /* DIAGNOSTICO (20/09/2026, a peticion del dueño): mismo criterio
+       que Flujo A (ver su comentario completo) -- Promise.allSettled
+       en vez de Promise.all, cada fallo etiquetado con el servicio
+       exacto, visible en la respuesta en vez de tragado en silencio
+       por el catch de mas abajo. */
+    const svcResults = await Promise.allSettled(parsedServices.map(s =>
       createListItem(ORDER_SERVICES_LIST, {
         Title:       s.ServiceName || '',
         OrderID:     orderId,
@@ -670,8 +692,13 @@ exports.handler = async (event) => {
         Division:    s.Division,
         Level:       s.Level || '',
         Quantity:    numOrNull(s.Quantity)
-      })
+      }).catch(e => { throw new Error('[' + (s.ServiceName || '?') + '] ' + e.message); })
     ));
+    const svcFailures = svcResults.filter(r => r.status === 'rejected');
+    if (svcFailures.length) {
+      svcWarning = 'Some services could not be saved: ' + svcFailures.map(r => r.reason.message).join(' | ');
+      console.error('Post-order services write failed:', svcWarning);
+    }
 
     const createdHistoryFields = {
       Title:      orderId,
@@ -719,7 +746,7 @@ exports.handler = async (event) => {
       }
     }
 } catch (e) { console.error('Post-order write failed:', e.message); }
-    return jsonResponse(200, { success: true, orderId, id: result.id, historyWarning });
+    return jsonResponse(200, { success: true, orderId, id: result.id, historyWarning, warning: svcWarning });
 
   } catch (err) {
     return jsonResponse(500, { error: err.message });
