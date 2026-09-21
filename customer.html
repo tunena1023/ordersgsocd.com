@@ -4836,25 +4836,33 @@ if (client) {
          particular. Se usan template literals (backticks) en vez de
          concatenar comillas a mano, para no repetir el bug de escapado
          que tumbo el intento anterior (ba9d4bc). */
+      /* A peticion del dueño (20/09/2026): la cantidad (y el nivel)
+         deben verse como su propia columna, en la MISMA linea que el
+         servicio -- no como subtitulo debajo, como estaba. Tabla real
+         de columnas (Categoria/Servicio/Detalle + tiempo si aplica +
+         camarita), mismo criterio visual que activeSvcReadOnlyHtml()
+         en admin.html. Envuelta en overflow-x:auto por seguridad en
+         pantallas angostas -- la tabla nunca empuja el ancho de la
+         pagina completa, solo se desliza ella sola si hace falta. */
       const svcTableHtml = svcRows.length
-        ? '<div>' + svcRows.map(r => {
+        ? '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">' +
+          svcRows.map((r, i) => {
             const baseMins = showTime ? GSEstimatedTime.svcMinutes(r.sku, r.lvl, trackingServiceTimesCache) : null;
             const mins = baseMins != null ? baseMins * (Number(r.qty) || 1) : null;
-            const detailParts = [esc(r.cat), r.sub, (mins != null ? esc(GSEstimatedTime.fmtDuration(mins)) : '')].filter(Boolean);
-            const detailText = detailParts.join(' · ');
-            const detailLine = detailText
-              ? `<div style="font-size:12px;color:var(--gray);margin-top:2px;line-height:1.4">${detailText}</div>`
-              : '';
-            return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
-              <div style="flex:1;min-width:0">
-                <div style="font-size:13px;font-weight:600;color:var(--black);line-height:1.4">${r.name}</div>
-                ${detailLine}
-              </div>
-              <button type="button" title="Add a photo for this service" onclick="startClientServicePhoto('${jsStr(orderId)}','${jsStr(r.svcNameRaw)}')" style="flex-shrink:0;width:32px;height:32px;padding:0;border-radius:6px;border:1.5px solid var(--border);background:var(--white);color:var(--gray);cursor:pointer;display:flex;align-items:center;justify-content:center">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
-              </button>
-            </div>`;
-          }).join('') + '</div>'
+            const timeText = mins != null ? esc(GSEstimatedTime.fmtDuration(mins)) : '';
+            const rowBorder = i < svcRows.length - 1 ? ' style="border-bottom:1px solid var(--border)"' : '';
+            return '<tr' + rowBorder + '>' +
+              '<td style="padding:10px 12px 10px 0;color:var(--gold);font-weight:600;white-space:nowrap">' + esc(r.cat) + '</td>' +
+              '<td style="padding:10px 12px 10px 0">' + esc(r.name) + '</td>' +
+              '<td style="padding:10px 12px 10px 0;color:var(--gray)">' + (r.sub || '') + '</td>' +
+              (showTime ? '<td style="padding:10px 12px 10px 0;color:var(--gold-dk);font-weight:600;white-space:nowrap;text-align:right">' + timeText + '</td>' : '') +
+              '<td style="padding:10px 0;text-align:right">' +
+                '<button type="button" title="Add a photo for this service" onclick="startClientServicePhoto(\'' + jsStr(orderId) + '\',\'' + jsStr(r.svcNameRaw) + '\')" style="width:32px;height:32px;padding:0;border-radius:6px;border:1.5px solid var(--border);background:var(--white);color:var(--gray);cursor:pointer;display:inline-flex;align-items:center;justify-content:center">' +
+                  '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>' +
+                '</button>' +
+              '</td>' +
+            '</tr>';
+          }).join('') + '</table></div>'
         : '<div style="font-size:12px;padding:10px 0">No services recorded.</div>';
       const svcHeaderHtml =
         '<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">' +
