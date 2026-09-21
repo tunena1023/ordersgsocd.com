@@ -10,6 +10,16 @@ const {
   jsonResponse
 } = require('./lib/graph');
 
+/* BUG REAL encontrado y arreglado (20/09/2026, ver el comentario
+   completo en Admingsocd.com/admin-approve-order.js, misma revision):
+   Quantity en OrderServices paso de Texto a Numero. Este archivo
+   nunca mandaba Quantity (ni Level) al deshacer una solicitud -- se
+   perdian por completo al restaurar los servicios de antes. */
+function numOrNull(v) {
+  const n = parseInt(v, 10);
+  return (n && n > 0) ? n : null;
+}
+
 async function fetchByField(listName, fieldName, value) {
   const filter = encodeURIComponent(`fields/${fieldName} eq '${value}'`);
   let url = siteListPath(listName) + `?$expand=fields&$top=200&$filter=${filter}`;
@@ -112,6 +122,8 @@ exports.handler = async (event) => {
               ServiceName: s.ServiceName || '',
               SubOption:   s.SubOption   || '',
               Division:    s.Division    || f.Division || '',
+              Level:       s.Level       || '',
+              Quantity:    numOrNull(s.Quantity),
               NotCompleted:       (s.NotCompleted === true || String(s.NotCompleted) === 'true'),
               NotCompletedReason: (s.NotCompleted === true || String(s.NotCompleted) === 'true')
                                     ? (s.NotCompletedReason || '') : ''

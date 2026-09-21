@@ -28,6 +28,15 @@ const {
   createListItem, graphFetch, siteListPath, jsonResponse
 } = require('./lib/graph');
 
+/* BUG REAL encontrado y arreglado (20/09/2026, ver el comentario
+   completo en Admingsocd.com/admin-approve-order.js, misma revision):
+   Quantity en OrderServices paso de Texto a Numero -- '' ya no es un
+   respaldo valido para "sin cantidad" en un campo Numero. */
+function numOrNull(v) {
+  const n = parseInt(v, 10);
+  return (n && n > 0) ? n : null;
+}
+
 async function fetchByField(listName, fieldName, value) {
   const filter = encodeURIComponent(`fields/${fieldName} eq '${value}'`);
   let url = siteListPath(listName) + `?$expand=fields&$top=200&$filter=${filter}`;
@@ -160,7 +169,7 @@ exports.handler = async (event) => {
           SubOption:   f.SubOption   || '',
           Division:    f.Division    || template.Division,
           Level:       f.Level       || '',
-          Quantity:    f.Quantity    || ''
+          Quantity:    numOrNull(f.Quantity)
         });
       }));
 

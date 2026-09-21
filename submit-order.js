@@ -109,6 +109,15 @@ function parseServicesString(str, division) {
    parseServicesString no encontraba nada que parsear, guardando la orden
    sin ningun servicio. resolveServices acepta ambos formatos para que
    ningun llamador (actual o futuro) pierda servicios silenciosamente. */
+/* BUG REAL encontrado y arreglado (20/09/2026, ver el comentario
+   completo en Admingsocd.com/admin-approve-order.js, misma revision):
+   Quantity en OrderServices paso de Texto a Numero -- '' ya no es un
+   respaldo valido para "sin cantidad" en un campo Numero. */
+function numOrNull(v) {
+  const n = parseInt(v, 10);
+  return (n && n > 0) ? n : null;
+}
+
 function resolveServices(raw, division) {
   if (Array.isArray(raw)) {
     return raw.map(s => ({
@@ -371,7 +380,7 @@ exports.handler = async (event) => {
               ServiceName: s.ServiceName || '',
               SubOption:   s.SubOption   || '',
               Division:    s.Division    || b.Division,
-              Quantity:    s.Quantity    || ''
+              Quantity:    numOrNull(s.Quantity)
             })
           ),
           createListItem(ORDER_HISTORY_LIST, {
@@ -585,7 +594,7 @@ exports.handler = async (event) => {
               SubOption:   s.SubOption   || '',
               Division:    s.Division    || b.Division,
               Level:       s.Level       || '',
-              Quantity:    s.Quantity    || ''
+              Quantity:    numOrNull(s.Quantity)
             })
           ));
 
@@ -660,7 +669,7 @@ exports.handler = async (event) => {
         SubOption:   s.SubOption,
         Division:    s.Division,
         Level:       s.Level || '',
-        Quantity:    s.Quantity || ''
+        Quantity:    numOrNull(s.Quantity)
       })
     ));
 
