@@ -169,6 +169,16 @@ exports.handler = async (event) => {
         ServiceName: it.fields.ServiceName || '',
         SubOption:   it.fields.SubOption   || '',
         Division:    it.fields.Division    || order.Division,
+        /* BUG REAL encontrado y arreglado (20/09/2026, reportado por
+           el dueño con una orden real): este mapeo nunca incluia
+           Level ni Quantity -- el dato ni siquiera llegaba al
+           navegador, sin importar que tan bien estuviera guardado en
+           SharePoint. svcSubLabel() (en este mismo archivo y en
+           customer.html) siempre regresaba vacio para cualquier
+           servicio de cantidad o de nivel, mostrando un guion en vez
+           del dato real. */
+        Level:              it.fields.Level    || '',
+        Quantity:           it.fields.Quantity || '',
         /* Columnas nuevas 28/08/2026: servicio no realizado + motivo */
         NotCompleted:       it.fields.NotCompleted === true
                             || String(it.fields.NotCompleted) === 'true',
