@@ -27,8 +27,16 @@ async function fetchCatalog() {
     rows.push(...(data.value || []));
     url = data['@odata.nextLink'] || null;
   }
-  const settings = await readJsonSettings(['catalog_service_areas', 'catalog_package_contents']);
+  const settings = await readJsonSettings(['catalog_service_areas', 'catalog_package_contents', 'catalog_level_prices']);
   const areasMap = settings.catalog_service_areas, pkgMap = settings.catalog_package_contents;
+  const levelAdj = settings.catalog_level_prices || {};
+  /* Precio por nivel: Level 1 = QuickBooks; L2/L3 suman % o $ (Admin > Service Times). */
+  const levelPricesFor = (price, adj) => {
+    if (price == null || price === '' || isNaN(Number(price))) return null;
+    const b = Number(price); const out = { 'Level 1': b };
+    [['l2', 'Level 2'], ['l3', 'Level 3']].forEach(([k, L]) => { const a = adj && adj[k]; const v = a ? (Number(a.v) || 0) : 0; out[L] = Math.round((a && a.t === '$' ? b + v : b * (1 + v / 100)) * 100) / 100; });
+    return out;
+  };
   return rows.filter(it => it.fields).map(it => ({
     id: it.id,
     sku: it.fields.SKU || '',
@@ -42,6 +50,7 @@ async function fetchCatalog() {
     /* Paquetes como plantilla + tarjetas por area (picker v1.52.0; lo edita Admin > Developer). */
     areas: Array.isArray(areasMap[String(it.fields.SKU || '').trim()]) ? areasMap[String(it.fields.SKU || '').trim()] : [],
     packageItems: Array.isArray(pkgMap[String(it.fields.SKU || '').trim()]) ? pkgMap[String(it.fields.SKU || '').trim()] : [],
+    levelPrices: levelPricesFor(it.fields.Price, levelAdj[String(it.fields.SKU || '').trim()]),
     active: it.fields.Active === undefined ? true : (it.fields.Active === true || it.fields.Active === 'true'),
     requiresQuantity: it.fields.RequiresQuantity === true || it.fields.RequiresQuantity === 'true'
   })).filter(s => s.active);
@@ -171,9 +180,12 @@ exports.handler = async (event) => {
     const qsClient = String(((event && event.queryStringParameters) || {}).clientId || '').trim();
     if (qsClient) {
       try {
-        const allowed = (await readJsonSettings(['portal_recurring_clients'])).portal_recurring_clients;
+        const st = await readJsonSettings(['portal_recurring_clients', 'portal_price_clients']);
+        const allowed = st.portal_recurring_clients, priced = st.portal_price_clients;
         oldCatalogResult.recurringAllowed = Array.isArray(allowed) && allowed.map(String).indexOf(qsClient) !== -1;
-      } catch (e) { oldCatalogResult.recurringAllowed = false; }
+        /* Precios: apagados por default; el dueño los prende por cliente. */
+        oldCatalogResult.pricesAllowed = Array.isArray(priced) && priced.map(String).indexOf(qsClient) !== -1;
+      } catch (e) { oldCatalogResult.recurringAllowed = false; oldCatalogResult.pricesAllowed = false; }
     }
     return jsonResponse(200, oldCatalogResult);
   } catch (err) {
