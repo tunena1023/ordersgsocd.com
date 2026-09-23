@@ -4,6 +4,14 @@ Este archivo existe para que cualquier chat de Claude (u otra persona) que entre
 a este repo después no tenga que adivinar el proceso, ni repetir preguntas ya
 resueltas, ni subir cosas sin permiso. Léelo completo antes de tocar código.
 
+## SUBIDO (23/09/2026): descripción del servicio en tooltip
+
+gsocd-shared v1.50.0 (`service-tooltip` + picker) en customer,
+recurring, templates y tracking. get-services.js manda `description` en
+el catálogo. tracking.html ahora pide get-services siempre (antes solo
+con tiempos estimados) para registrar las descripciones; los tiempos
+siguen saliendo solo si el cliente los tiene activados.
+
 ## SUBIDO (23/09/2026, tarde): lugar con edificios en el Recurring del cliente
 
 get-my-recurring.js arma el lugar con las mismas reglas que placeLabel()

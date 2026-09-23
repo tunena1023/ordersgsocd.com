@@ -431,7 +431,8 @@
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.32.0/print-button/print-button.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/date-time-picker/date-time-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.24/order-form-premium/order-form-premium.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/service-picker/service-picker.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.50.0/service-tooltip/service-tooltip.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.50.0/service-picker/service-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/service-change-panel/service-change-panel.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.44.2/order-history/order-history.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.10/camera-queue/camera-queue.js"></script>
@@ -487,9 +488,14 @@ if (client) {
      esperarla en expandOrder() sin condicion de carrera si se abre
      una orden antes de que termine de cargar. */
   let serviceTimesCache = {};
-  const serviceTimesPromise = client.showEstimatedTime
-    ? GS.api('/get-services', { method: 'GET' }).then(data => { serviceTimesCache = data.serviceTimes || {}; }).catch(() => {})
-    : Promise.resolve();
+  /* Tambien trae la descripcion de cada servicio (tooltip al pasar el
+     mouse, gsocd-shared/service-tooltip) -- por eso ahora se pide
+     siempre; los tiempos siguen saliendo solo si el cliente los tiene
+     activados, igual que antes. */
+  const serviceTimesPromise = GS.api('/get-services', { method: 'GET' }).then(data => {
+    if (window.GSServiceTooltip) GSServiceTooltip.register(data.catalog || []);
+    if (client.showEstimatedTime) serviceTimesCache = data.serviceTimes || {};
+  }).catch(() => {});
   /* Cache del detalle ya cargado de cada orden, para que reabrirla sea
      instantaneo sin volver a pedirselo a la API. Se invalida entero
      cada vez que se recarga la lista (loadOrders). */
@@ -1181,7 +1187,7 @@ if (client) {
             }
             return '<tr>' +
             '<td data-label="Category">' + r.cat + '</td>' +
-            '<td data-label="Service">' + r.name + '</td>' +
+            '<td data-label="Service">' + (window.GSServiceTooltip ? GSServiceTooltip.nameHtml(r.sku, r.name) : r.name) + '</td>' +
             '<td data-label="Detail" style="color:' + (r.sub ? 'var(--black)' : 'var(--gray)') + '">' + (r.sub || '—') + '</td>' +
             (showTime ? '<td data-label="Time">' + (mins != null ? esc(GSEstimatedTime.fmtDuration(mins)) : '') + '</td>' : '') +
             statusCellHtml +
