@@ -1187,7 +1187,7 @@ if (client) {
             }
             return '<tr>' +
             '<td data-label="Category">' + r.cat + '</td>' +
-            '<td data-label="Service">' + (window.GSServiceTooltip ? GSServiceTooltip.nameHtml(r.sku, r.name) : r.name) + pkgIncludesFromHistory(history, r.sku) + '</td>' +
+            '<td data-label="Service">' + (window.GSServiceTooltip ? GSServiceTooltip.nameHtml(r.sku, r.name) : r.name) + pkgIncludesFromOrder(data.order, r.sku) + '</td>' +
             '<td data-label="Detail" style="color:' + (r.sub ? 'var(--black)' : 'var(--gray)') + '">' + (r.sub || '—') + '</td>' +
             (showTime ? '<td data-label="Time">' + (mins != null ? esc(GSEstimatedTime.fmtDuration(mins)) : '') + '</td>' : '') +
             statusCellHtml +
@@ -1382,15 +1382,15 @@ if (client) {
   /* Paquete: lo que incluia EL DIA que se creo la orden (foto interna
      'Package Snapshot' que guarda el servidor). Sin foto, nada (ordenes
      de antes se ven igual que siempre). */
-  function pkgIncludesFromHistory(history, sku) {
+  /* Paquete: lo que incluia EL DIA que se creo la orden (columna
+     Orders.PackageContents). Sin copia, nada. */
+  function pkgIncludesFromOrder(order, sku) {
     let items = null;
-    (history || []).forEach(h => {
-      if (String(h.ChangeType || '') !== 'Package Snapshot') return;
-      try { const v = JSON.parse(h.NewValue || '{}'); if (Array.isArray(v[String(sku || '')])) items = v[String(sku || '')]; } catch (e) { /* sigue */ }
-    });
+    try { const v = JSON.parse((order && order.PackageContents) || '{}'); if (Array.isArray(v[String(sku || '')])) items = v[String(sku || '')]; } catch (e) { items = null; }
     if (!items || !items.length) return '';
+    const escT = s => String(s == null ? '' : s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
     return '<div style="font-size:11px;color:var(--gray);margin-top:4px;line-height:1.6">Includes: ' + items.map(x =>
-      (window.GSServiceTooltip ? GSServiceTooltip.nameHtml(x.sku, GS.escape ? GS.escape(x.serviceName || x.sku) : String(x.serviceName || x.sku).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))) : String(x.serviceName || x.sku).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))) +
+      (window.GSServiceTooltip ? GSServiceTooltip.nameHtml(x.sku, escT(x.serviceName || x.sku)) : escT(x.serviceName || x.sku)) +
       (x.level ? ' <b style="color:var(--gold-dk);font-size:10px">' + String(x.level).replace('Level ', 'L') + '</b>' : '')).join(', ') + '</div>';
   }
   function isHiddenFromClient(h) {

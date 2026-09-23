@@ -122,6 +122,7 @@ exports.handler = async (event) => {
       id:              orderItem.id,
       createdDateTime: orderItem.createdDateTime || '',
       OrderID:         f.OrderID || f.Title || '',
+      PackageContents: f.PackageContents || '',
       ClientID:        f.ClientID || '',
       BusinessName:    f.BusinessName || f.Title || '',
       Division:        f.Division || '',

@@ -12,8 +12,8 @@
 ============================================================ */
 
 const XLSX = require('xlsx');
-const { graphFetch, jsonResponse, siteListPath, SERVICES_CATALOG_LIST, SERVICE_TIMES_LIST } = require('./lib/graph');
-const { readJsonSettings } = require('./lib/package-contents');
+const { graphFetch, jsonResponse, siteListPath, queryList, SERVICES_CATALOG_LIST, SERVICE_TIMES_LIST, CLIENTS_LIST } = require('./lib/graph');
+const catalogFields = require('./lib/catalog-fields');
 
 /* Catalogo nuevo (ServicesCatalog) -- lista real de SharePoint, SKU-
    based, la misma que ya usa el lado admin. Se manda aparte como
@@ -27,17 +27,7 @@ async function fetchCatalog() {
     rows.push(...(data.value || []));
     url = data['@odata.nextLink'] || null;
   }
-  const settings = await readJsonSettings(['catalog_service_areas', 'catalog_package_contents', 'catalog_level_prices']);
-  const areasMap = settings.catalog_service_areas, pkgMap = settings.catalog_package_contents;
-  const levelAdj = settings.catalog_level_prices || {};
-  /* Precio por nivel: Level 1 = QuickBooks; L2/L3 suman % o $ (Admin > Service Times). */
-  const levelPricesFor = (price, adj) => {
-    if (price == null || price === '' || isNaN(Number(price))) return null;
-    const b = Number(price); const out = { 'Level 1': b };
-    [['l2', 'Level 2'], ['l3', 'Level 3']].forEach(([k, L]) => { const a = adj && adj[k]; const v = a ? (Number(a.v) || 0) : 0; out[L] = Math.round((a && a.t === '$' ? b + v : b * (1 + v / 100)) * 100) / 100; });
-    return out;
-  };
-  return rows.filter(it => it.fields).map(it => ({
+    return rows.filter(it => it.fields).map(it => ({
     id: it.id,
     sku: it.fields.SKU || '',
     serviceName: it.fields.ServiceName || '',
@@ -48,9 +38,9 @@ async function fetchCatalog() {
     /* Sales Description de QuickBooks -> tooltip (gsocd-shared/service-tooltip). */
     description: it.fields.Description || '',
     /* Paquetes como plantilla + tarjetas por area (picker v1.52.0; lo edita Admin > Developer). */
-    areas: Array.isArray(areasMap[String(it.fields.SKU || '').trim()]) ? areasMap[String(it.fields.SKU || '').trim()] : [],
-    packageItems: Array.isArray(pkgMap[String(it.fields.SKU || '').trim()]) ? pkgMap[String(it.fields.SKU || '').trim()] : [],
-    levelPrices: levelPricesFor(it.fields.Price, levelAdj[String(it.fields.SKU || '').trim()]),
+    areas: catalogFields.areasOf(it.fields),
+    packageItems: catalogFields.packageItemsOf(it.fields),
+    levelPrices: catalogFields.levelPricesFor(it.fields.Price, catalogFields.levelAdjustOf(it.fields)),
     active: it.fields.Active === undefined ? true : (it.fields.Active === true || it.fields.Active === 'true'),
     requiresQuantity: it.fields.RequiresQuantity === true || it.fields.RequiresQuantity === 'true'
   })).filter(s => s.active);
@@ -175,16 +165,15 @@ exports.handler = async (event) => {
 
     oldCatalogResult.catalog = catalog;
     oldCatalogResult.serviceTimes = await fetchServiceTimes(catalog);
-    /* Opcion Recurring en el portal: solo los clientes que el dueño elige
-       en Admin > Developer (Settings portal_recurring_clients). */
+    /* Lo que ve ESTE cliente (columnas Si/No de Clients: ShowRecurring,
+       ShowPrices; las prende el dueño en Admin). */
     const qsClient = String(((event && event.queryStringParameters) || {}).clientId || '').trim();
     if (qsClient) {
       try {
-        const st = await readJsonSettings(['portal_recurring_clients', 'portal_price_clients']);
-        const allowed = st.portal_recurring_clients, priced = st.portal_price_clients;
-        oldCatalogResult.recurringAllowed = Array.isArray(allowed) && allowed.map(String).indexOf(qsClient) !== -1;
-        /* Precios: apagados por default; el dueño los prende por cliente. */
-        oldCatalogResult.pricesAllowed = Array.isArray(priced) && priced.map(String).indexOf(qsClient) !== -1;
+        const rows = await queryList(CLIENTS_LIST, '$expand=fields&$top=5&$filter=' + encodeURIComponent("fields/ClientID eq '" + qsClient.replace(/'/g, "''") + "'"));
+        const f = (rows[0] && rows[0].fields) || {};
+        oldCatalogResult.recurringAllowed = catalogFields.truthy(f.ShowRecurring);
+        oldCatalogResult.pricesAllowed = catalogFields.truthy(f.ShowPrices);
       } catch (e) { oldCatalogResult.recurringAllowed = false; oldCatalogResult.pricesAllowed = false; }
     }
     return jsonResponse(200, oldCatalogResult);
