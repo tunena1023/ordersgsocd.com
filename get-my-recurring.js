@@ -43,10 +43,27 @@ async function fetchByField(listName, fieldName, value) {
   return out;
 }
 
+/* Contratos "Who does what" por lugar (Admingsocd.com, 23/09/2026):
+   cada renglon trae zone/area/qty (y dias/persona). Para el cliente, el
+   lugar va pegado al servicio ("Floor 1 / Hallway — Vacuum carpets") --
+   si no, veria "Vacuum carpets" repetido 3 veces sin saber donde, que es
+   justo el alcance que el contrato ahora deja claro. El mismo lugar +
+   servicio con 2 personas sale UNA vez. Contratos de siempre: igual. */
+function placeLabel(s) {
+  const z = String(s.zone || '');
+  const zone = z === 'BLD' ? 'Elevators & stairs' : z === 'EXT' ? 'Exterior' : (/^F\d+$/.test(z) ? 'Floor ' + z.slice(1) : z);
+  const q = Number(s.qty) || 1;
+  return zone + ' / ' + String(s.area || '').trim() + (q > 1 ? ' \u00d7' + q : '');
+}
 function parseServicesJson(raw) {
   try {
     const arr = JSON.parse(raw || '[]');
-    return Array.isArray(arr) ? arr.map(s => ({ ServiceName: s.serviceName || s.sku || '', Level: s.level || '' })) : [];
+    if (!Array.isArray(arr)) return [];
+    const seen = new Set();
+    return arr.map(s => ({
+      ServiceName: (s.zone && s.area ? placeLabel(s) + ' \u2014 ' : '') + (s.serviceName || s.sku || ''),
+      Level: s.level || ''
+    })).filter(x => { const k = x.ServiceName + '|' + x.Level; if (seen.has(k)) return false; seen.add(k); return true; });
   } catch (e) { return []; }
 }
 
