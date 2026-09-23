@@ -142,7 +142,7 @@ function parseServices(wb) {
   return out;
 }
 
-exports.handler = async () => {
+exports.handler = async (event) => {
   /* La página lo pide con GET (GS.api('/get-services', { method: 'GET' })) */
   try {
     const [oldCatalogResult, catalog] = await Promise.all([
@@ -166,6 +166,15 @@ exports.handler = async () => {
 
     oldCatalogResult.catalog = catalog;
     oldCatalogResult.serviceTimes = await fetchServiceTimes(catalog);
+    /* Opcion Recurring en el portal: solo los clientes que el dueño elige
+       en Admin > Developer (Settings portal_recurring_clients). */
+    const qsClient = String(((event && event.queryStringParameters) || {}).clientId || '').trim();
+    if (qsClient) {
+      try {
+        const allowed = (await readJsonSettings(['portal_recurring_clients'])).portal_recurring_clients;
+        oldCatalogResult.recurringAllowed = Array.isArray(allowed) && allowed.map(String).indexOf(qsClient) !== -1;
+      } catch (e) { oldCatalogResult.recurringAllowed = false; }
+    }
     return jsonResponse(200, oldCatalogResult);
   } catch (err) {
     return jsonResponse(500, { error: err.message });
