@@ -49,19 +49,43 @@ async function fetchByField(listName, fieldName, value) {
    si no, veria "Vacuum carpets" repetido 3 veces sin saber donde, que es
    justo el alcance que el contrato ahora deja claro. El mismo lugar +
    servicio con 2 personas sale UNA vez. Contratos de siempre: igual. */
-function placeLabel(s) {
-  const z = String(s.zone || '');
-  const zone = z === 'BLD' ? 'Elevators & stairs' : z === 'EXT' ? 'Exterior' : (/^F\d+$/.test(z) ? 'Floor ' + z.slice(1) : z);
-  const q = Number(s.qty) || 1;
-  return zone + ' / ' + String(s.area || '').trim() + (q > 1 ? ' \u00d7' + q : '');
+/* Mismas reglas que placeLabel() en Admingsocd.com/lib/recurring-orders.js
+   (23/09/2026, con edificios): edificio si el contrato tiene varios,
+   piso si ese edificio tiene varios (o Elevators & stairs / Exterior),
+   y el area. Un negocio de un solo nivel se lee "Restroom" a secas. */
+function zoneLabel(z) {
+  const v = String(z || '');
+  return v === 'BLD' ? 'Elevators & stairs' : v === 'EXT' ? 'Exterior' : (/^F\d+$/.test(v) ? 'Floor ' + v.slice(1) : v);
 }
+function placeContext(arr) {
+  const places = arr.filter(s => s && s.zone && s.area);
+  const blds = new Set(places.map(s => String(s.bld || 'main')));
+  const floorsBy = {};
+  places.forEach(s => {
+    const bid = String(s.bld || 'main'), fl = /^F\d+$/.test(String(s.zone)) ? +String(s.zone).slice(1) : 1;
+    floorsBy[bid] = Math.max(floorsBy[bid] || 1, Number(s.floors) || 1, fl, s.zone === 'BLD' ? 2 : 1);
+  });
+  return { multi: blds.size > 1, floorsBy };
+}
+function placeLabel(s, ctx) {
+  const bid = String(s.bld || 'main'), out = [];
+  if (ctx.multi) out.push(String(s.bldLabel || 'Building').trim());
+  if ((ctx.floorsBy[bid] || 1) > 1 || s.zone === 'EXT' || s.zone === 'BLD') out.push(zoneLabel(s.zone));
+  const q = Number(s.qty) || 1;
+  out.push(String(s.area || '').trim() + (q > 1 ? ' \u00d7' + q : ''));
+  return out.join(' / ');
+}
+/* Contratos "Who does what" por lugar: el lugar va pegado al servicio
+   ("Floor 1 / Hallway — Vacuum carpets"), una sola vez aunque lo
+   compartan 2 personas. Contratos de siempre: igual que antes. */
 function parseServicesJson(raw) {
   try {
     const arr = JSON.parse(raw || '[]');
     if (!Array.isArray(arr)) return [];
+    const ctx = placeContext(arr);
     const seen = new Set();
     return arr.map(s => ({
-      ServiceName: (s.zone && s.area ? placeLabel(s) + ' \u2014 ' : '') + (s.serviceName || s.sku || ''),
+      ServiceName: (s.zone && s.area ? placeLabel(s, ctx) + ' \u2014 ' : '') + (s.serviceName || s.sku || ''),
       Level: s.level || ''
     })).filter(x => { const k = x.ServiceName + '|' + x.Level; if (seen.has(k)) return false; seen.add(k); return true; });
   } catch (e) { return []; }

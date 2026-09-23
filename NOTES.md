@@ -4,6 +4,12 @@ Este archivo existe para que cualquier chat de Claude (u otra persona) que entre
 a este repo después no tenga que adivinar el proceso, ni repetir preguntas ya
 resueltas, ni subir cosas sin permiso. Léelo completo antes de tocar código.
 
+## SUBIDO (23/09/2026, tarde): lugar con edificios en el Recurring del cliente
+
+get-my-recurring.js arma el lugar con las mismas reglas que placeLabel()
+de Admingsocd.com (edificio si hay varios, piso si el edificio tiene
+varios, área). Si cambian allá, cambiar aquí.
+
 ## Reglas de trabajo con el dueño del proyecto
 
 1. **Nada se sube al repo sin permiso explícito.** El dueño dice cómo quiere
