@@ -1417,7 +1417,7 @@
 <script src="shared.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/date-time-picker/date-time-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.50.0/service-tooltip/service-tooltip.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.50.0/service-picker/service-picker.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.52.0/service-picker/service-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/service-change-panel/service-change-panel.js"></script>
 <!-- Pendiente: gsocd-shared va en v1.15.0, el siguiente tag real seria v1.16.0
      (componente nuevo, todavia solo vive en local). Ajustar cuando se suba. -->
@@ -1875,6 +1875,8 @@ if (client) {
       mode: (isJan || isMixed) ? 'levels' : 'toggle',
       showSelectAll: isJan,
       groupByCategory: true,
+      /* picker v1.52.0: toggle Recurring / Units; arranca en Units (paquetes como plantilla). */
+      workToggle: isJan || isMixed, workMode: 'units',
       propertyType: propertyType,
       initialSelected: selected,
       initialLevels: svcLevel,

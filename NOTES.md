@@ -4,6 +4,16 @@ Este archivo existe para que cualquier chat de Claude (u otra persona) que entre
 a este repo después no tenga que adivinar el proceso, ni repetir preguntas ya
 resueltas, ni subir cosas sin permiso. Léelo completo antes de tocar código.
 
+## SUBIDO (23/09/2026): paquetes como plantilla en el portal
+
+Picker v1.52.0 en customer/recurring/templates/tracking; Create Order
+arranca en Units (paquetes como plantilla). get-services manda `areas` y
+`packageItems` (Settings, los escribe Admin). `lib/package-contents.js`
+(copia sin defaults): al crear una orden (los 4 caminos de submit-order)
+se congela lo que incluía cada paquete ese día (OrderHistory 'Package
+Snapshot', interno: el cliente no lo ve en la línea de tiempo), y
+tracking muestra "Includes" SOLO desde esa foto.
+
 ## SUBIDO (23/09/2026): descripción del servicio en tooltip
 
 gsocd-shared v1.50.0 (`service-tooltip` + picker) en customer,

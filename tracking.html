@@ -432,7 +432,7 @@
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/date-time-picker/date-time-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.24/order-form-premium/order-form-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.50.0/service-tooltip/service-tooltip.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.50.0/service-picker/service-picker.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.52.0/service-picker/service-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/service-change-panel/service-change-panel.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.44.2/order-history/order-history.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.10/camera-queue/camera-queue.js"></script>
@@ -1187,7 +1187,7 @@ if (client) {
             }
             return '<tr>' +
             '<td data-label="Category">' + r.cat + '</td>' +
-            '<td data-label="Service">' + (window.GSServiceTooltip ? GSServiceTooltip.nameHtml(r.sku, r.name) : r.name) + '</td>' +
+            '<td data-label="Service">' + (window.GSServiceTooltip ? GSServiceTooltip.nameHtml(r.sku, r.name) : r.name) + pkgIncludesFromHistory(history, r.sku) + '</td>' +
             '<td data-label="Detail" style="color:' + (r.sub ? 'var(--black)' : 'var(--gray)') + '">' + (r.sub || '—') + '</td>' +
             (showTime ? '<td data-label="Time">' + (mins != null ? esc(GSEstimatedTime.fmtDuration(mins)) : '') + '</td>' : '') +
             statusCellHtml +
@@ -1379,6 +1379,20 @@ if (client) {
      importa. */
   /* clientNoteText -- ya viene dentro de GSOrderHistory (gsocd-shared).
      Se quito de aqui por quedar huerfana. */
+  /* Paquete: lo que incluia EL DIA que se creo la orden (foto interna
+     'Package Snapshot' que guarda el servidor). Sin foto, nada (ordenes
+     de antes se ven igual que siempre). */
+  function pkgIncludesFromHistory(history, sku) {
+    let items = null;
+    (history || []).forEach(h => {
+      if (String(h.ChangeType || '') !== 'Package Snapshot') return;
+      try { const v = JSON.parse(h.NewValue || '{}'); if (Array.isArray(v[String(sku || '')])) items = v[String(sku || '')]; } catch (e) { /* sigue */ }
+    });
+    if (!items || !items.length) return '';
+    return '<div style="font-size:11px;color:var(--gray);margin-top:4px;line-height:1.6">Includes: ' + items.map(x =>
+      (window.GSServiceTooltip ? GSServiceTooltip.nameHtml(x.sku, GS.escape ? GS.escape(x.serviceName || x.sku) : String(x.serviceName || x.sku).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))) : String(x.serviceName || x.sku).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))) +
+      (x.level ? ' <b style="color:var(--gold-dk);font-size:10px">' + String(x.level).replace('Level ', 'L') + '</b>' : '')).join(', ') + '</div>';
+  }
   function isHiddenFromClient(h) {
     const fc = String(h.FieldChanged || '');
     const ct = String(h.ChangeType || '');

@@ -13,6 +13,7 @@
 
 const XLSX = require('xlsx');
 const { graphFetch, jsonResponse, siteListPath, SERVICES_CATALOG_LIST, SERVICE_TIMES_LIST } = require('./lib/graph');
+const { readJsonSettings } = require('./lib/package-contents');
 
 /* Catalogo nuevo (ServicesCatalog) -- lista real de SharePoint, SKU-
    based, la misma que ya usa el lado admin. Se manda aparte como
@@ -26,6 +27,8 @@ async function fetchCatalog() {
     rows.push(...(data.value || []));
     url = data['@odata.nextLink'] || null;
   }
+  const settings = await readJsonSettings(['catalog_service_areas', 'catalog_package_contents']);
+  const areasMap = settings.catalog_service_areas, pkgMap = settings.catalog_package_contents;
   return rows.filter(it => it.fields).map(it => ({
     id: it.id,
     sku: it.fields.SKU || '',
@@ -36,6 +39,9 @@ async function fetchCatalog() {
     category: it.fields.Category || '',
     /* Sales Description de QuickBooks -> tooltip (gsocd-shared/service-tooltip). */
     description: it.fields.Description || '',
+    /* Paquetes como plantilla + tarjetas por area (picker v1.52.0; lo edita Admin > Developer). */
+    areas: Array.isArray(areasMap[String(it.fields.SKU || '').trim()]) ? areasMap[String(it.fields.SKU || '').trim()] : [],
+    packageItems: Array.isArray(pkgMap[String(it.fields.SKU || '').trim()]) ? pkgMap[String(it.fields.SKU || '').trim()] : [],
     active: it.fields.Active === undefined ? true : (it.fields.Active === true || it.fields.Active === 'true'),
     requiresQuantity: it.fields.RequiresQuantity === true || it.fields.RequiresQuantity === 'true'
   })).filter(s => s.active);
