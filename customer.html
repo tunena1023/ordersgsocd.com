@@ -1444,7 +1444,7 @@
 <script src="shared.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/date-time-picker/date-time-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.50.0/service-tooltip/service-tooltip.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.56.0/service-picker/service-picker.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.59.0/service-picker/service-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/service-change-panel/service-change-panel.js"></script>
 <!-- Pendiente: gsocd-shared va en v1.15.0, el siguiente tag real seria v1.16.0
      (componente nuevo, todavia solo vive en local). Ajustar cuando se suba. -->
@@ -1491,6 +1491,7 @@ if (client) {
 
   let serviceData = null;
   let catalogCache = [];
+  let pkgLevels = {}; // { pkgSku: [{sku, level}] } -- lo escogido dentro de cada paquete (picker v1.59.0)
   /* Tiempos por servicio -- solo tiene sentido llenarlo si
      client.showEstimatedTime esta prendido, pero se guarda igual
      (no es dato sensible); quien decide mostrarlo es el gating en la
@@ -1988,11 +1989,14 @@ if (client) {
       initialSelected: selected,
       initialLevels: svcLevel,
       initialQuantities: svcQty,
+      /* picker v1.59.0: niveles de lo que incluye cada paquete (mix & match). */
+      initialPackageLevels: pkgLevels,
       onChange: function (sel, lvl, propType, qty) {
         selected = sel;
         svcLevel = lvl;
         svcQty = qty;
         propertyType = propType;
+        pkgLevels = servicePicker && servicePicker.getPackageLevels ? servicePicker.getPackageLevels() : {};
         updateSummary();
         scheduleDraftSave();
       }
@@ -2714,6 +2718,10 @@ if (client) {
       Requester: client.contactPerson || client.businessName || client.clientId,
       Division: currentDiv,
       Services: buildServicesArray(),
+      /* picker v1.59.0: el nivel que escogio el cliente para cada servicio
+         de adentro de cada paquete (mix & match). El servidor lo guarda en
+         la copia congelada del paquete de ESTA orden. */
+      PackageLevels: pkgLevels || {},
       EntryDate: entryDateTime,
       DueDate: dueDateTime,
       Contact: client.contact || '',

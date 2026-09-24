@@ -416,7 +416,7 @@ exports.handler = async (event) => {
         );
       } catch (e) { console.error('Draft cleanup failed:', e.message); }
 
-      await recordPackageSnapshots(orderId, svcSource, b.ClientID);
+      await recordPackageSnapshots(orderId, svcSource, b.ClientID, null, b.PackageLevels);
       return jsonResponse(200, { success: true, orderId, id: result.id });
     }
 
@@ -806,7 +806,7 @@ exports.handler = async (event) => {
             OldValue:   '',
             NewValue:   'SERVICES:' + JSON.stringify({ services: parsedServices, dirtLevel: unit.dirtLevel || b.DirtLevel || '', entryDate: unitFields.EntryDate || '', dueDate: unitFields.DueDate || '' })
           });
-          await recordPackageSnapshots(orderId, parsedServices, actor);
+          await recordPackageSnapshots(orderId, parsedServices, actor, null, b.PackageLevels);
         } catch (e) {
           /* Mismo criterio que el Flujo C: un problema al escribir
              servicios/historial no debe tumbar la orden completa. */
@@ -923,7 +923,7 @@ exports.handler = async (event) => {
        orden SI se creaba, pero la respuesta era error 500 (el cliente
        veia error y podia volver a mandarla). Venia de 31a1b9f (23/09).
        Ahora vive dentro del mismo try (recordPackageSnapshots no lanza). */
-    await recordPackageSnapshots(orderId, parsedServices, (b.OfficeCreated && b.ChangedBy) ? b.ChangedBy : b.ClientID);
+    await recordPackageSnapshots(orderId, parsedServices, (b.OfficeCreated && b.ChangedBy) ? b.ChangedBy : b.ClientID, null, b.PackageLevels);
 } catch (e) { console.error('Post-order write failed:', e.message); }
     return jsonResponse(200, { success: true, orderId, id: result.id, historyWarning });
 
