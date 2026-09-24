@@ -690,6 +690,18 @@
     #panel-templates .svc-chip-grid, #panel-templates .jan-row-grid { grid-template-columns: 1fr; }
   }
 
+  /* Lista de edificios del campo Building # (24/09/2026) */
+  .bldg-menu { display: none; position: absolute; z-index: 400; background: var(--white); border: 1px solid var(--border); border-radius: 8px;
+    box-shadow: 0 10px 28px rgba(0,0,0,.16); max-height: 260px; overflow-y: auto; padding: 4px 0; }
+  .bldg-menu-h { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--gray); padding: 8px 14px 6px; }
+  .bldg-opt { padding: 9px 14px; cursor: pointer; border-top: 1px solid #F2EEE6; }
+  .bldg-opt:first-of-type { border-top: none; }
+  .bldg-opt:hover, .bldg-opt.on { background: #FBF6E8; }
+  .bldg-opt-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .bldg-opt-name { font-size: 13.5px; font-weight: 600; color: var(--black); }
+  .bldg-opt-num { font-size: 11px; font-weight: 700; color: var(--gold-dk, #8C6F2A); background: #F6EFD9; border-radius: 10px; padding: 2px 8px; flex-shrink: 0; }
+  .bldg-opt-addr { font-size: 11.5px; color: var(--gray); margin-top: 2px; }
+
   /* Profile (panel dentro de customer.html, que es el que ve el cliente)
      > Edit primary address / Edit building / Add building (24/09/2026):
      igual que Admin > Clients -- cada seccion en su tarjeta blanca
@@ -1782,6 +1794,80 @@ if (client) {
     $('ad-citystatezip').textContent = [c.city, c.zip].filter(Boolean).join(', ') || '—';
     $('ad-email').textContent = c.contact || '';
   }
+
+  /* ===== Building # con lista de edificios (24/09/2026, el dueño: "al
+     hacer clic en el building number que salga un drop down con los
+     edificios que tienen agregados, pero tambien pueden escribir sin
+     problema"). Aplica a TODOS los campos "Building #" de ordenes: el de
+     una unidad, los de varias unidades y el de "+ Add a Unit" (cualquier
+     input cuyo id termina en 'building-number'). Es un campo de texto
+     normal: la lista solo ayuda; escoger un edificio pone su numero (o
+     su nombre si no tiene numero) y se puede escribir cualquier otra
+     cosa. Sin edificios guardados, el campo se queda como siempre. */
+  let bldgSuggest = [];
+  let bldgMenuFor = null, bldgActive = -1;
+  async function loadBldgSuggest() {
+    try {
+      const data = await GS.api('/get-client-addresses', { method: 'POST', body: { clientId: client.clientId } });
+      bldgSuggest = (data.addresses || []).filter(a => !a.archived && (a.buildingNumber || a.label));
+    } catch (e) { bldgSuggest = []; }
+  }
+  loadBldgSuggest();
+  const isBldgInput = el => el && el.tagName === 'INPUT' && /building-number$/.test(el.id || '');
+  function bldgValue(b) { return String(b.buildingNumber || b.label || ''); }
+  function bldgMenuEl() {
+    let m = document.getElementById('bldg-suggest-menu');
+    if (!m) { m = document.createElement('div'); m.id = 'bldg-suggest-menu'; m.className = 'bldg-menu'; document.body.appendChild(m); }
+    return m;
+  }
+  function closeBldgMenu() { const m = document.getElementById('bldg-suggest-menu'); if (m) m.style.display = 'none'; bldgMenuFor = null; bldgActive = -1; }
+  function openBldgMenu(input) {
+    if (!bldgSuggest.length) return closeBldgMenu();
+    const q = input.value.trim().toLowerCase();
+    const list = bldgSuggest.filter(b => !q || [b.buildingNumber, b.label, b.address].some(v => String(v || '').toLowerCase().includes(q)));
+    const m = bldgMenuEl();
+    if (!list.length) return closeBldgMenu();
+    bldgMenuFor = input; bldgActive = -1;
+    m.innerHTML = '<div class="bldg-menu-h">Your buildings</div>' + list.map((b, i) =>
+      '<div class="bldg-opt" data-i="' + i + '" data-val="' + esc(bldgValue(b)) + '">' +
+        '<div class="bldg-opt-top"><span class="bldg-opt-name">' + esc(b.label || ('Building ' + b.buildingNumber)) + '</span>' +
+          (b.buildingNumber ? '<span class="bldg-opt-num">#' + esc(b.buildingNumber) + '</span>' : '') + '</div>' +
+        (b.address ? '<div class="bldg-opt-addr">' + esc([b.address, b.suite, b.city].filter(Boolean).join(', ')) + '</div>' : '') +
+      '</div>').join('');
+    const r = input.getBoundingClientRect();
+    m.style.left = Math.max(8, r.left + window.scrollX) + 'px';
+    m.style.top = (r.bottom + window.scrollY + 4) + 'px';
+    m.style.width = Math.min(Math.max(r.width, 260), window.innerWidth - 16) + 'px';
+    m.style.display = 'block';
+  }
+  function pickBldg(val) {
+    if (!bldgMenuFor) return;
+    bldgMenuFor.value = val;
+    bldgMenuFor.dispatchEvent(new Event('input', { bubbles: true }));
+    bldgMenuFor.dispatchEvent(new Event('change', { bubbles: true }));
+    closeBldgMenu();
+  }
+  document.addEventListener('focusin', e => { if (isBldgInput(e.target)) openBldgMenu(e.target); });
+  document.addEventListener('click', e => {
+    if (isBldgInput(e.target)) { openBldgMenu(e.target); return; }
+    if (!e.target.closest('#bldg-suggest-menu')) closeBldgMenu();
+  });
+  document.addEventListener('input', e => { if (isBldgInput(e.target) && e.isTrusted) openBldgMenu(e.target); });
+  document.addEventListener('focusout', e => { if (isBldgInput(e.target)) setTimeout(() => { if (document.activeElement !== bldgMenuFor) closeBldgMenu(); }, 150); });
+  document.addEventListener('mousedown', e => { const o = e.target.closest('#bldg-suggest-menu .bldg-opt'); if (o) { e.preventDefault(); pickBldg(o.dataset.val); } });
+  document.addEventListener('keydown', e => {
+    if (!bldgMenuFor || e.target !== bldgMenuFor) return;
+    const opts = [...document.querySelectorAll('#bldg-suggest-menu .bldg-opt')];
+    if (!opts.length) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      bldgActive = (bldgActive + (e.key === 'ArrowDown' ? 1 : -1) + opts.length) % opts.length;
+      opts.forEach((o, i) => o.classList.toggle('on', i === bldgActive));
+      opts[bldgActive].scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter' && bldgActive > -1) { e.preventDefault(); pickBldg(opts[bldgActive].dataset.val); }
+    else if (e.key === 'Escape') closeBldgMenu();
+  });
+  window.addEventListener('resize', closeBldgMenu);
 
   async function refreshOrdersCount() {
     try {
