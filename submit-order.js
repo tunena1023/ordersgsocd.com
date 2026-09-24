@@ -14,6 +14,7 @@ const {
   jsonResponse
 } = require('./lib/graph');
 const { recordPackageSnapshots } = require('./lib/package-contents');
+const { recordUsualOrder } = require('./lib/usual-packages');
 
 async function fetchAll(listName) {
   let url = siteListPath(listName) + '?$expand=fields&$top=200';
@@ -417,6 +418,7 @@ exports.handler = async (event) => {
       } catch (e) { console.error('Draft cleanup failed:', e.message); }
 
       await recordPackageSnapshots(orderId, svcSource, b.ClientID, null, b.PackageLevels);
+      if (!b.OfficeCreated) await recordUsualOrder(b.ClientID, b.Division, svcSource);
       return jsonResponse(200, { success: true, orderId, id: result.id });
     }
 
@@ -831,6 +833,8 @@ exports.handler = async (event) => {
         });
       } catch (e) { console.error('Batch Created history write failed:', e.message); }
 
+      /* 'Your usual order': un PO de varias unidades cuenta como UNA orden. */
+      if (!b.OfficeCreated && createdOrderIds.length) await recordUsualOrder(b.ClientID, b.Division, parsedServices);
       return jsonResponse(200, { success: true, batchId: poTag, orderIds: createdOrderIds });
     }
 
@@ -924,6 +928,8 @@ exports.handler = async (event) => {
        veia error y podia volver a mandarla). Venia de 31a1b9f (23/09).
        Ahora vive dentro del mismo try (recordPackageSnapshots no lanza). */
     await recordPackageSnapshots(orderId, parsedServices, (b.OfficeCreated && b.ChangedBy) ? b.ChangedBy : b.ClientID, null, b.PackageLevels);
+    /* 'Your usual order' (24/09/2026): solo ordenes que manda el cliente. */
+    if (!b.OfficeCreated) await recordUsualOrder(b.ClientID, b.Division, parsedServices);
 } catch (e) { console.error('Post-order write failed:', e.message); }
     return jsonResponse(200, { success: true, orderId, id: result.id, historyWarning });
 

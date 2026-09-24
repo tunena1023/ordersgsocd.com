@@ -1444,7 +1444,7 @@
 <script src="shared.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/date-time-picker/date-time-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.50.0/service-tooltip/service-tooltip.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.60.0/service-picker/service-picker.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.61.0/service-picker/service-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/service-change-panel/service-change-panel.js"></script>
 <!-- Pendiente: gsocd-shared va en v1.15.0, el siguiente tag real seria v1.16.0
      (componente nuevo, todavia solo vive en local). Ajustar cuando se suba. -->
@@ -1491,6 +1491,21 @@ if (client) {
 
   let serviceData = null;
   let catalogCache = [];
+  let usualSetsCache = []; // [{key, name, division, items:[{sku, level}]}] -- get-services, por cliente
+  let savedSetsCache = []; // paquetes propios del cliente (sus Templates), como tarjeta "My package"
+  function templatesToSets(list) {
+    return (list || []).map(t => ({ key: String(t.id), name: t.name, division: t.division,
+      items: (t.services || []).filter(x => x && x.SubOption).map(x => ({ sku: String(x.SubOption), level: x.Level || '' })) }))
+      .filter(t => t.items.length);
+  }
+  async function loadSavedSets() {
+    try {
+      const r = await GS.api('/list-templates', { method: 'POST', body: { clientId: client.clientId } });
+      savedSetsCache = templatesToSets(r.templates || []);
+    } catch (e) { savedSetsCache = []; }
+    if (servicePicker && servicePicker.setSavedSets) servicePicker.setSavedSets(savedSetsCache.filter(t => !currentDiv || t.division === currentDiv || currentDiv === 'Mixed'));
+  }
+  loadSavedSets();
   let pkgLevels = {}; // { pkgSku: [{sku, level}] } -- lo escogido dentro de cada paquete (picker v1.59.0)
   /* Tiempos por servicio -- solo tiene sentido llenarlo si
      client.showEstimatedTime esta prendido, pero se guarda igual
@@ -1751,6 +1766,8 @@ if (client) {
     window.gsPricesAllowed = !!data.pricesAllowed;
     serviceData = data;
     catalogCache = data.catalog || [];
+    /* 'Usual order' de este cliente (lo que ha pedido 10 veces seguidas), picker v1.61.0. */
+    usualSetsCache = data.usualSets || [];
     serviceTimesCache = data.serviceTimes || {};
     if (editParam) {
       /* BUG REAL arreglado (12/09/2026): "New Order" y "Processing"
@@ -1991,6 +2008,27 @@ if (client) {
       initialQuantities: svcQty,
       /* picker v1.59.0: niveles de lo que incluye cada paquete (mix & match). */
       initialPackageLevels: pkgLevels,
+      usualSets: usualSetsCache,
+      savedSets: savedSetsCache.filter(t => !div || t.division === div || isMixed),
+      /* Edit del "Usual order" (picker v1.61.0): el cliente lo ajusta y lo
+         guarda con nombre como SU paquete (se guarda como Template). Al
+         guardarlo, el "Usual order" se esconde hasta que junte otro ciclo. */
+      usualEdit: {
+        onSave: async function (name, items) {
+          const services = items.map(x => {
+            const svc = catalogCache.find(c => String(c.sku) === String(x.sku)) || {};
+            return { Category: svc.propertyType || propertyType, ServiceName: svc.serviceName || x.sku, SubOption: x.sku,
+              Division: GSOrderFormPremium.realDivisionForSku(catalogCache, x.sku, currentDiv), Level: x.level || '', Quantity: '' };
+          });
+          try {
+            await GS.api('/save-template', { method: 'POST', body: { clientId: client.clientId, name, division: currentDiv, services, fromUsual: true } });
+          } catch (e) { showToast('Could not save your package: ' + e.message); throw e; }
+          usualSetsCache = [];
+          if (servicePicker && servicePicker.setUsualSets) servicePicker.setUsualSets([]);
+          await loadSavedSets();
+          showToast('Saved as “' + name + '”. It\u2019s now in your packages.');
+        }
+      },
       onChange: function (sel, lvl, propType, qty) {
         selected = sel;
         svcLevel = lvl;

@@ -15,6 +15,7 @@ const XLSX = require('xlsx');
 const { graphFetch, jsonResponse, siteListPath, queryList, SERVICES_CATALOG_LIST, SERVICE_TIMES_LIST, CLIENTS_LIST } = require('./lib/graph');
 const catalogFields = require('./lib/catalog-fields');
 const { clientPackagesFor, applyClientPackages } = require('./lib/client-packages');
+const { usualSetsFromFields } = require('./lib/usual-packages');
 
 /* Catalogo nuevo (ServicesCatalog) -- lista real de SharePoint, SKU-
    based, la misma que ya usa el lado admin. Se manda aparte como
@@ -175,6 +176,8 @@ exports.handler = async (event) => {
         const f = (rows[0] && rows[0].fields) || {};
         oldCatalogResult.recurringAllowed = catalogFields.truthy(f.ShowRecurring);
         oldCatalogResult.pricesAllowed = catalogFields.truthy(f.ShowPrices);
+        /* 'Your usual order' de este cliente (lib/usual-packages.js). */
+        oldCatalogResult.usualSets = usualSetsFromFields(f);
       } catch (e) { oldCatalogResult.recurringAllowed = false; oldCatalogResult.pricesAllowed = false; }
       /* Paquetes por cliente (24/09/2026): si Admin le guardo a este
          cliente su propia version de un paquete (ClientPackages), el

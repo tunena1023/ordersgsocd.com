@@ -10,6 +10,7 @@
    comportamiento de antes.
 ============================================================ */
 
+const { usualSaved } = require('./lib/usual-packages');
 const {
   SERVICE_TEMPLATES_LIST,
   createListItem, updateListItemByItemId,
@@ -54,6 +55,9 @@ exports.handler = async (event) => {
     }
 
     const created = await createListItem(SERVICE_TEMPLATES_LIST, fields);
+    /* Guardado desde 'Your usual order' (Edit > Save my package): el usual se
+       esconde y el siguiente sale con 3 seguidas (lib/usual-packages.js). */
+    if (b.fromUsual) await usualSaved(clientId, division);
     return jsonResponse(200, { success: true, id: created.id });
   } catch (err) {
     return jsonResponse(500, { error: err.message });
