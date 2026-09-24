@@ -292,11 +292,12 @@ exports.handler = async (event) => {
           OldValue:   '',
           NewValue:   'SERVICES:' + JSON.stringify({ services: unitServices, dirtLevel: '', entryDate: effectiveEntryDate, dueDate: effectiveDueDate })
         });
+        /* Mismo bug (24/09/2026): unitServices vive dentro de este try;
+           afuera tronaba con 'unitServices is not defined'. */
+        await recordPackageSnapshots(orderId, unitServices, actor);
       } catch (e) {
         console.error('AddUnitToBatch post-create write failed:', e.message);
       }
-
-      await recordPackageSnapshots(orderId, unitServices, actor);
       return jsonResponse(200, { success: true, orderId });
     }
 
@@ -916,8 +917,14 @@ exports.handler = async (event) => {
         historyWarning = 'The order was created, but its first history entry could not be saved: ' + e2.message;
       }
     }
-} catch (e) { console.error('Post-order write failed:', e.message); }
+    /* BUG REAL (24/09/2026, captura del dueño: 'Error: parsedServices is not
+       defined' al mandar una orden desde el portal). Esta linea estaba
+       DESPUES del try de arriba, donde parsedServices ya no existe: la
+       orden SI se creaba, pero la respuesta era error 500 (el cliente
+       veia error y podia volver a mandarla). Venia de 31a1b9f (23/09).
+       Ahora vive dentro del mismo try (recordPackageSnapshots no lanza). */
     await recordPackageSnapshots(orderId, parsedServices, (b.OfficeCreated && b.ChangedBy) ? b.ChangedBy : b.ClientID);
+} catch (e) { console.error('Post-order write failed:', e.message); }
     return jsonResponse(200, { success: true, orderId, id: result.id, historyWarning });
 
   } catch (err) {
