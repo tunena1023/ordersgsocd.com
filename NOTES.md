@@ -4,6 +4,26 @@ Este archivo existe para que cualquier chat de Claude (u otra persona) que entre
 a este repo después no tenga que adivinar el proceso, ni repetir preguntas ya
 resueltas, ni subir cosas sin permiso. Léelo completo antes de tocar código.
 
+## SUBIDO (24/09/2026): Building # con lista de edificios + Profile en tarjetas
+
+- **New Order > Building #** (una unidad, cada renglon de varias
+  unidades y "+ Add a Unit" de un PO): al tocarlo sale "Your buildings"
+  con los edificios NO archivados de Profile (nombre, # y direccion);
+  escribir filtra; escoger pone el numero (o el nombre si no tiene
+  numero). Sigue siendo texto libre. Aprobado con mini ("asi mero"):
+  https://claude.ai/artifact/1cjaexdsmizqg5rMmT3JjN
+  A proposito NO cambia la direccion de la orden ni la tarjeta negra
+  (sigue la principal). Si el dueño lo pide, ese seria otro paso.
+- **Profile**: secciones en tarjetas desplegables, TODAS cerradas por
+  defecto, y Save al final (abajo de Contacts). OJO: el Profile que ven
+  los clientes es el panel `#panel-profile` DENTRO de `customer.html`;
+  `profile.html` es una copia VIEJA que todavia linkean templates,
+  tracking, gallery y recurring. Primero se cambio solo profile.html y
+  el dueño no veia nada -- cualquier cambio a Profile va en los DOS
+  mientras exista la copia.
+- **PENDIENTE (sin decidir):** apuntar el tab Profile de templates /
+  tracking / gallery / recurring a customer.html y retirar profile.html.
+
 ## SUBIDO (23/09/2026): paquetes como plantilla en el portal
 
 Picker v1.52.0 en customer/recurring/templates/tracking; Create Order
