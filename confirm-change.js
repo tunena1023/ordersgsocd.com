@@ -38,7 +38,7 @@ const {
    este es el otro punto real donde un cambio propuesto (de oficina o
    de un supervisor, reenviado al cliente) se aplica por primera vez:
    cuando el cliente le da Confirm. */
-const { resolveOrderDivision, divisionChangeHistoryPayload } = require('gsocd-shared/lib/division-rules');
+const { resolveOrderDivision, divisionChangeHistoryPayload } = require('./lib/division-rules');
 
 /* Mismo parser que ya usa admin-approve-order.js (lastRequestedSnapshot)
    y gsocd-shared/order-history.js (parseServicesPayload) del lado
