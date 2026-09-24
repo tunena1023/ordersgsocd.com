@@ -1877,7 +1877,7 @@ if (client) {
       division: div,
       crossDivision: isMixed,
       mode: (isJan || isMixed) ? 'levels' : 'toggle',
-      showSelectAll: isJan,
+      showSelectAll: false, /* quitado de todas partes (dueño, 24/09/2026) */
       groupByCategory: true,
       /* picker v1.52.0: toggle Recurring / Units; arranca en Units (paquetes como plantilla). */
       workToggle: !!window.gsRecurringAllowed && (isJan || isMixed), showPackages: isJan || isMixed, workMode: 'units',
@@ -3364,7 +3364,7 @@ if (client) {
       division: tplCurrentDiv,
       crossDivision: isMixed,
       mode: (isJan || isMixed) ? 'levels' : 'toggle',
-      showSelectAll: isJan,
+      showSelectAll: false, /* quitado de todas partes (dueño, 24/09/2026) */
       groupByCategory: true,
       tplPropertyType: tplPropertyType,
       initialSelected: tplSelected,

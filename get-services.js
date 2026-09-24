@@ -14,6 +14,7 @@
 const XLSX = require('xlsx');
 const { graphFetch, jsonResponse, siteListPath, queryList, SERVICES_CATALOG_LIST, SERVICE_TIMES_LIST, CLIENTS_LIST } = require('./lib/graph');
 const catalogFields = require('./lib/catalog-fields');
+const { clientPackagesFor, applyClientPackages } = require('./lib/client-packages');
 
 /* Catalogo nuevo (ServicesCatalog) -- lista real de SharePoint, SKU-
    based, la misma que ya usa el lado admin. Se manda aparte como
@@ -175,6 +176,11 @@ exports.handler = async (event) => {
         oldCatalogResult.recurringAllowed = catalogFields.truthy(f.ShowRecurring);
         oldCatalogResult.pricesAllowed = catalogFields.truthy(f.ShowPrices);
       } catch (e) { oldCatalogResult.recurringAllowed = false; oldCatalogResult.pricesAllowed = false; }
+      /* Paquetes por cliente (24/09/2026): si Admin le guardo a este
+         cliente su propia version de un paquete (ClientPackages), el
+         portal le muestra esa. Si falla, se queda la general. */
+      try { oldCatalogResult.catalog = applyClientPackages(oldCatalogResult.catalog, await clientPackagesFor(qsClient)); }
+      catch (e) { console.error('ClientPackages for ' + qsClient + ':', e.message); }
     }
     return jsonResponse(200, oldCatalogResult);
   } catch (err) {
