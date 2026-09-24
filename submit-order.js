@@ -224,7 +224,11 @@ exports.handler = async (event) => {
       }
       const bf = { BuildingNumber: buildingNumber, Address: template.Address || '', Suite: template.Suite || '', City: template.City || '', Zip: template.Zip || '' };
 
-      const actor = (b.changedBy && String(b.changedBy).trim()) || 'Admin';
+      /* Quien la creo (24/09/2026, bug visto por el dueño: ordenes hechas
+         desde este portal salian 'by Admin'). Este archivo solo lo usa el
+         portal del cliente: si no llega un nombre de oficina, fue el
+         cliente -- igual que el flujo de una sola orden (ChangedBy = ClientID). */
+      const actor = (b.changedBy && String(b.changedBy).trim()) || String(b.ClientID || '').trim() || 'Client';
       const suffix = nextGlobalSuffix(allOrders);
       const orderId = String(b.ClientID).trim() + '-' + suffix + '-' + add.batchId;
 
@@ -705,7 +709,11 @@ exports.handler = async (event) => {
 
       const allOrderRows = await fetchAll(ORDERS_LIST);
 
-      const actor = (b.changedBy && String(b.changedBy).trim()) || 'Admin';
+      /* Quien la creo (24/09/2026, bug visto por el dueño: ordenes hechas
+         desde este portal salian 'by Admin'). Este archivo solo lo usa el
+         portal del cliente: si no llega un nombre de oficina, fue el
+         cliente -- igual que el flujo de una sola orden (ChangedBy = ClientID). */
+      const actor = (b.changedBy && String(b.changedBy).trim()) || String(b.ClientID || '').trim() || 'Client';
       const poTag = nextGlobalPO(allOrderRows);
       let nextSuffixNum = parseInt(nextGlobalSuffix(allOrderRows), 10);
       const parsedServices = resolveServices(b.Services, b.Division);
