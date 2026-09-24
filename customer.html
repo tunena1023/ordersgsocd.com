@@ -690,6 +690,21 @@
     #panel-templates .svc-chip-grid, #panel-templates .jan-row-grid { grid-template-columns: 1fr; }
   }
 
+  /* Profile (panel dentro de customer.html, que es el que ve el cliente)
+     > Edit primary address / Edit building / Add building (24/09/2026):
+     igual que Admin > Clients -- cada seccion en su tarjeta blanca
+     desplegable, TODAS cerradas por defecto; el titulo abre/cierra.
+     Cerrada solo se esconde con CSS: Save sigue leyendo los campos. */
+  #panel-profile .ctl-card { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; margin-bottom: 14px; }
+  #panel-profile .ctl-card-h { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--gray); margin: 0 0 14px;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; user-select: none; }
+  #panel-profile .ctl-card-h::after { content: '\25BE'; font-size: 12px; color: var(--gold-dk, #8C6F2A); transition: transform .15s; }
+  #panel-profile .ctl-card.collapsed > .ctl-card-h { margin-bottom: 0; }
+  #panel-profile .ctl-card.collapsed > .ctl-card-h::after { transform: rotate(-90deg); }
+  #panel-profile .ctl-card.collapsed > :not(.ctl-card-h) { display: none !important; }
+  #panel-profile .ctl-card > :last-child, #panel-profile .ctl-card .gs-ofp-unitrow:last-child, #panel-profile .ctl-card .control-grid:last-child { margin-bottom: 0 !important; }
+  @media (max-width: 560px) { #panel-profile .ctl-card { padding: 14px; } }
+
   /* ============================================================
      PANEL PROFILE -- reglas de profile.html (su propia pagina
      antes de unirla aqui), encapsuladas bajo #panel-profile.
@@ -3555,7 +3570,7 @@ if (client) {
     if (profileSelected === 'primary') {
       const active = contacts.filter(c => !c.archived);
       const recipient = active.find(c => c.notifyRecipient);
-      let html = '<p style="font-size:12px;color:var(--gray);margin-bottom:4px">This is your <strong>primary address</strong> — used by default unless a different building is profileSelected when placing an order.</p>' +
+      let html = '<p style="font-size:12px;color:var(--gray);margin-bottom:4px">This is your <strong>primary address</strong> — used by default unless a different building is selected when placing an order.</p>' +
         '<div style="font-size:15px;font-weight:700;margin:14px 0 4px">' + esc(profileFields.businessName || client.businessName || client.clientId) + '</div>' +
         '<div style="font-size:13px;color:var(--gray)">' + esc(profileFields.address || '—') + ' ' + esc(profileFields.suite || '') + ' ' + esc(profileFields.city || '') + ' ' + esc(profileFields.zip || '') + '</div>' +
         '<div style="margin-top:18px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray)">Contacts on file</div>';
@@ -3619,34 +3634,43 @@ if (client) {
       if (!active.length) contactsHtml = '<p class="empty-note" style="padding:4px 0">No additional contacts yet.</p>';
       const archivedCount = contacts.filter(c => c.archived).length;
 
-      control.innerHTML = '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin-bottom:12px">Edit primary address</div>' +
+      control.innerHTML = '<div class="ctl-card collapsed"><p class="ctl-card-h" onclick="this.parentNode.classList.toggle(\'collapsed\')">Edit primary address</p>' +
         '<div class="gs-ofp-unitrow">' + field('bname', 'Business Name', profileFields.businessName) + field('cperson', 'Contact Person', profileFields.contactPerson) + '</div>' +
         '<div class="gs-ofp-unitrow">' + field('email', 'Contact Email', profileFields.contact) + field('phone', 'Phone', profileFields.phone) + '</div>' +
         '<div class="gs-ofp-unitrow">' + field('address', 'Address', profileFields.address) + field('suite', 'Suite', profileFields.suite) + '</div>' +
         '<div class="gs-ofp-unitrow">' + field('city', 'City', profileFields.city) + field('zip', 'Zip', profileFields.zip) + '</div>' +
-        '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:20px 0 10px;padding-top:16px;border-top:1px solid var(--border)">Office hours at this address</div>' +
+        '</div>' +
+        '<div class="ctl-card collapsed"><p class="ctl-card-h" onclick="this.parentNode.classList.toggle(\'collapsed\')">Office hours at this address</p>' +
         '<p style="font-size:11px;color:var(--gray);margin-bottom:10px">So our crew knows when someone will be there to let them in.</p>' +
         officeHoursFieldsHtml(profileFields) +
+        '</div>' +
         holidaysSectionHtml('') +
-        '<button class="gs-ofp-btn-primary" style="width:100%;margin-top:6px" onclick="savePrimaryEdit()">Save</button>' +
-        '<p class="dialog-error" id="ctl-error"></p>' +
-        '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:20px 0 8px;padding-top:16px;border-top:1px solid var(--border)">Contacts</div>' +
+        '<div class="ctl-card collapsed"><p class="ctl-card-h" onclick="this.parentNode.classList.toggle(\'collapsed\')">Contacts</p>' +
         '<div id="ctl-contacts">' + contactsHtml + '</div>' +
         '<div id="ctl-newcontacts"></div>' +
         '<a onclick="addContactRow(false)" style="font-size:11px;color:var(--gray);text-decoration:underline;cursor:pointer;display:block;margin:4px 0 6px">+ Add another contact</a>' +
         (archivedCount ? '<a onclick="toggleShowArchivedContacts(); openEdit()" style="font-size:11px;color:var(--gray);text-decoration:underline;cursor:pointer;display:block">' + (showArchivedContacts ? 'Hide' : 'Show') + ' archived contacts (' + archivedCount + ')</a>' : '') +
-        (showArchivedContacts ? archivedContactsHtml() : '');
+        (showArchivedContacts ? archivedContactsHtml() : '') +
+        '</div>' +
+        /* Save al FINAL (24/09/2026, el dueño: "por que pusiste el boton de
+           Save arriba de Contacts?"): Save tambien guarda los contactos
+           nuevos de "+ Add another contact", asi que va abajo de todo,
+           igual que Admin. */
+        '<button class="gs-ofp-btn-primary" style="width:100%;margin-top:6px" onclick="savePrimaryEdit()">Save</button>' +
+        '<p class="dialog-error" id="ctl-error"></p>';
       loadHolidaysInto(client.clientId, '');
     } else {
       const b = addresses.find(x => x.id === profileSelected) || {};
-      control.innerHTML = '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin-bottom:12px">Edit ' + esc(b.label || 'building') + '</div>' +
+      control.innerHTML = '<div class="ctl-card collapsed"><p class="ctl-card-h" onclick="this.parentNode.classList.toggle(\'collapsed\')">Edit ' + esc(b.label || 'building') + '</p>' +
         '<div class="gs-ofp-unitrow">' + field('label', 'Label', b.label) + field('building', 'Building #', b.buildingNumber) + '</div>' +
         field('address', 'Address', b.address, true) +
         '<div class="gs-ofp-unitrow">' + field('suite', 'Suite', b.suite) + field('city', 'City', b.city) + '</div>' +
         '<div class="gs-ofp-unitrow">' + field('zip', 'Zip', b.zip) + '</div>' +
-        '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:20px 0 10px;padding-top:16px;border-top:1px solid var(--border)">Office hours at this building</div>' +
+        '</div>' +
+        '<div class="ctl-card collapsed"><p class="ctl-card-h" onclick="this.parentNode.classList.toggle(\'collapsed\')">Office hours at this building</p>' +
         '<p style="font-size:11px;color:var(--gray);margin-bottom:10px">So our crew knows when someone will be there to let them in.</p>' +
         officeHoursFieldsHtml(b) +
+        '</div>' +
         holidaysSectionHtml(b.id) +
         '<button class="gs-ofp-btn-primary" style="width:100%;margin-top:6px" onclick="saveBuildingEdit(\'' + esc(b.id) + '\')">Save</button>' +
         '<p class="dialog-error" id="ctl-error"></p>';
@@ -3725,10 +3749,10 @@ if (client) {
 
   function holidaysSectionHtml(buildingId) {
     const safe = holSafe(buildingId);
-    return '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:20px 0 8px;padding-top:16px;border-top:1px solid var(--border)">Holidays</div>' +
+    return '<div class="ctl-card collapsed"><p class="ctl-card-h" onclick="this.parentNode.classList.toggle(\'collapsed\')">Holidays</p>' +
       '<p style="font-size:11px;color:var(--gray);margin-bottom:10px">Choose which ones apply here, and whether you\'ll be open or closed.</p>' +
       '<div id="hol-list-' + safe + '"><p class="empty-note" style="padding:8px 0">Loading…</p></div>' +
-      '<div id="hol-add-' + safe + '" style="margin-top:8px"></div>';
+      '<div id="hol-add-' + safe + '" style="margin-top:8px"></div></div>';
   }
 
   async function loadHolidaysInto(clientId, buildingId) {
@@ -4117,7 +4141,7 @@ if (client) {
   function startAddBuilding() {
     const control = $('control-panel');
     control.classList.add('open');
-    control.innerHTML = '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin-bottom:12px">Add building</div>' +
+    control.innerHTML = '<div class="ctl-card collapsed"><p class="ctl-card-h" onclick="this.parentNode.classList.toggle(\'collapsed\')">Add building</p>' +
       '<div class="control-grid">' +
         field('label', 'Label', '') +
         field('building', 'Building #', '') +
@@ -4127,9 +4151,11 @@ if (client) {
         field('zip', 'Zip', '') +
         field('phone', 'Phone (optional)', '') +
       '</div>' +
-      '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:20px 0 10px;padding-top:16px;border-top:1px solid var(--border)">Office hours at this building</div>' +
+      '</div>' +
+      '<div class="ctl-card collapsed"><p class="ctl-card-h" onclick="this.parentNode.classList.toggle(\'collapsed\')">Office hours at this building</p>' +
       '<p style="font-size:11px;color:var(--gray);margin-bottom:10px">So our crew knows when someone will be there to let them in. You can also set this later.</p>' +
       officeHoursFieldsHtml({}) +
+      '</div>' +
       '<button class="gs-ofp-btn-primary" style="width:100%;margin-top:6px" onclick="saveBuildingEdit(\'new\')">Save</button>' +
       '<p class="dialog-error" id="ctl-error"></p>';
   }
