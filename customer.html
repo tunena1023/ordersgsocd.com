@@ -678,6 +678,8 @@
      todavia tienen el diseño triste"): tarjetas del mismo estilo que "My
      package" de New Order (al final SON esos templates). Una sola abierta:
      a la izquierda con sus servicios; las demas cerradas a la derecha. ===== */
+  #panel-templates .tplx-back { background: none; border: none; font-family: inherit; font-size: 12px; font-weight: 600; color: var(--gold-dk); cursor: pointer; padding: 4px 0; margin-bottom: 14px; }
+  #panel-templates .tplx-back:hover { text-decoration: underline; }
   #panel-templates .tplx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
   #panel-templates .tplx-split { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 12px; align-items: start; }
   #panel-templates .tplx-side { display: flex; flex-direction: column; gap: 10px; }
@@ -1243,7 +1245,7 @@
           </div>
         </div>
         <div class="confirm-actions">
-          <button class="gs-ofp-btn-primary" onclick="location.href='tracking.html'">View Order Tracker →</button>
+          <button class="gs-ofp-btn-primary" onclick="location.href='customer.html?tab=processing'">View Order Tracker →</button>
         </div>
       </div>
 
@@ -1341,10 +1343,8 @@
   <h2>Templates</h2>
   <p class="list-sub">Saved combos of services you use often. Load one to start a new order without rebuilding it from scratch — you'll still fill in the dates, address and any other details for that order.</p>
 
-  <div class="subtabs">
-    <button type="button" class="subtab active" data-view="saved" onclick="showSubview('saved')">Saved</button>
-    <button type="button" class="subtab" data-view="add" onclick="startNewTemplate()">+ Add Template</button>
-  </div>
+  <!-- 24/09/2026 (dueño): fuera la pestañita "+ Add Template" (repetia el
+       boton dorado "+ New template"); el editor trae su "← Back to templates". -->
 
   <!-- ===== SAVED ===== -->
   <div class="subview active" id="subview-saved">
@@ -1354,6 +1354,7 @@
 
   <!-- ===== ADD TEMPLATE ===== -->
   <div class="subview" id="subview-add">
+    <button type="button" class="tplx-back" onclick="showSubview('saved')">&larr; Back to templates</button>
     <div class="field-wrap">
       <label>Template name</label>
       <input type="text" id="tpl-name" placeholder="e.g. Monthly common area clean">
@@ -1481,7 +1482,7 @@
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.6/nav-premium/nav-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.32.0/print-button/print-button.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.24/order-form-premium/order-form-premium.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.44.2/order-history/order-history.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.58.0/order-history/order-history.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.10/camera-queue/camera-queue.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.0.0/lightbox/lightbox.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.30.0/order-card-header/order-card-header.js"></script>
@@ -2756,7 +2757,7 @@ if (client) {
       }
     } catch (e) {
       alert('Could not load the draft: ' + e.message);
-      location.href = 'tracking.html';
+      location.href = 'customer.html?tab=processing';
     }
   }
 
@@ -2775,7 +2776,7 @@ if (client) {
       const isAssignByService = o && (o.AssignByService === true || o.AssignByService === 'true');
       if (!o || (!isAssignByService && (o.Status || 'Received') !== 'Received')) {
         alert('This order can no longer be edited directly.');
-        location.href = 'tracking.html';
+        location.href = 'customer.html?tab=processing';
         return;
       }
       editOrderId = orderId;
@@ -2809,7 +2810,7 @@ if (client) {
       updateSummary();
     } catch (e) {
       alert('Could not load the order: ' + e.message);
-      location.href = 'tracking.html';
+      location.href = 'customer.html?tab=processing';
     }
   }
 
@@ -2991,7 +2992,7 @@ if (client) {
       if (editOrderId) {
         // Notificación de cambios enviados (la foto, si hubo, ya se subio directo -- ver addNewOrderPhoto)
         showToast('Your changes were sent to our office for review. You will receive a confirmation email shortly.');
-        setTimeout(() => { location.href = 'tracking.html'; }, 2500);
+        setTimeout(() => { location.href = 'customer.html?tab=processing&openOrder=' + encodeURIComponent(editOrderId); }, 2500);
       } else if (result.batchId) {
         await releaseNewOrderPhotos(result.orderIds || []);
         showBatchConfirmation(result.batchId, result.orderIds || [], order);
@@ -4625,11 +4626,34 @@ if (client) {
     GSNavPremium.showPanel(which);
   }
 
+  /* 24/09/2026 (consolidar las copias viejas): la tira de fotos de cada
+     orden en Processing/History solo existia en tracking.html. Mismo codigo
+     de alla: fotos del cliente por orden (get-client-gallery). */
+  let orderPhotosMap = {};
+  /* Lo que incluyo un paquete EN ESTA orden (Orders.PackageContents) --
+     solo existia en tracking.html. */
+  function pkgIncludesFromOrder(order, sku) {
+    let items = null;
+    try { const v = JSON.parse((order && order.PackageContents) || '{}'); if (Array.isArray(v[String(sku || '')])) items = v[String(sku || '')]; } catch (e) { items = null; }
+    if (!items || !items.length) return '';
+    const escT = x => String(x == null ? '' : x).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+    return '<div style="font-size:11px;color:var(--gray);margin-top:4px;line-height:1.6">Includes: ' + items.map(x =>
+      (window.GSServiceTooltip ? GSServiceTooltip.nameHtml(x.sku, escT(x.serviceName || x.sku)) : escT(x.serviceName || x.sku)) +
+      (x.level ? ' <b style="color:var(--gold-dk);font-size:10px">' + String(x.level).replace('Level ', 'L') + '</b>' : '')).join(', ') + '</div>';
+  }
+  function orderPhotoStripHtml(orderId) {
+    return GSPhotoHoverPreview.stripHtml(orderPhotosMap[orderId]);
+  }
   async function loadOrders() {
     try {
-      const data = await GS.api('/get-orders', { method: 'POST', body: { clientId: client.clientId } });
+      const [data, galleryRes] = await Promise.all([
+        GS.api('/get-orders', { method: 'POST', body: { clientId: client.clientId } }),
+        GS.api('/get-client-gallery', { method: 'POST', body: { clientId: client.clientId } }).catch(() => ({ groups: [] }))
+      ]);
       ordersCache = data.orders || [];
       orderDetailCache = {};
+      orderPhotosMap = {};
+      (galleryRes.groups || []).forEach(g => { orderPhotosMap[g.orderId] = g.photos || []; });
       renderProcessing();
       renderHistory();
     } catch (e) {
@@ -5033,6 +5057,7 @@ if (client) {
               bathrooms: o.Bathrooms,
               extraLine: orderDateLine(o)
             })}
+            ${orderPhotoStripHtml(o.OrderID)}
           </div>
           <div style="display:flex;align-items:center;gap:16px;flex-shrink:0">
             ${GSOrderBadges.occupied(o)}${GSOrderBadges.officeNeed(o)}
@@ -5061,6 +5086,7 @@ if (client) {
               completedDateText: o.CompletedDate ? fmtDate(o.CompletedDate) : '',
               extraLine: orderDateLine(o)
             })}
+            ${orderPhotoStripHtml(o.OrderID)}
           </div>
           <div style="display:flex;align-items:center;gap:16px;flex-shrink:0">
             ${GSOrderBadges.occupied(o)}${GSOrderBadges.officeNeed(o)}
@@ -5150,6 +5176,14 @@ if (client) {
         ? GSOrderHistory.parseServicesPayload(pendingRow.NewValue) : null;
       const isPendingProposal = !!(proposedPayload && Array.isArray(proposedPayload.services) && proposedPayload.services.length);
       const services = isPendingProposal ? proposedPayload.services : (data.services || []);
+      /* 24/09/2026 (consolidar copias): estatus por servicio para ordenes
+         "Assign by service" -- solo existia en tracking.html. El cliente ve
+         Completed / Assigned / Not started (nunca terminos de oficina). */
+      const svcAssignByKey = {};
+      if (!isPendingProposal) {
+        (data.serviceAssignments || []).forEach(a => { svcAssignByKey[a.Category + '|' + a.ServiceName] = a; });
+      }
+      const showSvcStatus = !!(o.AssignByService === true || o.AssignByService === 'true') && !isPendingProposal;
       const contactsForSummary = await ensureContactsCache();
       await trackingServiceTimesPromise; // no-op si showEstimatedTime esta apagado
 
@@ -5199,7 +5233,16 @@ if (client) {
             const mins = showTime ? lineMinutesFor(r.sku, r.lvl, r.qty, o, trackingServiceTimesCache) : null;
             const camHtml = '<button type="button" title="Add a photo for this service" onclick="startClientServicePhoto(\'' + jsStr(orderId) + '\',\'' + jsStr(r.svcNameRaw) + '\')" style="width:32px;height:32px;padding:0;border-radius:6px;border:1.5px solid var(--border);background:var(--white);color:var(--gray);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">' +
               '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg></button>';
-            return svcLineRowHtml(r, { timeText: mins != null ? esc(GSEstimatedTime.fmtDuration(mins)) : '', camHtml });
+            let statusHtml = '';
+            if (showSvcStatus) {
+              const a = svcAssignByKey[r.catReal + '|' + r.svcNameRaw];
+              const isDone = a && a.WorkStatus === 'Completed';
+              const scheduled = !!(a && a.AssignedTo && a.ScheduledDate);
+              const label = isDone ? 'Completed' : (scheduled ? 'Assigned' : 'Not started');
+              const color = isDone ? '#3E7A4C' : (scheduled ? 'var(--gold-dk)' : 'var(--gray)');
+              statusHtml = '<span style="color:' + color + ';font-weight:600">' + label + '</span>';
+            }
+            return svcLineRowHtml(r, { timeText: mins != null ? esc(GSEstimatedTime.fmtDuration(mins)) : '', statusHtml, camHtml, extraHtml: pkgIncludesFromOrder(o, r.sku) });
           }).join('')
         : '<div style="font-size:12px;padding:10px 0">No services recorded.</div>';
       const svcHeaderHtml =

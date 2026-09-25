@@ -4,6 +4,21 @@ Este archivo existe para que cualquier chat de Claude (u otra persona) que entre
 a este repo después no tenga que adivinar el proceso, ni repetir preguntas ya
 resueltas, ni subir cosas sin permiso. Léelo completo antes de tocar código.
 
+## 24/09/2026: UNA sola pagina del portal (customer.html)
+
+- tracking.html, templates.html, recurring.html, profile.html y gallery.html
+  ya NO son paginas: solo redirigen a customer.html al panel correcto
+  (?tab=processing|history|templates|recurring|profile|gallery) conservando
+  sus parametros (openOrder, openId, #history). Eran copias viejas con el
+  selector v1.52.0 y sin arreglos. Su codigo esta en el historial de git.
+- Antes de retirarlas se pasaron a customer.html las 3 cosas que solo
+  tenia tracking.html: tira de fotos por orden, estatus por servicio
+  (Assign by service) y "Includes" del paquete.
+- customer.html ya no manda a tracking.html (Order Tracker, errores de
+  borrador/edicion, despues de mandar cambios).
+- Cualquier cambio del portal va SOLO en customer.html.
+- Pendiente viejo "profile.html (copia vieja)" RESUELTO.
+
 ## SUBIDO (24/09/2026): Building # con lista de edificios + Profile en tarjetas
 
 - **New Order > Building #** (una unidad, cada renglon de varias
