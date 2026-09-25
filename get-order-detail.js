@@ -148,6 +148,8 @@ exports.handler = async (event) => {
       ServiceWindow:    f.ServiceWindow || '',
       DispatchDate:     f.DispatchDate || '',
       InspectionDate:   f.InspectionDate || '',
+      InspectionWindow: f.InspectionWindow || '',
+      InspectionDoneAt: f.InspectionDoneAt || '',
       DelayReasonType:  f.DelayReasonType || '',
       DelayReasonNotes: f.DelayReasonNotes || '',
       Archived:         f.Archived === true || f.Archived === 'true',

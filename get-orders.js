@@ -76,6 +76,11 @@ exports.handler = async (event) => {
           ServiceWindow:    f.ServiceWindow || '',
           DelayReasonType:  f.DelayReasonType || '',
           DelayReasonNotes: f.DelayReasonNotes || '',
+          /* Inspeccion (25/09/2026): el cliente ve cuando va el
+             supervisor y cuando ya se hizo. */
+          InspectionDate:   f.InspectionDate || '',
+          InspectionWindow: f.InspectionWindow || '',
+          InspectionDoneAt: f.InspectionDoneAt || '',
           BatchId:    f.BatchId    || '',
           BuildingId: f.BuildingId || ''
         };

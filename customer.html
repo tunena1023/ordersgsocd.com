@@ -961,6 +961,8 @@
   #panel-processing .status-pending, #panel-history .status-pending { background: #FFF8E6; color: #8C6F2A; }
   #panel-processing .status-review, #panel-history .status-review { background: #F0EAFE; color: #6B3FA0; }
   #panel-processing .status-assigned, #panel-history .status-assigned { background: #EEF4FF; color: #2A5AC9; }
+  #panel-processing .status-inspection, #panel-history .status-inspection { background: #E6EEFB; color: #2A4E8C; }
+  #panel-processing .status-inspected, #panel-history .status-inspected { background: #E3F1E6; color: #24663A; }
   #panel-processing .status-working, #panel-history .status-working { background: #E6F4FB; color: #1F6E96; }
   #panel-processing .status-changereq, #panel-history .status-changereq { background: #FDECEC; color: #B33A3A; }
   #panel-processing .status-cancelreq, #panel-history .status-cancelreq { background: #FBEAEA; color: #B33A3A; }
@@ -1557,7 +1559,7 @@
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.10/camera-queue/camera-queue.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.0.0/lightbox/lightbox.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.30.0/order-card-header/order-card-header.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.31.0/gallery-groups/gallery-groups.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.69.0/gallery-groups/gallery-groups.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.26.0/photo-hover-preview/photo-hover-preview.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.8.0/order-badges/order-badges.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.40.0/order-tracker/order-tracker.js"></script>
@@ -4936,6 +4938,8 @@ if (client) {
       case 'Updated': return 'status-updated';
       case 'Incomplete': return 'status-incomplete';
       case 'Completed': return 'status-confirmed';
+      case 'Inspection Scheduled': return 'status-inspection';
+      case 'Inspected': return 'status-inspected';
       default: return 'status-pending';
     }
   }
@@ -4953,6 +4957,8 @@ if (client) {
      todavia no la toca) se sigue viendo como "Received" tal cual. */
   function displayStatus(o) {
     const s = o.Status || 'Received';
+    /* Inspeccion (25/09/2026): un supervisor va a ver antes del trabajo. */
+    if (s === 'Inspection') return 'Inspection Scheduled';
     if (s === 'Received' && o.Supervisor && o.ServiceWindow && o.DispatchDate) return 'Scheduled';
     return s;
   }
@@ -5110,6 +5116,9 @@ if (client) {
      GSOrderCardHeader, asi que ya no se repiten aqui). */
   function orderDateLine(o) {
     const parts = [];
+    if (o.Status === 'Inspection' && o.InspectionDate) {
+      parts.push('Inspection ' + fmtDate(o.InspectionDate) + (o.InspectionWindow ? ' · ' + o.InspectionWindow : ''));
+    }
     if (o.EntryDate) parts.push('Entry ' + fmtDate(o.EntryDate));
     if (o.DueDate) parts.push('Due ' + fmtDate(o.DueDate));
     if (o.createdDateTime) parts.push('Created ' + fmtDateTime(o.createdDateTime));
@@ -5351,6 +5360,7 @@ if (client) {
               <div><div class="field-caption">Entry</div><div class="field-value">${fmtDateTime(o.EntryDate)}</div></div>
               <div><div class="field-caption">Due</div><div class="field-value">${fmtDate(o.DueDate)}</div></div>
               <div><div class="field-caption">Service window</div><div class="field-value">${esc(o.ServiceWindow || 'To be confirmed')}</div></div>
+              ${o.InspectionDate ? `<div><div class="field-caption">Inspection</div><div class="field-value">${o.InspectionDoneAt ? 'Done ' + fmtDate(o.InspectionDoneAt) : fmtDate(o.InspectionDate) + (o.InspectionWindow ? '<br><span style="font-size:12px;color:var(--gray)">' + esc(o.InspectionWindow) + '</span>' : '')}</div></div>` : ''}
               <div><div class="field-caption">Building / Unit</div><div class="field-value">${esc(o.BuildingNumber || '—')} / ${esc(o.UnitNumber || '—')}</div></div>
               <div><div class="field-caption">Bed / Bath</div><div class="field-value">${esc(o.Bedrooms || '—')} / ${esc(o.Bathrooms || '—')}</div></div>
             </div>
