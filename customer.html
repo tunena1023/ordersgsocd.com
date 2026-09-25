@@ -686,11 +686,15 @@
   #panel-templates .tplx-card { border: 1px solid var(--border); border-radius: 10px; background: var(--white); transition: border-color .15s, box-shadow .15s; }
   #panel-templates .tplx-card:hover { border-color: #D8C68F; box-shadow: 0 2px 10px rgba(0,0,0,.05); }
   #panel-templates .tplx-card.open { border-color: var(--gold); box-shadow: 0 4px 16px rgba(140,111,42,.12); }
-  #panel-templates .tplx-head { padding: 14px 16px; cursor: pointer; display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; }
+  /* 24/09/2026 (dueño, captura: "esas tarjetas cerradas se ven reachas"):
+     las etiquetas iban a un lado del nombre y con nombres reales se comian
+     el ancho (el nombre y los servicios quedaban palabra por palabra).
+     Ahora las etiquetas van SIEMPRE en su renglon, arriba del nombre. */
+  #panel-templates .tplx-head { padding: 14px 16px; cursor: pointer; display: flex; flex-direction: column; gap: 8px; }
   #panel-templates .tplx-name { font-size: 15px; font-weight: 700; color: var(--black); line-height: 1.3; }
   #panel-templates .tplx-meta { font-size: 12px; color: var(--gray); margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
   #panel-templates .tplx-prev { font-size: 12px; color: var(--gray); margin-top: 6px; line-height: 1.45; }
-  #panel-templates .tplx-tags { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; flex-shrink: 0; }
+  #panel-templates .tplx-tags { display: flex; gap: 6px; flex-wrap: wrap; order: -1; }
   #panel-templates .tplx-tag { font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 3px 9px; border-radius: 20px; white-space: nowrap; background: #E6F2EF; color: #2F6F62; }
   #panel-templates .tplx-tag.div { background: #F6EFD9; color: var(--gold-dk); }
   #panel-templates .tplx-tag.shared { background: var(--off); color: var(--gray); }
@@ -704,7 +708,7 @@
   #panel-templates .tplx-empty { border: 1.5px dashed #E6D3A0; background: #FFFDF7; border-radius: 12px; padding: 28px 20px; text-align: center; color: var(--gray); font-size: 13px; }
   #panel-templates .tplx-empty b { display: block; color: var(--black); font-size: 15px; margin-bottom: 4px; }
   @media (max-width: 760px) { #panel-templates .tplx-split { grid-template-columns: 1fr; } }
-  @media (max-width: 560px) { #panel-templates .tplx-head { flex-direction: column; } #panel-templates .tplx-tags { justify-content: flex-start; order: -1; } }
+
   #panel-templates .btn-gold { background: var(--gold); color: var(--black); border: none; padding: 10px 22px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; cursor: pointer; font-family: inherit; }
   #panel-templates .btn-gold:hover { background: var(--gold-lt); }
   #panel-templates .btn-outline { background: var(--white); border: 1.5px solid var(--border); color: var(--black); padding: 9px 20px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; cursor: pointer; font-family: inherit; }
@@ -3541,7 +3545,8 @@ if (client) {
       box.innerHTML = '<div class="tplx-empty"><b>No templates yet</b>Save the services you order often and start a new order from them in one tap.</div>';
       return;
     }
-    if (tplOpenId && !templates.some(t => String(t.id) === String(tplOpenId))) tplOpenId = null;
+    /* Siempre hay una abierta (el dueño): la primera por defecto. */
+    if (!tplOpenId || !templates.some(t => String(t.id) === String(tplOpenId))) tplOpenId = templates[0].id;
     const card = t => {
       const open = String(t.id) === String(tplOpenId);
       const n = (t.services || []).length;
@@ -3573,7 +3578,7 @@ if (client) {
     box.innerHTML = '<div class="tplx-split"><div>' + card(openT) + '</div>' +
       (others.length ? '<div class="tplx-side">' + others.map(card).join('') + '</div>' : '') + '</div>';
   }
-  function tplToggle(id) { tplOpenId = String(tplOpenId) === String(id) ? null : id; renderTemplates(); }
+  function tplToggle(id) { if (String(tplOpenId) === String(id)) return; tplOpenId = id; renderTemplates(); }
   window.tplToggle = tplToggle;
 
   /* Lista de solo lectura de lo que trae el template (se quedo para quien
