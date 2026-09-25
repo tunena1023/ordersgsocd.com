@@ -1556,7 +1556,7 @@
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.32.0/print-button/print-button.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.24/order-form-premium/order-form-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@8a4738ee52ce14321f83cf040a577d089d96cf4d/order-history/order-history.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.10/camera-queue/camera-queue.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@71670c4e06fbb09c07fe248cf4a5a89c3399b384/camera-queue/camera-queue.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.0.0/lightbox/lightbox.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.30.0/order-card-header/order-card-header.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@f9af97cecb79115d4a7d51705609b674d513bb89/gallery-groups/gallery-groups.js"></script>
@@ -1731,9 +1731,12 @@ if (client) {
     for (const item of mine) {
       await GSCameraQueue.release(item.id, { orderId: orderIds[0] });
       for (let i = 1; i < orderIds.length; i++) {
+        /* Llave fija por copia (camera-queue v1.70.0): si esto corre 2
+           veces, la copia de cada unidad se reemplaza, no se duplica. */
+        const photoKey = item.body.photoKey ? item.body.photoKey + i : undefined;
         await GSCameraQueue.enqueue(item.meta && item.meta.serviceName
-          ? { endpoint: '/upload-client-service-photo', body: { orderId: orderIds[i], serviceName: item.meta.serviceName, imageBase64: item.body.imageBase64 } }
-          : { endpoint: '/upload-client-photo', body: { orderId: orderIds[i], imageBase64: item.body.imageBase64 } });
+          ? { endpoint: '/upload-client-service-photo', body: { orderId: orderIds[i], serviceName: item.meta.serviceName, imageBase64: item.body.imageBase64, photoKey } }
+          : { endpoint: '/upload-client-photo', body: { orderId: orderIds[i], imageBase64: item.body.imageBase64, photoKey } });
       }
     }
   }
