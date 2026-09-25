@@ -2102,11 +2102,28 @@ if (client) {
   function updateSummary() {
     const box = $('summary-services');
     const lines = [];
+    /* 24/09/2026 (el dueño: "si se selecciona un paquete solo se muestra un
+       servicio, pero debe mostrar la suma de los servicios -- ese codigo
+       nomas es para canalizar paquetes, no es un servicio en si"): un
+       paquete se desglosa en SUS servicios, cada uno con el nivel escogido
+       (pkgLevels) y su camarita. La X de cualquiera de ellos quita el
+       paquete completo (la orden cobra el paquete). El tiempo total sigue
+       saliendo de la linea real del paquete. */
+    const realLines = [];
     Object.entries(selected).forEach(([propType, svcs]) => {
       Object.entries(svcs).forEach(([svc, sku]) => {
         const lvl = svcLevel[svcKey(propType, svc)];
         const qty = svcQty[svcKey(propType, svc)];
-        lines.push({ propType, svc, sku, lvl, qty });
+        realLines.push({ propType, svc, sku, lvl, qty });
+        const cat = (catalogCache || []).find(c => String(c.sku) === String(sku));
+        const items = cat && Array.isArray(cat.packageItems) && cat.packageItems.length ? ((pkgLevels || {})[String(sku)] || cat.packageItems) : null;
+        if (items) {
+          items.forEach(x => {
+            const it = (catalogCache || []).find(c => String(c.sku) === String(x.sku));
+            if (!it) return;
+            lines.push({ propType, svc: it.serviceName, sku: x.sku, lvl: x.level || '', qty: '', pkgOf: svc, pkgSku: String(sku), noTime: true });
+          });
+        } else lines.push({ propType, svc, sku, lvl, qty });
       });
     });
 
@@ -2116,12 +2133,12 @@ if (client) {
       box.innerHTML = '<p class="summary-empty">No services selected yet</p>';
     } else {
       box.innerHTML = lines.map((l) => {
-        const mins = showTime ? GSEstimatedTime.svcMinutes(l.sku, l.lvl, serviceTimesCache) : null;
+        const mins = showTime && !l.noTime ? GSEstimatedTime.svcMinutes(l.sku, l.lvl, serviceTimesCache) : null;
         /* 24/09/2026 (dueño): la X ANTES del nombre (para no picarla sin
            querer desde el celular junto a la camara) y la camarita
            alineada a la derecha. */
         return '<div class="summary-item" style="align-items:center;gap:8px">' +
-               '<button class="summary-remove" data-proptype="' + esc(l.propType) + '" data-svc="' + esc(l.svc) + '" title="Remove service" style="flex-shrink:0;margin:0">\u2715</button>' +
+               '<button class="summary-remove" data-proptype="' + esc(l.propType) + '" data-svc="' + esc(l.svc) + '"' + (l.pkgOf ? ' data-pkg="' + esc(l.pkgOf) + '" data-pkgsku="' + esc(l.pkgSku) + '"' : '') + ' title="Remove service" style="flex-shrink:0;margin:0">\u2715</button>' +
                '<div style="min-width:0;flex:1">' +
                '<span>' + esc(l.svc) + '</span>' +
                (l.lvl ? '<br><span style="color:var(--gray)">' + esc(l.lvl) + '</span>' : '') +
@@ -2133,7 +2150,7 @@ if (client) {
                '</button></div>';
       }).join('');
       if (showTime) {
-        const svcRows = lines.map(l => ({ SubOption: l.sku, Level: l.lvl || '', Quantity: l.qty || 1 }));
+        const svcRows = realLines.map(l => ({ SubOption: l.sku, Level: l.lvl || '', Quantity: l.qty || 1 }));
         box.innerHTML += GSEstimatedTime.boxHtml(svcRows, serviceTimesCache);
       }
     }
@@ -2143,13 +2160,44 @@ if (client) {
     const btn = e.target.closest('.summary-remove');
     if (!btn) return;
     const propType = btn.dataset.proptype, svc = btn.dataset.svc;
+    /* Servicio de ADENTRO de un paquete (24/09/2026, el dueño: "mas bien
+       seria deseleccionar el paquete y dejar los servicios individuales"):
+       se quita el paquete y los DEMAS servicios quedan como servicios
+       sueltos con su mismo nivel (se cobran uno por uno). Si ese set se
+       repite, cuenta para su "Your usual order" como cualquier otro. */
+    if (btn.dataset.pkg) {
+      const pkgName = btn.dataset.pkg, pkgSku = btn.dataset.pkgsku;
+      const cat = (catalogCache || []).find(c => String(c.sku) === String(pkgSku));
+      const items = ((pkgLevels || {})[pkgSku]) || (cat && cat.packageItems) || [];
+      if (selected[propType]) {
+        delete selected[propType][pkgName];
+        delete svcLevel[svcKey(propType, pkgName)];
+      }
+      delete (pkgLevels || {})[pkgSku];
+      items.forEach(x => {
+        const it = (catalogCache || []).find(c => String(c.sku) === String(x.sku));
+        if (!it || it.serviceName === svc) return;
+        if (!selected[propType]) selected[propType] = {};
+        selected[propType][it.serviceName] = it.sku;
+        if (x.level) svcLevel[svcKey(propType, it.serviceName)] = x.level;
+      });
+      if (selected[propType] && !Object.keys(selected[propType]).length) delete selected[propType];
+      if (servicePicker) servicePicker.setSelected(selected, svcLevel, svcQty, pkgLevels);
+      updateSummary();
+      scheduleDraftSave();
+      showToast('Removed ' + svc + ' — ' + pkgName + ' is now separate services.');
+      return;
+    }
     if (selected[propType]) {
       delete selected[propType][svc];
       delete svcLevel[svcKey(propType, svc)];
+      delete svcQty[svcKey(propType, svc)];
       if (!Object.keys(selected[propType]).length) delete selected[propType];
     }
     updateSummary();
-    if (servicePicker) servicePicker.setSelected(selected, svcLevel);
+    /* Antes solo mandaba (selected, svcLevel): setSelected ponia las
+       cantidades en {} y se perdian las de los demas servicios. */
+    if (servicePicker) servicePicker.setSelected(selected, svcLevel, svcQty, pkgLevels);
     scheduleDraftSave();
   });
 
