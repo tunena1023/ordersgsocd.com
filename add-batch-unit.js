@@ -27,6 +27,11 @@ const {
   ORDERS_LIST, ORDER_SERVICES_LIST, ORDER_HISTORY_LIST, CLIENTS_LIST,
   createListItem, graphFetch, siteListPath, jsonResponse
 } = require('./lib/graph');
+/* Correos (lib/notify.js, 25/09/2026): mismo par que una orden nueva
+   en submit-order.js -- "we received your order" al cliente y aviso a
+   la oficina. Nunca truenan. */
+const graph = require('./lib/graph');
+const { notifyClient, notifyOffice } = require('./lib/notify');
 
 /* BUG REAL encontrado y arreglado (20/09/2026, ver el comentario
    completo en Admingsocd.com/admin-approve-order.js, misma revision):
@@ -190,6 +195,10 @@ exports.handler = async (event) => {
       console.error('add-batch-unit post-create write failed:', e.message);
     }
 
+    await Promise.all([
+      notifyClient(graph, { event: 'received', orderId }),
+      notifyOffice(graph, { event: 'client-request', kind: 'new', orderId, details: [['Added to PO', String(b.batchId)]] })
+    ]);
     return jsonResponse(200, { success: true, orderId });
   } catch (e) {
     return jsonResponse(500, { error: e.message });

@@ -15,6 +15,32 @@ const {
 } = require('./lib/graph');
 const { recordPackageSnapshots } = require('./lib/package-contents');
 const { recordUsualOrder } = require('./lib/usual-packages');
+/* Correos (lib/notify.js, copia de gsocd-shared, 25/09/2026): "we
+   received your order" al cliente -- lo que la pantalla de confirmacion
+   ya prometia ("You will receive a confirmation email") -- y aviso a la
+   oficina. Nunca truenan: la orden ya quedo guardada. */
+const graph = require('./lib/graph');
+const { notifyClient, notifyOffice } = require('./lib/notify');
+
+async function mailNewOrder(b, orderIds, order) {
+  if (!orderIds || !orderIds.length) return;
+  const first = orderIds[0];
+  /* En paralelo, para no alargar la respuesta de "Submit". Si la creo
+     la oficina desde el portal, la oficina ya sabe. */
+  await Promise.all([
+    notifyClient(graph, { event: 'received', orderId: first, order: order || null, orderIds }),
+    b.OfficeCreated ? null : notifyOffice(graph, {
+      event: 'client-request', kind: 'new', orderId: first, order: order || null,
+      details: orderIds.length > 1 ? [['Units', String(orderIds.length)]] : [],
+      notes: b.Notes || ''
+    })
+  ]);
+}
+
+async function mailClientEdit(b, orderId, kind) {
+  if (b.OfficeCreated) return;
+  await notifyOffice(graph, { event: 'client-request', kind, orderId });
+}
 
 async function fetchAll(listName) {
   let url = siteListPath(listName) + '?$expand=fields&$top=200';
@@ -299,6 +325,7 @@ exports.handler = async (event) => {
       } catch (e) {
         console.error('AddUnitToBatch post-create write failed:', e.message);
       }
+      await mailNewOrder(b, [orderId], null);
       return jsonResponse(200, { success: true, orderId });
     }
 
@@ -419,6 +446,7 @@ exports.handler = async (event) => {
 
       await recordPackageSnapshots(orderId, svcSource, b.ClientID, null, b.PackageLevels);
       if (!b.OfficeCreated) await recordUsualOrder(b.ClientID, b.Division, svcSource);
+      await mailNewOrder(b, [orderId], Object.assign({}, orderFields, { OrderID: orderId, Status: 'Received' }));
       return jsonResponse(200, { success: true, orderId, id: result.id });
     }
 
@@ -516,6 +544,7 @@ exports.handler = async (event) => {
           NewValue:   JSON.stringify({ services: parsedServices })
         });
 
+        await mailClientEdit(b, existing.OrderID, 'edit');
         return jsonResponse(200, { success: true, orderId: existing.OrderID });
       }
 
@@ -613,6 +642,7 @@ exports.handler = async (event) => {
         }
 
         if (!changes.length) {
+          if (directLevelChanges.length) await mailClientEdit(b, existing.OrderID, 'edit');
           return jsonResponse(200, { success: true, orderId: existing.OrderID, noChanges: !directLevelChanges.length });
         }
 
@@ -628,6 +658,7 @@ exports.handler = async (event) => {
           NewValue:   JSON.stringify({ category: c.category, serviceName: c.serviceName, detail: c.newValue })
         })));
 
+        await mailClientEdit(b, existing.OrderID, 'change');
         return jsonResponse(200, { success: true, orderId: existing.OrderID });
       }
 
@@ -699,6 +730,7 @@ exports.handler = async (event) => {
         NewValue:   JSON.stringify(newServices)
       });
 
+      await mailClientEdit(b, existing.OrderID, 'change');
       return jsonResponse(200, { success: true, orderId: existing.OrderID });
     }
 
@@ -835,6 +867,7 @@ exports.handler = async (event) => {
 
       /* 'Your usual order': un PO de varias unidades cuenta como UNA orden. */
       if (!b.OfficeCreated && createdOrderIds.length) await recordUsualOrder(b.ClientID, b.Division, parsedServices);
+      await mailNewOrder(b, createdOrderIds, null);
       return jsonResponse(200, { success: true, batchId: poTag, orderIds: createdOrderIds });
     }
 
@@ -931,6 +964,7 @@ exports.handler = async (event) => {
     /* 'Your usual order' (24/09/2026): solo ordenes que manda el cliente. */
     if (!b.OfficeCreated) await recordUsualOrder(b.ClientID, b.Division, parsedServices);
 } catch (e) { console.error('Post-order write failed:', e.message); }
+    await mailNewOrder(b, [orderId], Object.assign({}, orderFields, { OrderID: orderId, Status: 'Received' }));
     return jsonResponse(200, { success: true, orderId, id: result.id, historyWarning });
 
   } catch (err) {

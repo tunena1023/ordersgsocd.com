@@ -1,10 +1,20 @@
 /* ============================================================
    recover-client-id.js — recuperación de ClientID por email.
-   Escribe una fila en IdRecovery; un flow de Power Automate
-   manda el correo. Content-Type OBLIGATORIO en el POST.
+   Manda el correo directo desde el codigo (lib/notify.js,
+   25/09/2026) al email principal de la cuenta, y deja una fila en
+   IdRecovery como registro. Antes lo mandaba un flow de Power
+   Automate que nunca quedo, y el anti-duplicado dejaba recuperar el
+   ID una sola vez en la vida por email; ahora se puede pedir de
+   nuevo, con un freno de 10 minutos entre correos para que nadie lo
+   use para llenarle el buzon a un cliente.
+   Content-Type OBLIGATORIO en el POST.
 ============================================================ */
 
-const { CLIENTS_LIST, graphFetch, siteListPath, jsonResponse } = require('./lib/graph');
+const graph = require('./lib/graph');
+const { CLIENTS_LIST, graphFetch, siteListPath, jsonResponse } = graph;
+const { sendClientIdEmail } = require('./lib/notify');
+
+const RESEND_WAIT_MS = 10 * 60 * 1000;
 
 const RECOVERY_LIST = 'IdRecovery';
 
@@ -57,14 +67,17 @@ exports.handler = async (event) => {
 
     const f = item.fields;
 
-    /* Anti-duplicado: si ya existe la fila, el flow no se vuelve a disparar */
-    const already = recRows.some(it =>
+    /* Freno: si ya se mando uno a este email hace menos de 10 min, no
+       se manda otro (la respuesta es la misma, found: true). */
+    const recent = recRows.some(it =>
       it.fields &&
       String(it.fields.Email    || '').trim().toLowerCase() === wanted &&
-      String(it.fields.ClientID || '').trim() === String(f.ClientID || '').trim()
+      String(it.fields.ClientID || '').trim() === String(f.ClientID || '').trim() &&
+      Date.now() - new Date(it.createdDateTime || 0).getTime() < RESEND_WAIT_MS
     );
 
-    if (!already) {
+    if (!recent) {
+      await sendClientIdEmail(graph, { to: f.Contact, clientId: f.ClientID, businessName: f.Title || f.BusinessName || '' });
       await graphFetch(siteListPath(RECOVERY_LIST), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -12,9 +12,9 @@
    o el id de un contacto de ClientContacts.
 
    No hay bloqueo de "Confirmations" aqui aunque la orden este
-   esperando confirmacion del cliente -- el candado real vive en el
-   flow de Power Automate (el evento de confirmacion pendiente
-   siempre se manda, sin importar este ajuste), no en el guardado.
+   esperando confirmacion del cliente -- el candado real vive en
+   lib/notify.js (shouldSend: Confirmations siempre sale, sin importar
+   este ajuste), no en el guardado. Antes se pensaba en Power Automate.
 ============================================================ */
 
 const {

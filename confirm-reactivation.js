@@ -16,6 +16,10 @@ const {
   graphFetch, siteListPath,
   jsonResponse
 } = require('./lib/graph');
+/* Aviso a la oficina de que el cliente confirmo (lib/notify.js,
+   25/09/2026). Nunca truena. */
+const graph = require('./lib/graph');
+const { notifyOffice } = require('./lib/notify');
 
 async function fetchByField(listName, fieldName, value) {
   const filter = encodeURIComponent(`fields/${fieldName} eq '${value}'`);
@@ -115,6 +119,11 @@ exports.handler = async (event) => {
         NewValue:     newStatus
       })
     ]);
+
+    await notifyOffice(graph, {
+      event: 'client-request', kind: 'reactivation-confirmed',
+      order: Object.assign({}, f, { Status: newStatus, OrderID: orderId })
+    });
 
     return jsonResponse(200, { success: true, status: newStatus });
 

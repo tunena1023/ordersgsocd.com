@@ -33,6 +33,10 @@ const {
   graphFetch, siteListPath,
   jsonResponse
 } = require('./lib/graph');
+/* Aviso a la oficina de que el cliente confirmo (lib/notify.js,
+   25/09/2026). Nunca truena. */
+const graph = require('./lib/graph');
+const { notifyOffice } = require('./lib/notify');
 /* gsocd-shared v1.34.0+ -- ver el comentario completo en
    admin-update-order.js (Admingsocd.com). Aqui se necesita porque
    este es el otro punto real donde un cambio propuesto (de oficina o
@@ -263,6 +267,11 @@ exports.handler = async (event) => {
     }
 
     await Promise.all(writes);
+
+    await notifyOffice(graph, {
+      event: 'client-request', kind: 'confirmed',
+      order: Object.assign({}, f, { Status: newStatus, OrderID: orderId })
+    });
 
     return jsonResponse(200, { success: true, status: newStatus });
 

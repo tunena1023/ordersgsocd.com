@@ -20,6 +20,9 @@ const {
   graphFetch, siteListPath,
   jsonResponse
 } = require('./lib/graph');
+/* Aviso a la oficina (lib/notify.js, 25/09/2026). Nunca truena. */
+const graph = require('./lib/graph');
+const { notifyOffice } = require('./lib/notify');
 
 async function fetchByField(listName, fieldName, value) {
   const filter = encodeURIComponent(`fields/${fieldName} eq '${value}'`);
@@ -206,6 +209,23 @@ exports.handler = async (event) => {
         NewValue:     JSON.stringify(requestedServices)
       });
     }
+
+    const details = [];
+    if (requestedDates) {
+      details.push(['Requested dates', [requestedDates.entryDate && 'Entry ' + requestedDates.entryDate,
+        requestedDates.dueDate && 'Due ' + requestedDates.dueDate, requestedDates.serviceWindow].filter(Boolean).join(' · ')]);
+    }
+    if (requestedServices) {
+      details.push(['Requested services', String((requestedServices.services || []).length) + ' service(s)'
+        + (requestedServices.removedNotes && requestedServices.removedNotes.length ? ', ' + requestedServices.removedNotes.length + ' removed' : '')]);
+    }
+    await notifyOffice(graph, {
+      event: 'client-request',
+      kind: isCancel ? 'cancel' : (requestedDates && !requestedServices ? 'reschedule' : 'change'),
+      order: Object.assign({}, f, { Status: newStatus, OrderID: orderId }),
+      details,
+      notes: description || ''
+    });
 
     return jsonResponse(200, {
       success: true,
