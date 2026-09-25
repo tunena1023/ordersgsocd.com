@@ -1444,7 +1444,7 @@
 <script src="shared.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/date-time-picker/date-time-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.50.0/service-tooltip/service-tooltip.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.61.0/service-picker/service-picker.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.62.0/service-picker/service-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/service-change-panel/service-change-panel.js"></script>
 <!-- Pendiente: gsocd-shared va en v1.15.0, el siguiente tag real seria v1.16.0
      (componente nuevo, todavia solo vive en local). Ajustar cuando se suba. -->
@@ -1495,7 +1495,7 @@ if (client) {
   let savedSetsCache = []; // paquetes propios del cliente (sus Templates), como tarjeta "My package"
   function templatesToSets(list) {
     return (list || []).map(t => ({ key: String(t.id), name: t.name, division: t.division,
-      items: (t.services || []).filter(x => x && x.SubOption).map(x => ({ sku: String(x.SubOption), level: x.Level || '' })) }))
+      items: (t.services || []).filter(x => x && x.SubOption).map(x => Object.assign({ sku: String(x.SubOption), level: x.Level || '' }, x.Quantity ? { qty: x.Quantity } : {})) }))
       .filter(t => t.items.length);
   }
   async function loadSavedSets() {
@@ -1999,7 +1999,7 @@ if (client) {
       showSelectAll: false, /* quitado de todas partes (dueño, 24/09/2026) */
       groupByCategory: true,
       /* picker v1.52.0: toggle Recurring / Units; arranca en Units (paquetes como plantilla). */
-      workToggle: !!window.gsRecurringAllowed && (isJan || isMixed), showPackages: isJan || isMixed, workMode: 'units',
+      workToggle: !!window.gsRecurringAllowed && (isJan || isMixed), showPackages: true /* v1.62.0: usual / My package / paquetes en TODAS las divisiones */, workMode: 'units',
       /* Precios: solo si el dueño se los prendio a este cliente. */
       showPrices: !!window.gsPricesAllowed,
       propertyType: propertyType,
@@ -2014,17 +2014,21 @@ if (client) {
          guarda con nombre como SU paquete (se guarda como Template). Al
          guardarlo, el "Usual order" se esconde hasta que junte otro ciclo. */
       usualEdit: {
-        onSave: async function (name, items) {
+        onSave: async function (name, items, source) {
           const services = items.map(x => {
             const svc = catalogCache.find(c => String(c.sku) === String(x.sku)) || {};
             return { Category: svc.propertyType || propertyType, ServiceName: svc.serviceName || x.sku, SubOption: x.sku,
               Division: GSOrderFormPremium.realDivisionForSku(catalogCache, x.sku, currentDiv), Level: x.level || '', Quantity: '' };
           });
           try {
-            await GS.api('/save-template', { method: 'POST', body: { clientId: client.clientId, name, division: currentDiv, services, fromUsual: true } });
+            /* source: 'usual' (Edit del usual: lo esconde) o 'package' (Edit de
+               un paquete del catalogo: el usual se queda como estaba). */
+            await GS.api('/save-template', { method: 'POST', body: { clientId: client.clientId, name, division: currentDiv, services, fromUsual: source === 'usual' } });
           } catch (e) { showToast('Could not save your package: ' + e.message); throw e; }
-          usualSetsCache = [];
-          if (servicePicker && servicePicker.setUsualSets) servicePicker.setUsualSets([]);
+          if (source === 'usual') {
+            usualSetsCache = [];
+            if (servicePicker && servicePicker.setUsualSets) servicePicker.setUsualSets([]);
+          }
           await loadSavedSets();
           showToast('Saved as “' + name + '”. It\u2019s now in your packages.');
         }
