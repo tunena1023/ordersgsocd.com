@@ -2106,22 +2106,20 @@ if (client) {
        servicio, pero debe mostrar la suma de los servicios -- ese codigo
        nomas es para canalizar paquetes, no es un servicio en si"): un
        paquete se desglosa en SUS servicios, cada uno con el nivel escogido
-       (pkgLevels) y su camarita. La X de cualquiera de ellos quita el
-       paquete completo (la orden cobra el paquete). El tiempo total sigue
-       saliendo de la linea real del paquete. */
-    const realLines = [];
+       (pkgLevels) y su camarita. La X de uno de ellos quita el paquete y
+       deja los DEMAS como servicios sueltos. El tiempo total es la SUMA de
+       estos servicios (nunca un tiempo propio del paquete). */
     Object.entries(selected).forEach(([propType, svcs]) => {
       Object.entries(svcs).forEach(([svc, sku]) => {
         const lvl = svcLevel[svcKey(propType, svc)];
         const qty = svcQty[svcKey(propType, svc)];
-        realLines.push({ propType, svc, sku, lvl, qty });
         const cat = (catalogCache || []).find(c => String(c.sku) === String(sku));
         const items = cat && Array.isArray(cat.packageItems) && cat.packageItems.length ? ((pkgLevels || {})[String(sku)] || cat.packageItems) : null;
         if (items) {
           items.forEach(x => {
             const it = (catalogCache || []).find(c => String(c.sku) === String(x.sku));
             if (!it) return;
-            lines.push({ propType, svc: it.serviceName, sku: x.sku, lvl: x.level || '', qty: '', pkgOf: svc, pkgSku: String(sku), noTime: true });
+            lines.push({ propType, svc: it.serviceName, sku: x.sku, lvl: x.level || '', qty: '', pkgOf: svc, pkgSku: String(sku) });
           });
         } else lines.push({ propType, svc, sku, lvl, qty });
       });
@@ -2133,7 +2131,7 @@ if (client) {
       box.innerHTML = '<p class="summary-empty">No services selected yet</p>';
     } else {
       box.innerHTML = lines.map((l) => {
-        const mins = showTime && !l.noTime ? GSEstimatedTime.svcMinutes(l.sku, l.lvl, serviceTimesCache) : null;
+        const mins = showTime ? GSEstimatedTime.svcMinutes(l.sku, l.lvl, serviceTimesCache) : null;
         /* 24/09/2026 (dueño): la X ANTES del nombre (para no picarla sin
            querer desde el celular junto a la camara) y la camarita
            alineada a la derecha. */
@@ -2150,7 +2148,9 @@ if (client) {
                '</button></div>';
       }).join('');
       if (showTime) {
-        const svcRows = realLines.map(l => ({ SubOption: l.sku, Level: l.lvl || '', Quantity: l.qty || 1 }));
+        /* Total = suma de los servicios que se ven (un paquete ya viene
+           desglosado en sus servicios): nunca un tiempo propio del paquete. */
+        const svcRows = lines.map(l => ({ SubOption: l.sku, Level: l.lvl || '', Quantity: l.qty || 1 }));
         box.innerHTML += GSEstimatedTime.boxHtml(svcRows, serviceTimesCache);
       }
     }
@@ -5135,8 +5135,7 @@ if (client) {
          pagina completa, solo se desliza ella sola si hace falta. */
       const svcTableHtml = svcRows.length
         ? svcRows.map(r => {
-            const baseMins = showTime ? GSEstimatedTime.svcMinutes(r.sku, r.lvl, trackingServiceTimesCache) : null;
-            const mins = baseMins != null ? baseMins * (Number(r.qty) || 1) : null;
+            const mins = showTime ? lineMinutesFor(r.sku, r.lvl, r.qty, o, trackingServiceTimesCache) : null;
             const camHtml = '<button type="button" title="Add a photo for this service" onclick="startClientServicePhoto(\'' + jsStr(orderId) + '\',\'' + jsStr(r.svcNameRaw) + '\')" style="width:32px;height:32px;padding:0;border-radius:6px;border:1.5px solid var(--border);background:var(--white);color:var(--gray);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">' +
               '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg></button>';
             return svcLineRowHtml(r, { timeText: mins != null ? esc(GSEstimatedTime.fmtDuration(mins)) : '', camHtml });
@@ -5150,7 +5149,7 @@ if (client) {
         '<p class="detail-label" style="margin:0">' + (isPendingProposal ? 'Services (Proposed)' : 'Services Requested') + '</p>' +
         '<span style="font-size:10px;color:var(--gold-dk);white-space:nowrap">&#9660; ' + svcRows.length + ' service' + (svcRows.length === 1 ? '' : 's') + '</span>' +
         '</div>' +
-        '<div id="' + svcDetailId + '" style="display:none;padding:0 12px">' + svcTableHtml + (showTime ? GSEstimatedTime.boxHtml(services, trackingServiceTimesCache) : '') + '</div>' +
+        '<div id="' + svcDetailId + '" style="display:none;padding:0 12px">' + svcTableHtml + (showTime ? GSEstimatedTime.boxHtml(expandPkgForTime(services, o), trackingServiceTimesCache) : '') + '</div>' +
         '</div>';
 
       const noticeHtml = delayNoticeHtml(o);
@@ -5338,6 +5337,42 @@ if (client) {
           bits.join('<span style="color:#C9C3B6">\u00b7</span>') +
         '</div>' + (o.extraHtml || '') +
       '</div>' + (o.camHtml || '') + '</div>';
+  }
+
+  /* 24/09/2026 (el dueño: "los tiempos siempre deberian ser la suma de
+     los servicios; los paquetes solo son nombres, no es un servicio en si
+     y no se puede dar un tiempo random"): el tiempo de un PAQUETE es la
+     SUMA de lo que incluye (cada servicio con su nivel). Lo que incluye:
+     la copia congelada de ESA orden (Orders.PackageContents) o, si no la
+     hay, el catalogo. expandPkgForTime devuelve renglones listos para
+     GSEstimatedTime (SubOption/Level/Quantity). */
+  function pkgItemsForTime(sku, order) {
+    const k = String(sku || '');
+    try { const v = JSON.parse((order && order.PackageContents) || '{}'); if (Array.isArray(v[k]) && v[k].length) return v[k]; } catch (e) {}
+    const cat = (typeof catalogCache !== 'undefined' && catalogCache || []).find(c => String(c.sku) === k);
+    return cat && Array.isArray(cat.packageItems) && cat.packageItems.length ? cat.packageItems : null;
+  }
+  function expandPkgForTime(services, order) {
+    const out = [];
+    (services || []).forEach(s => {
+      const sku = s.SubOption || s.sku;
+      const items = pkgItemsForTime(sku, order);
+      const q = Number(s.Quantity || s.qty) || 1;
+      if (items) items.forEach(x => out.push({ SubOption: x.sku, Level: x.level || '', Quantity: q }));
+      else out.push({ SubOption: sku, Level: s.Level || s.lvl || '', Quantity: s.Quantity || s.qty || '' });
+    });
+    return out;
+  }
+  function lineMinutesFor(sku, lvl, qty, order, times) {
+    const items = pkgItemsForTime(sku, order);
+    const q = Number(qty) || 1;
+    if (items) {
+      let tot = 0, any = false;
+      items.forEach(x => { const m = GSEstimatedTime.svcMinutes(x.sku, x.level || '', times); if (m != null) { tot += m; any = true; } });
+      return any ? tot * q : null;
+    }
+    const m = GSEstimatedTime.svcMinutes(sku, lvl, times);
+    return m != null ? m * q : null;
   }
   function isSkuFormat(sub) { return /^\d{3}-\d+$/.test(String(sub || '')); }
   function svcSubLabel(s) {
