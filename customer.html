@@ -523,33 +523,83 @@
   .btn-gold:hover { background: var(--gold-dk); color: var(--white); }
 
   #order-confirmation { display: none; }
-  .confirm-card { border: 1px solid var(--border); background: var(--white); margin-bottom: 28px; overflow: hidden; }
-  .confirm-banner { background: var(--black); color: var(--gold); font-family: 'Cormorant Garamond', serif; font-size: 22px; letter-spacing: 1px; padding: 22px 40px; }
-  .confirm-head { text-align: center; padding: 40px; }
-  .confirm-check { font-size: 36px; color: var(--gold); margin-bottom: 12px; }
-  .confirm-head .step-title { margin-bottom: 8px; }
-  .confirm-head p { font-size: 13px; color: var(--gray); line-height: 1.7; }
-  .confirm-ordernum-box { display: inline-block; margin-top: 22px; padding: 18px 36px; background: var(--off); border: 1px solid var(--border); }
-  .confirm-ordernum-label { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--gray); margin-bottom: 6px; }
-  .confirm-ordernum-value { font-family: 'Inter', sans-serif; font-size: 20px; font-weight: 700; color: var(--black); }
-  .confirm-grid { display: flex; flex-direction: column; gap: 24px; margin-top: 28px; }
-  .confirm-box { background: var(--white); border: 1px solid var(--border); padding: 24px; }
-  .confirm-box h4 { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 600; margin-bottom: 14px; }
-  .confirm-actions { text-align: center; margin-top: 32px; }
-  .confirm-actions .btn-gold { max-width: 320px; }
+  /* Pantalla "Order received" (25/09/2026, pedido del dueño: "se ve toda
+     gacha"; mini aprobado: https://claude.ai/artifact/Y6gXdcvdjwS8MySDXoF8Cg).
+     Dice "received" y no "confirmed": todavia falta que la oficina la
+     programe. Todo con prefijo oc- para no chocar con el resto. */
+  .oc { display: flex; flex-direction: column; gap: 22px; max-width: 1040px; margin: 0 auto; }
+  /* Sin la barra lateral, la confirmacion usa todo el ancho (antes quedaba
+     una columna vacia de 320px a la derecha). */
+  .order-wrap.is-confirmed { grid-template-columns: 1fr; }
+  .order-wrap.is-confirmed .order-main { border-right: 0; }
+  .oc-hero { position: relative; background: var(--black); color: var(--white); padding: 36px 28px 30px; overflow: hidden;
+             display: grid; grid-template-columns: auto 1fr auto; gap: 22px; align-items: center; }
+  .oc-hero::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+                    background: radial-gradient(600px 220px at 100% 0%, rgba(201,168,76,.22), transparent 70%); }
+  .oc-seal { width: 64px; height: 64px; border-radius: 50%; border: 1.5px solid var(--gold); display: grid; place-items: center; position: relative; }
+  .oc-seal::before { content: ""; position: absolute; inset: 5px; border-radius: 50%; border: 1px dashed rgba(201,168,76,.5); }
+  .oc-seal svg { width: 26px; height: 26px; }
+  .oc-hero h2 { margin: 0; font: 600 34px/1.1 'Cormorant Garamond', Georgia, serif; letter-spacing: .3px; color: var(--white); }
+  .oc-hero p { margin: 8px 0 0; font-size: 14px; color: #cfc9bb; line-height: 1.55; max-width: 48ch; }
+  .oc-hero p b { color: var(--gold-lt); font-weight: 500; }
+  .oc-num { position: relative; z-index: 1; text-align: right; }
+  .oc-num small { display: block; font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: #a79d86; }
+  .oc-num strong { display: block; font: 700 26px/1.2 'Inter', sans-serif; color: var(--gold); letter-spacing: .02em; font-variant-numeric: tabular-nums; margin-top: 4px; overflow-wrap: anywhere; }
+  .oc-copy { all: unset; cursor: pointer; margin-top: 8px; font-size: 11px; color: #e9d9ae; border: 1px solid rgba(233,217,174,.35); padding: 4px 10px; border-radius: 99px; display: inline-block; }
+  .oc-copy:hover { border-color: var(--gold); }
+  .oc-copy:focus-visible { outline: 2px solid var(--gold); }
+  .oc-track { border: 1px solid var(--border); padding: 22px 24px; display: grid; grid-template-columns: repeat(4, 1fr); }
+  .oc-step { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; position: relative; }
+  .oc-step::before { content: ""; position: absolute; top: 13px; left: -50%; width: 100%; height: 2px; background: var(--border); z-index: 0; }
+  .oc-step:first-child::before { display: none; }
+  .oc-step.done::before, .oc-step.now::before { background: var(--gold); }
+  .oc-dot { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--border); background: var(--white); display: grid; place-items: center; position: relative; z-index: 1; font-size: 12px; font-weight: 700; color: var(--gray); }
+  .oc-step.done .oc-dot { background: var(--gold); border-color: var(--gold); color: var(--black); }
+  .oc-step.now .oc-dot { border-color: var(--gold); color: var(--gold-dk); box-shadow: 0 0 0 4px rgba(201,168,76,.18); }
+  .oc-step b { font-size: 13px; font-weight: 600; }
+  .oc-step small { font-size: 11px; color: var(--gray); line-height: 1.35; }
+  .oc-cols { display: grid; grid-template-columns: 1.1fr .9fr; gap: 22px; align-items: start; }
+  .oc-card { border: 1px solid var(--border); background: var(--white); }
+  .oc-card h3 { margin: 0; padding: 16px 22px; border-bottom: 1px solid var(--border); font: 600 20px/1.2 'Cormorant Garamond', Georgia, serif;
+                display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .oc-card h3 small { font: 500 11px 'Inter', sans-serif; color: var(--gray); letter-spacing: .06em; text-transform: uppercase; }
+  .oc-kv { display: grid; grid-template-columns: 1fr 1fr; margin: 0; }
+  .oc-kv div { padding: 14px 22px; border-bottom: 1px solid #eee9de; min-width: 0; }
+  .oc-kv div:nth-child(odd) { border-right: 1px solid #eee9de; }
+  .oc-kv .oc-wide { grid-column: 1 / -1; border-right: 0; }
+  .oc-kv dt { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--gray); margin: 0 0 4px; }
+  .oc-kv dd { margin: 0; font-size: 15px; font-weight: 500; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .oc-svcs { list-style: none; margin: 0; padding: 6px 0; }
+  .oc-svcs li { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 12px 22px; border-bottom: 1px solid #eee9de; }
+  .oc-svcs li:last-child { border-bottom: 0; }
+  .oc-svcs .oc-cat { grid-column: 1 / -1; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--gold-dk); font-weight: 600; }
+  .oc-svcs .oc-nm { font-size: 15px; font-weight: 500; }
+  .oc-pill { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 99px; background: var(--off); border: 1px solid var(--border); align-self: center; white-space: nowrap; }
+  .oc-next { background: var(--off); border: 1px solid var(--border); padding: 20px 22px; }
+  .oc-next h3 { margin: 0 0 12px; font: 600 20px/1.2 'Cormorant Garamond', Georgia, serif; }
+  .oc-next ol { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; counter-reset: ocn; }
+  .oc-next li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; font-size: 13.5px; line-height: 1.5; color: #3a372f; counter-increment: ocn; }
+  .oc-next li::before { content: counter(ocn); width: 22px; height: 22px; border-radius: 50%; background: var(--black); color: var(--gold); font-size: 11px; font-weight: 700; display: grid; place-items: center; margin-top: 1px; }
+  .oc-next li b { color: var(--black); font-weight: 600; }
+  .oc-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .oc-actions button { min-width: 240px; }
+  .oc-help { text-align: center; font-size: 12.5px; color: var(--gray); margin: 0; }
+  .oc-help b { color: var(--black); font-weight: 600; }
+  @media (max-width: 760px) {
+    .oc { gap: 16px; }
+    .oc-hero { grid-template-columns: 1fr; padding: 26px 20px; gap: 14px; }
+    .oc-seal { width: 52px; height: 52px; }
+    .oc-hero h2 { font-size: 28px; }
+    .oc-num { text-align: left; border-top: 1px solid rgba(233,217,174,.2); padding-top: 14px; }
+    .oc-track { padding: 16px 8px; }
+    .oc-step small { display: none; }
+    .oc-step b { font-size: 11px; }
+    .oc-cols { grid-template-columns: 1fr; }
+    .oc-kv div, .oc-card h3, .oc-svcs li { padding-left: 16px; padding-right: 16px; }
+    .oc-actions { flex-direction: column; }
+    .oc-actions button { width: 100%; min-width: 0; }
+  }
 
-  /* Tabla de servicios de solo lectura -- mismo formato exacto que
-     admin.html usa en Active/History/Review (reviewSvcTableHtml),
-     agrupada por categoria, sin fecha por servicio (todos los
-     servicios de una orden se hacen el mismo dia). */
-  .svc-table-box { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-  .svc-table-box table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  .svc-table-box td { padding: 9px 14px; border-bottom: 1px solid var(--border); }
-  .svc-table-box tr:last-child td { border-bottom: none; }
-  .svc-table-box .svc-cat { color: var(--gold-dk); font-weight: 600; width: 36%; }
-  .svc-table-box .svc-name { width: 32%; }
-  .svc-table-box .svc-opt { color: var(--gray); }
-  .svc-table-box .svc-opt.has-val { color: var(--black); }
 
   @media (max-width: 860px) {
     .portal-header { padding: 14px 20px; }
@@ -1225,31 +1275,48 @@
       </div>
 
       <div id="order-confirmation">
-        <div class="confirm-card">
-          <div class="confirm-banner">GS Solutions</div>
-          <div class="confirm-head">
-            <div class="confirm-check">✓</div>
-            <div class="step-title" id="confirm-title">Order Confirmed</div>
-            <p id="confirm-msg">Our team is reviewing your request and will contact you within 24 hours.<br>
-               If you have any questions, call us at (515) 473-5990 or email orders@gsocd.com.</p>
-            <div class="confirm-ordernum-box">
-              <p class="confirm-ordernum-label">Order Number</p>
-              <p class="confirm-ordernum-value" id="confirmed-order-num">—</p>
+        <div class="oc">
+          <section class="oc-hero">
+            <div class="oc-seal" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#C9A84C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.2 4.2L19 7"/></svg></div>
+            <div>
+              <h2 id="confirm-title">Order received</h2>
+              <p id="confirm-msg">Our office will review it and email you the date and arrival window within 24 hours.</p>
             </div>
+            <div class="oc-num">
+              <small id="confirm-num-label">Order number</small>
+              <strong id="confirmed-order-num">—</strong>
+              <button type="button" class="oc-copy" id="confirm-copy" onclick="copyConfirmedOrderNum()">Copy</button>
+            </div>
+          </section>
+
+          <section class="oc-track" aria-label="Order progress">
+            <div class="oc-step done"><span class="oc-dot">✓</span><b>Received</b><small>Just now</small></div>
+            <div class="oc-step now"><span class="oc-dot">2</span><b>Scheduled</b><small>Within 24 hours</small></div>
+            <div class="oc-step"><span class="oc-dot">3</span><b>In progress</b><small>On service day</small></div>
+            <div class="oc-step"><span class="oc-dot">4</span><b>Completed</b><small>Report and photos</small></div>
+          </section>
+
+          <div class="oc-cols">
+            <div class="oc-card">
+              <h3>Order details <small id="confirm-unit-tag"></small></h3>
+              <dl class="oc-kv" id="confirm-summary"></dl>
+              <ul class="oc-svcs" id="confirm-services" aria-label="Services"></ul>
+            </div>
+            <aside class="oc-next">
+              <h3>What happens next</h3>
+              <ol>
+                <li><span><b>We review your order.</b> If something needs your OK, we'll email you before changing anything.</span></li>
+                <li><span><b>You get the date and arrival window</b> by email as soon as it's scheduled.</span></li>
+                <li><span><b>Our crew does the work.</b> You get the completion report and photos when it's done.</span></li>
+              </ol>
+            </aside>
           </div>
-        </div>
-        <div class="confirm-grid">
-          <div class="confirm-box">
-            <h4>Order Summary</h4>
-            <div id="confirm-summary"></div>
+
+          <div class="oc-actions">
+            <button type="button" class="gs-ofp-btn-primary" onclick="location.href='customer.html?tab=processing'">Track this order</button>
+            <button type="button" class="gs-ofp-btn-secondary" onclick="location.href='customer.html'">Place another order</button>
           </div>
-          <div class="confirm-box">
-            <h4>Services</h4>
-            <div id="confirm-services"></div>
-          </div>
-        </div>
-        <div class="confirm-actions">
-          <button class="gs-ofp-btn-primary" onclick="location.href='customer.html?tab=processing'">View Order Tracker →</button>
+          <p class="oc-help">Questions? Call <b>(515) 473-5990</b> or email <b>orders@gsocd.com</b>.</p>
         </div>
       </div>
 
@@ -2015,31 +2082,6 @@ if (client) {
   }
 
   function svcKey(p, n) { return p + '|' + n; }
-
-  /* Tabla de solo lectura para la pantalla de confirmacion -- mismo
-     formato exacto (3 columnas, agrupado por categoria, categoria solo
-     en el primer renglon de su grupo) que admin.html usa en
-     Active/History/Review via reviewSvcTableHtml. Sin fecha por
-     servicio: todos los servicios de una orden se hacen el mismo dia,
-     las fechas de la orden ya viven en "Order Summary". */
-  function renderConfirmServicesTable(lines) {
-    if (!lines.length) return '<p style="color:var(--gray);font-size:13px">No services on this order.</p>';
-    const byCat = {};
-    lines.forEach(l => { const c = l.category || 'General'; if (!byCat[c]) byCat[c] = []; byCat[c].push(l); });
-    const rows = [];
-    Object.entries(byCat).forEach(([cat, list]) => {
-      list.forEach((l, i) => rows.push({ cat: i === 0 ? cat : '', name: l.name, sub: l.sub }));
-    });
-    return '<div class="svc-table-box"><table>' +
-      rows.map(r =>
-        '<tr>' +
-          '<td class="svc-cat">' + esc(r.cat) + '</td>' +
-          '<td class="svc-name">' + esc(r.name) + '</td>' +
-          '<td class="svc-opt' + (r.sub ? ' has-val' : '') + '">' + (r.sub ? esc(r.sub) : '—') + '</td>' +
-        '</tr>'
-      ).join('') +
-      '</table></div>';
-  }
 
   let servicePicker = null;
 
@@ -3022,70 +3064,97 @@ if (client) {
     }
   }
 
-  function showBatchConfirmation(batchId, orderIds, order) {
-    $('order-form-steps').style.display = 'none';
-    const sidebar = document.querySelector('.order-sidebar');
-    if (sidebar) sidebar.style.display = 'none';
-    $('confirmed-order-num').textContent = client.clientId + '-' + batchId + ' (' + orderIds.length + ' units)';
-
-    const lines = [];
-    Object.entries(selected).forEach(([propType, svcs]) => {
-      Object.entries(svcs).forEach(([svc, sku]) => {
-        const lvl = svcLevel[svcKey(propType, svc)];
-        lines.push([svc, lvl || '']);
-      });
-    });
-    $('confirm-summary').innerHTML =
-      '<div class="summary-item">Purchase Order # <span>' + esc(client.clientId + '-' + batchId) + '</span></div>' +
-      '<div class="summary-item">Units <span>' + orderIds.length + '</span></div>' +
-      lines.map(([label, lvl]) =>
-        '<div class="summary-item summary-svc">' + esc(label) + (lvl ? ' <span>' + esc(lvl) + '</span>' : '') + '</div>'
-      ).join('');
-
-    $('order-confirmation').style.display = 'block';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  /* ===== Pantalla "Order received" (25/09/2026) =====
+     Llena la tarjeta de detalles (dl) y la lista de servicios (ul) de
+     la pantalla nueva. Mismos datos que antes, solo otro formato. */
+  function confirmKv(rows) {
+    return rows.filter(r => r && r[1]).map(r =>
+      '<div' + (r[2] ? ' class="oc-wide"' : '') + '><dt>' + esc(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd></div>'
+    ).join('');
   }
-
-  function showConfirmation(orderId, order) {
-    $('order-form-steps').style.display = 'none';
-    /* La barra lateral derecha (Order Summary + Your Account) es parte
-       del formulario multi-paso; una vez confirmada la orden, el propio
-       panel de confirmacion ya trae su propio "Order Summary" (mas
-       completo, con fechas y direccion). Sin esto, quedaban los dos
-       resumenes visibles a la vez -- uno a la izquierda (confirmacion)
-       y el viejo sin ocultar a la derecha (sidebar). */
-    const sidebar = document.querySelector('.order-sidebar');
-    if (sidebar) sidebar.style.display = 'none';
-    $('confirmed-order-num').textContent = orderId;
-
+  function confirmServicesHtml(lines) {
+    if (!lines.length) return '<li><span class="oc-nm" style="color:var(--gray);font-size:13px">No services on this order.</span></li>';
+    const byCat = {};
+    lines.forEach(l => { const c = l.category || 'General'; (byCat[c] = byCat[c] || []).push(l); });
+    return Object.entries(byCat).map(([cat, list]) => list.map((l, i) =>
+      '<li>' + (i === 0 ? '<span class="oc-cat">' + esc(cat) + '</span>' : '') +
+      '<span class="oc-nm">' + esc(l.name) + '</span>' +
+      (l.sub ? '<span class="oc-pill">' + esc(l.sub) + '</span>' : '<span></span>') + '</li>'
+    ).join('')).join('');
+  }
+  function confirmLines() {
     const lines = [];
     Object.entries(selected).forEach(([propType, svcs]) => {
       Object.entries(svcs).forEach(([svc, sku]) => {
         const lvl = svcLevel[svcKey(propType, svc)];
-        /* BUG REAL arreglado (20/09/2026, reportado por el dueño):
-           esto solo leia svcLevel -- un servicio de cantidad
-           (Renovations, sin nivel) se veia sin nada en su columna de
-           sub-opcion en la pantalla de confirmacion, justo despues de
-           mandar la orden. */
+        /* BUG REAL arreglado (20/09/2026, reportado por el dueño): un
+           servicio de cantidad (Renovations, sin nivel) se veia sin nada
+           en la confirmacion -- por eso tambien se lee svcQty. */
         const qty = svcQty[svcKey(propType, svc)];
         lines.push({ category: propType, name: svc, sub: lvl || (qty ? 'Qty: ' + qty : '') });
       });
     });
-    $('confirm-summary').innerHTML =
-      '<div class="summary-item">Order # <span>' + esc(orderId) + '</span></div>' +
-      '<div class="summary-item">Entry <span>' + new Date(order.EntryDate).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + '</span></div>' +
-      '<div class="summary-item">Due <span>' + new Date(order.DueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + '</span></div>' +
-      '<div class="summary-item">Building/Unit <span>' + esc(order.BuildingNumber) + ' / ' + esc(order.UnitNumber) + '</span></div>' +
-      '<div class="summary-item">Bed/Bath <span>' + esc(order.Bedrooms) + ' / ' + esc(order.Bathrooms) + '</span></div>';
-
-    /* Tabla de servicios de solo lectura, agrupada por categoria --
-       mismo formato exacto que admin.html usa en Active/History/Review
-       (reviewSvcTableHtml). Sin fecha por servicio: todos los
-       servicios de una orden se hacen el mismo dia. */
-    $('confirm-services').innerHTML = renderConfirmServicesTable(lines);
-
+    return lines;
+  }
+  function fmtConfirmEntry(v) {
+    if (!v) return '';
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  }
+  function fmtConfirmDue(v) {
+    if (!v) return '';
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  }
+  function openConfirmation() {
+    $('order-form-steps').style.display = 'none';
+    /* La barra lateral (Order Summary + Your Account) es del formulario;
+       la confirmacion ya trae su propio resumen. Sin esto se veian los 2. */
+    const sidebar = document.querySelector('.order-sidebar');
+    if (sidebar) sidebar.style.display = 'none';
+    const wrap = document.querySelector('.order-wrap');
+    if (wrap) wrap.classList.add('is-confirmed');
     $('order-confirmation').style.display = 'block';
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  function copyConfirmedOrderNum() {
+    const btn = $('confirm-copy');
+    const txt = ($('confirmed-order-num').textContent || '').trim();
+    const done = () => { btn.textContent = 'Copied'; setTimeout(() => { btn.textContent = 'Copy'; }, 1500); };
+    try { navigator.clipboard.writeText(txt).then(done, done); } catch (e) { done(); }
+  }
+  window.copyConfirmedOrderNum = copyConfirmedOrderNum;
+
+  function showBatchConfirmation(batchId, orderIds, order) {
+    const po = client.clientId + '-' + batchId;
+    $('confirm-num-label').textContent = 'Purchase order';
+    $('confirmed-order-num').textContent = po;
+    $('confirm-unit-tag').textContent = orderIds.length + ' units';
+    $('confirm-summary').innerHTML = confirmKv([
+      ['Purchase order #', po],
+      ['Units', String(orderIds.length)],
+      ['Orders', orderIds.join(', '), true]
+    ]);
+    $('confirm-services').innerHTML = confirmServicesHtml(confirmLines());
+    openConfirmation();
+  }
+
+  function showConfirmation(orderId, order) {
+    $('confirm-num-label').textContent = 'Order number';
+    $('confirmed-order-num').textContent = orderId;
+    $('confirm-unit-tag').textContent = order.UnitNumber ? 'Unit ' + order.UnitNumber : '';
+    const bldgUnit = [order.BuildingNumber ? 'Bldg ' + order.BuildingNumber : '', order.UnitNumber ? 'Unit ' + order.UnitNumber : ''].filter(Boolean).join(' · ');
+    const bedBath = (order.Bedrooms || order.Bathrooms) ? (order.Bedrooms || '—') + ' / ' + (order.Bathrooms || '—') : '';
+    $('confirm-summary').innerHTML = confirmKv([
+      ['Entry', fmtConfirmEntry(order.EntryDate)],
+      ['Due', fmtConfirmDue(order.DueDate)],
+      ['Building / Unit', bldgUnit],
+      ['Bed / Bath', bedBath]
+    ]);
+    $('confirm-services').innerHTML = confirmServicesHtml(confirmLines());
+    openConfirmation();
   }
   /* Exponer al scope global las funciones que usan los onclick del HTML.
      Las async function declaradas dentro de este bloque NO son visibles
