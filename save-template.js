@@ -57,7 +57,7 @@ exports.handler = async (event) => {
     const created = await createListItem(SERVICE_TEMPLATES_LIST, fields);
     /* Guardado desde 'Your usual order' (Edit > Save my package): el usual se
        esconde y el siguiente sale con 3 seguidas (lib/usual-packages.js). */
-    if (b.fromUsual) await usualSaved(clientId, division);
+    if (b.fromUsual) await usualSaved(clientId, b.usualDivision || division); // el usual de la pestaña donde estaba, aunque el paquete quede Mixed
     return jsonResponse(200, { success: true, id: created.id });
   } catch (err) {
     return jsonResponse(500, { error: err.message });

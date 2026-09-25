@@ -1444,7 +1444,7 @@
 <script src="shared.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/date-time-picker/date-time-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.50.0/service-tooltip/service-tooltip.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.62.0/service-picker/service-picker.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.63.0/service-picker/service-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/service-change-panel/service-change-panel.js"></script>
 <!-- Pendiente: gsocd-shared va en v1.15.0, el siguiente tag real seria v1.16.0
      (componente nuevo, todavia solo vive en local). Ajustar cuando se suba. -->
@@ -1493,6 +1493,7 @@ if (client) {
   let catalogCache = [];
   let usualSetsCache = []; // [{key, name, division, items:[{sku, level}]}] -- get-services, por cliente
   let savedSetsCache = []; // paquetes propios del cliente (sus Templates), como tarjeta "My package"
+  let divBeforeMixed = null; // division de la que venia si un Edit la paso a Mixed (para esconder SU usual)
   function templatesToSets(list) {
     return (list || []).map(t => ({ key: String(t.id), name: t.name, division: t.division,
       items: (t.services || []).filter(x => x && x.SubOption).map(x => Object.assign({ sku: String(x.SubOption), level: x.Level || '' }, x.Quantity ? { qty: x.Quantity } : {})) }))
@@ -1909,6 +1910,7 @@ if (client) {
   /* ===== División ===== */
 
   async function selectDiv(div, el) {
+    divBeforeMixed = null;
     GSOrderFormPremium.activateDivTab(div, {cardId:'div-card', tabsId:'div-tabs', underlineId:'div-underline'});
     /* Si habia un guardado pendiente (el usuario acababa de escribir
        algo y todavia no pasaban los 3 segundos del debounce), se
@@ -2010,6 +2012,18 @@ if (client) {
       initialPackageLevels: pkgLevels,
       usualSets: usualSetsCache,
       savedSets: savedSetsCache.filter(t => !div || t.division === div || isMixed),
+      /* picker v1.63.0 (24/09/2026, dueño): si en un Edit se agrega un
+         servicio de otra division, la orden se va a Mixed EN ESE MOMENTO
+         (sin perder lo escogido): pestaña Mixed, currentDiv, y ya se ven
+         todos sus paquetes guardados. */
+      onGoMixed: function () {
+        if (currentDiv !== 'Mixed') divBeforeMixed = currentDiv;
+        currentDiv = 'Mixed';
+        GSOrderFormPremium.activateDivTab('Mixed', {cardId:'div-card', tabsId:'div-tabs', underlineId:'div-underline'});
+        if (servicePicker && servicePicker.setSavedSets) servicePicker.setSavedSets(savedSetsCache);
+        try { updateSummary(); } catch (e) {}
+        showToast('Switched to Mixed — this order now has services from more than one division.');
+      },
       /* Edit del "Usual order" (picker v1.61.0): el cliente lo ajusta y lo
          guarda con nombre como SU paquete (se guarda como Template). Al
          guardarlo, el "Usual order" se esconde hasta que junte otro ciclo. */
@@ -2020,17 +2034,29 @@ if (client) {
             return { Category: svc.propertyType || propertyType, ServiceName: svc.serviceName || x.sku, SubOption: x.sku,
               Division: GSOrderFormPremium.realDivisionForSku(catalogCache, x.sku, currentDiv), Level: x.level || '', Quantity: '' };
           });
+          /* 24/09/2026 (dueño): desde Janitorial se pueden agregar servicios de
+             otra division; si el paquete termina con mas de una division (o
+             con una distinta a esta pestaña) se guarda como Mixed y sale en
+             la pestaña Mixed. */
+          const divs = [...new Set(services.map(x => x.Division).filter(Boolean))];
+          const saveDiv = currentDiv === 'Mixed' || divs.length > 1 || (divs.length === 1 && divs[0] !== currentDiv) ? (divs.length === 1 && currentDiv !== 'Mixed' ? divs[0] : 'Mixed') : currentDiv;
           try {
             /* source: 'usual' (Edit del usual: lo esconde) o 'package' (Edit de
-               un paquete del catalogo: el usual se queda como estaba). */
-            await GS.api('/save-template', { method: 'POST', body: { clientId: client.clientId, name, division: currentDiv, services, fromUsual: source === 'usual' } });
+               un paquete del catalogo: el usual se queda como estaba).
+               usualDivision: la division del usual que se guardo, para
+               esconder ESE aunque el paquete quede Mixed. */
+            await GS.api('/save-template', { method: 'POST', body: { clientId: client.clientId, name, division: saveDiv, services, fromUsual: source === 'usual', usualDivision: divBeforeMixed || currentDiv } });
           } catch (e) { showToast('Could not save your package: ' + e.message); throw e; }
           if (source === 'usual') {
             usualSetsCache = [];
             if (servicePicker && servicePicker.setUsualSets) servicePicker.setUsualSets([]);
           }
           await loadSavedSets();
-          showToast('Saved as “' + name + '”. It\u2019s now in your packages.');
+          showToast(saveDiv === currentDiv
+            ? 'Saved as “' + name + '”. It\u2019s now in your packages.'
+            : saveDiv === 'Mixed'
+              ? 'Saved as “' + name + '” in Mixed — it has services from more than one division.'
+              : 'Saved as “' + name + '” in ' + saveDiv + '.');
         }
       },
       onChange: function (sel, lvl, propType, qty) {
