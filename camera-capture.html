@@ -240,6 +240,13 @@
            diferencia de new-order-photo no hace falta notReady. */
         endpoint = '/upload-client-service-photo';
         body = { orderId: orderId, serviceName: serviceName, imageBase64: imageBase64 };
+      } else if (context === 'new-order-service-photo') {
+        /* Foto POR SERVICIO mientras se arma la orden (24/09/2026): igual
+           que new-order-photo (se guarda sin subir hasta que la orden
+           exista), pero va al endpoint de fotos por servicio. */
+        endpoint = '/upload-client-service-photo';
+        body = { orderId: null, serviceName: serviceName, imageBase64: imageBase64 };
+        notReady = true;
       } else if (context === 'new-order-photo') {
         /* La orden todavia no existe -- se guarda igual (regla de oro,
            sin excepcion), pero no debe intentar subir sola hasta que
@@ -260,7 +267,7 @@
          ni siquiera lo intenta hasta que customer.html la libere. */
       const id = await GSCameraQueue.enqueue({
         endpoint: endpoint, body: body, notReady: notReady,
-        meta: { orderId: orderId, recurringServiceId: recurringServiceId, draftKey: draftKey }
+        meta: { orderId: orderId, recurringServiceId: recurringServiceId, draftKey: draftKey, serviceName: context === 'new-order-service-photo' ? serviceName : undefined }
       });
       thumbById[id] = { thumb, status };
     }

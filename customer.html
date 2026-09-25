@@ -1561,7 +1561,12 @@ if (client) {
       (draftOrderId && p.meta.draftKey === draftOrderId) ||
       (editOrderId && p.meta.orderId === editOrderId)
     ));
-    const pendingHtml = mine.map(p => '<img class="client-photo-thumb" style="opacity:.6" src="' + p.body.imageBase64 + '">').join('');
+    /* Fotos POR SERVICIO (24/09/2026): se cuentan en su renglon del
+       resumen (camarita con numero), no aqui con las generales. */
+    svcPhotoCount = {};
+    mine.filter(p => p.meta.serviceName).forEach(p => { svcPhotoCount[p.meta.serviceName] = (svcPhotoCount[p.meta.serviceName] || 0) + 1; });
+    try { updateSummary(); } catch (e) {}
+    const pendingHtml = mine.filter(p => !p.meta.serviceName).map(p => '<img class="client-photo-thumb" style="opacity:.6" src="' + p.body.imageBase64 + '">').join('');
 
     wrap.innerHTML = serverHtml + pendingHtml;
   }
@@ -1584,6 +1589,29 @@ if (client) {
      este archivo), se expone a mano. */
   window.addNewOrderPhoto = addNewOrderPhoto;
 
+  /* Foto POR SERVICIO mientras se arma la orden (24/09/2026, el dueño:
+     "si hay un boton para agregar fotos, pero no hay fotos por
+     servicio"). Misma idea que la general: la orden todavia no existe,
+     asi que la foto se guarda en el telefono ligada al borrador y al
+     servicio, y al mandar la orden se sube como foto DE ESE SERVICIO
+     (upload-client-service-photo, el mismo de la camarita de
+     Processing). Editando una orden real, sube directo. */
+  let svcPhotoCount = {};
+  async function addNewOrderServicePhoto(serviceName) {
+    if (editOrderId) {
+      location.href = 'camera-capture.html?context=service-photo&orderId=' + encodeURIComponent(editOrderId) +
+        '&serviceName=' + encodeURIComponent(serviceName) +
+        '&return=' + encodeURIComponent('customer.html?edit=' + editOrderId) + '&label=' + encodeURIComponent(serviceName);
+      return;
+    }
+    await saveDraft();
+    if (!draftOrderId) { alert('Please fill in a few fields first, then add your photo.'); return; }
+    location.href = 'camera-capture.html?context=new-order-service-photo&draftKey=' + encodeURIComponent(draftOrderId) +
+      '&serviceName=' + encodeURIComponent(serviceName) +
+      '&return=' + encodeURIComponent('customer.html?continue=' + draftOrderId) + '&label=' + encodeURIComponent(serviceName);
+  }
+  window.addNewOrderServicePhoto = addNewOrderServicePhoto;
+
   /* Se llama SOLO despues de que submit-order confirma que el/los
      OrderID(s) ya son reales -- nunca antes. Un lote de multiples
      unidades manda la MISMA foto a cada una (muestra algo del
@@ -1600,10 +1628,9 @@ if (client) {
     for (const item of mine) {
       await GSCameraQueue.release(item.id, { orderId: orderIds[0] });
       for (let i = 1; i < orderIds.length; i++) {
-        await GSCameraQueue.enqueue({
-          endpoint: '/upload-client-photo',
-          body: { orderId: orderIds[i], imageBase64: item.body.imageBase64 }
-        });
+        await GSCameraQueue.enqueue(item.meta && item.meta.serviceName
+          ? { endpoint: '/upload-client-service-photo', body: { orderId: orderIds[i], serviceName: item.meta.serviceName, imageBase64: item.body.imageBase64 } }
+          : { endpoint: '/upload-client-photo', body: { orderId: orderIds[i], imageBase64: item.body.imageBase64 } });
       }
     }
   }
@@ -2090,12 +2117,20 @@ if (client) {
     } else {
       box.innerHTML = lines.map((l) => {
         const mins = showTime ? GSEstimatedTime.svcMinutes(l.sku, l.lvl, serviceTimesCache) : null;
-        return '<div class="summary-item" style="align-items:center"><div style="min-width:0">' +
+        /* 24/09/2026 (dueño): la X ANTES del nombre (para no picarla sin
+           querer desde el celular junto a la camara) y la camarita
+           alineada a la derecha. */
+        return '<div class="summary-item" style="align-items:center;gap:8px">' +
+               '<button class="summary-remove" data-proptype="' + esc(l.propType) + '" data-svc="' + esc(l.svc) + '" title="Remove service" style="flex-shrink:0;margin:0">\u2715</button>' +
+               '<div style="min-width:0;flex:1">' +
                '<span>' + esc(l.svc) + '</span>' +
                (l.lvl ? '<br><span style="color:var(--gray)">' + esc(l.lvl) + '</span>' : '') +
                (l.qty ? '<br><span style="color:var(--gray)">Qty: ' + esc(l.qty) + '</span>' : '') +
                (mins != null ? '<br><span class="gs-est-time-inline" style="font-size:11px">' + esc(GSEstimatedTime.fmtDuration(mins * (l.qty || 1))) + '</span>' : '') + '</div>' +
-               '<button class="summary-remove" data-proptype="' + esc(l.propType) + '" data-svc="' + esc(l.svc) + '" title="Remove service">\u2715</button></div>';
+               '<button type="button" title="Add a photo for this service" onclick="addNewOrderServicePhoto(\'' + jsStr(l.svc) + '\')" style="position:relative;flex-shrink:0;margin-left:auto;width:30px;height:30px;padding:0;border-radius:6px;border:1.5px solid var(--border);background:var(--white);color:var(--gray);cursor:pointer;display:inline-flex;align-items:center;justify-content:center">' +
+                 '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>' +
+                 (svcPhotoCount[l.svc] ? '<span style="position:absolute;top:-6px;right:-6px;min-width:16px;height:16px;border-radius:8px;background:var(--gold);color:#111;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 4px">' + svcPhotoCount[l.svc] + '</span>' : '') +
+               '</button></div>';
       }).join('');
       if (showTime) {
         const svcRows = lines.map(l => ({ SubOption: l.sku, Level: l.lvl || '', Quantity: l.qty || 1 }));
