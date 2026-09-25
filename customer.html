@@ -1473,7 +1473,7 @@
 <script src="shared.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/date-time-picker/date-time-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.50.0/service-tooltip/service-tooltip.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.67.0/service-picker/service-picker.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.68.0/service-picker/service-picker.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.28.9/service-change-panel/service-change-panel.js"></script>
 <!-- Pendiente: gsocd-shared va en v1.15.0, el siguiente tag real seria v1.16.0
      (componente nuevo, todavia solo vive en local). Ajustar cuando se suba. -->
@@ -2050,6 +2050,7 @@ if (client) {
     const isMixed = div === 'Mixed';
 
     servicePicker = GSServicePicker.mount('customer-order', container, {
+      place: 'new-order',
       catalog: catalogCache,
       division: div,
       crossDivision: isMixed,
@@ -3683,6 +3684,7 @@ if (client) {
          'tplPropertyType' (el picker espera 'propertyType'), asi que un
          template Residential siempre se abria en Commercial. */
       workToggle: !!window.gsRecurringAllowed && (isJan || isMixed), showPackages: true, workMode: 'units',
+      place: 'template', /* picker v1.68.0: el Edit de paquetes lo trae la pieza compartida y aplica los cambios a este template */
       propertyType: tplPropertyType,
       initialSelected: tplSelected,
       initialLevels: tplSvcLevel,
