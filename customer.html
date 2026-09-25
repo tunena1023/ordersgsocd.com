@@ -3560,7 +3560,9 @@ if (client) {
         (open ? '<div class="tplx-body">' + (rows || '<p class="empty-note">No services in this template.</p>') + '</div>' : '') +
         '<div class="tplx-foot">' +
           '<button type="button" class="gs-ofp-btn-primary tplx-use" onclick="useTemplate(\'' + escAttr(t.id) + '\')">Use</button>' +
-          (t.mine ? '<button type="button" class="gs-ofp-btn-secondary tplx-edit" onclick="editTemplate(\'' + escAttr(t.id) + '\')">Edit</button>' +
+          /* Edit (y Delete) solo en la tarjeta ABIERTA (el dueño, 24/09/2026:
+             "el boton de Edit nomas lo debe tener el que esta abierto"). */
+          (t.mine && open ? '<button type="button" class="gs-ofp-btn-secondary tplx-edit" onclick="editTemplate(\'' + escAttr(t.id) + '\')">Edit</button>' +
             '<button type="button" class="tplx-del" onclick="deleteTemplate(\'' + escAttr(t.id) + '\')">Delete</button>' : '') +
         '</div></div>';
     };
