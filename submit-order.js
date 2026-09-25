@@ -13,7 +13,7 @@ const {
   graphFetch, siteListPath, geocodeAddress,
   jsonResponse
 } = require('./lib/graph');
-const { recordPackageSnapshots } = require('./lib/package-contents');
+const { recordPackageSnapshots, expandPackages } = require('./lib/package-contents');
 const { recordUsualOrder } = require('./lib/usual-packages');
 /* Correos (lib/notify.js, copia de gsocd-shared, 25/09/2026): "we
    received your order" al cliente -- lo que la pantalla de confirmacion
@@ -384,14 +384,21 @@ exports.handler = async (event) => {
          replicacion de SharePoint), no dejar la orden sin servicios.
          El cliente ya mando su seleccion actual en este mismo envio
          (b.Services); usarla como respaldo en vez de perderla. */
-      const svcSource = draftServiceRows.length
+      /* BUG de paso (24/09/2026): las filas del borrador se copiaban SIN
+         Level ni Quantity, asi que una orden creada desde un borrador
+         perdia los niveles. Ahora se copian. */
+      const svcOriginal = draftServiceRows.length
         ? draftServiceRows.map(row => ({
             Category:    row.fields.Category    || '',
             ServiceName: row.fields.ServiceName || '',
             SubOption:   row.fields.SubOption   || '',
-            Division:    row.fields.Division    || b.Division
+            Division:    row.fields.Division    || b.Division,
+            Level:       row.fields.Level       || '',
+            Quantity:    row.fields.Quantity    || ''
           }))
         : resolveServices(b.Services, b.Division);
+      /* Paquetes -> sus servicios (lib/package-contents.js expandPackages). */
+      const svcSource = await expandPackages(svcOriginal, b.ClientID, b.PackageLevels);
 
       const suffix = nextGlobalSuffix(allOrderRows);
       const orderId = String(b.ClientID).trim() + '-' + suffix;
@@ -422,6 +429,7 @@ exports.handler = async (event) => {
               ServiceName: s.ServiceName || '',
               SubOption:   s.SubOption   || '',
               Division:    s.Division    || b.Division,
+              Level:       s.Level       || '',
               Quantity:    numOrNull(s.Quantity)
             })
           ),
@@ -444,7 +452,7 @@ exports.handler = async (event) => {
         );
       } catch (e) { console.error('Draft cleanup failed:', e.message); }
 
-      await recordPackageSnapshots(orderId, svcSource, b.ClientID, null, b.PackageLevels);
+      await recordPackageSnapshots(orderId, svcOriginal, b.ClientID, null, b.PackageLevels);
       if (!b.OfficeCreated) await recordUsualOrder(b.ClientID, b.Division, svcSource);
       await mailNewOrder(b, [orderId], Object.assign({}, orderFields, { OrderID: orderId, Status: 'Received' }));
       return jsonResponse(200, { success: true, orderId, id: result.id });
@@ -453,6 +461,8 @@ exports.handler = async (event) => {
     /* ===== FLUJO B: Orden existente → edicion ===== */
     if (requestedId) {
       if (!b.Services) return jsonResponse(400, { error: 'Services are required' });
+      /* Paquetes -> sus servicios, igual que al crear (24/09/2026). */
+      const editServices = await expandPackages(resolveServices(b.Services, b.Division), b.ClientID, b.PackageLevels);
 
       const [orderRows, svcRows, histRows] = await Promise.all([
         fetchByOrderId(ORDERS_LIST,         requestedId),
@@ -508,7 +518,7 @@ exports.handler = async (event) => {
       if (existing.Status === 'Received') {
         await updateListItemByItemId(ORDERS_LIST, existing.itemId, orderFields);
 
-        const parsedServices = resolveServices(b.Services, b.Division);
+        const parsedServices = editServices;
         if (stale.length) {
           await Promise.all(stale.map(it => deleteListItem(ORDER_SERVICES_LIST, it.id)));
         }
@@ -566,7 +576,7 @@ exports.handler = async (event) => {
           Level: it.fields.Level || '', Quantity: it.fields.Quantity || '',
           NotCompleted: it.fields.NotCompleted === true || it.fields.NotCompleted === 'true'
         }));
-        const newSvcs = resolveServices(b.Services, b.Division);
+        const newSvcs = editServices;
         const oldMap = {}; oldSvcs.forEach(s => { oldMap[keyOf(s)] = s; });
         const newMap = {}; newSvcs.forEach(s => { newMap[keyOf(s)] = s; });
 
@@ -706,7 +716,7 @@ exports.handler = async (event) => {
          snapshot de la solicitud SIN su cantidad, perdida para
          siempre en cuanto se aplicara de verdad (admin-approve-
          order.js, Reassign/Reschedule). */
-      const newServices = resolveServices(b.Services, b.Division).map(s => ({
+      const newServices = editServices.map(s => ({
         Category: s.Category, ServiceName: s.ServiceName, SubOption: s.SubOption, Division: s.Division,
         Level: s.Level || '', Quantity: s.Quantity || ''
       }));
@@ -751,7 +761,8 @@ exports.handler = async (event) => {
       const actor = (b.changedBy && String(b.changedBy).trim()) || String(b.ClientID || '').trim() || 'Client';
       const poTag = nextGlobalPO(allOrderRows);
       let nextSuffixNum = parseInt(nextGlobalSuffix(allOrderRows), 10);
-      const parsedServices = resolveServices(b.Services, b.Division);
+      const originalServices = resolveServices(b.Services, b.Division);
+      const parsedServices = await expandPackages(originalServices, b.ClientID, b.PackageLevels);
 
       const createdOrderIds = [];
       for (const unit of b.Units) {
@@ -840,7 +851,7 @@ exports.handler = async (event) => {
             OldValue:   '',
             NewValue:   'SERVICES:' + JSON.stringify({ services: parsedServices, dirtLevel: unit.dirtLevel || b.DirtLevel || '', entryDate: unitFields.EntryDate || '', dueDate: unitFields.DueDate || '' })
           });
-          await recordPackageSnapshots(orderId, parsedServices, actor, null, b.PackageLevels);
+          await recordPackageSnapshots(orderId, originalServices, actor, null, b.PackageLevels);
         } catch (e) {
           /* Mismo criterio que el Flujo C: un problema al escribir
              servicios/historial no debe tumbar la orden completa. */
@@ -895,7 +906,8 @@ exports.handler = async (event) => {
        era solo en la respuesta final, no en el guardado real. */
     let historyWarning = null;
     try {
-    const parsedServices = resolveServices(b.Services, b.Division);
+    const originalServices = resolveServices(b.Services, b.Division);
+    const parsedServices = await expandPackages(originalServices, b.ClientID, b.PackageLevels);
     await Promise.all(parsedServices.map(s =>
       createListItem(ORDER_SERVICES_LIST, {
         Title:       s.ServiceName || '',
@@ -960,7 +972,7 @@ exports.handler = async (event) => {
        orden SI se creaba, pero la respuesta era error 500 (el cliente
        veia error y podia volver a mandarla). Venia de 31a1b9f (23/09).
        Ahora vive dentro del mismo try (recordPackageSnapshots no lanza). */
-    await recordPackageSnapshots(orderId, parsedServices, (b.OfficeCreated && b.ChangedBy) ? b.ChangedBy : b.ClientID, null, b.PackageLevels);
+    await recordPackageSnapshots(orderId, originalServices, (b.OfficeCreated && b.ChangedBy) ? b.ChangedBy : b.ClientID, null, b.PackageLevels);
     /* 'Your usual order' (24/09/2026): solo ordenes que manda el cliente. */
     if (!b.OfficeCreated) await recordUsualOrder(b.ClientID, b.Division, parsedServices);
 } catch (e) { console.error('Post-order write failed:', e.message); }
