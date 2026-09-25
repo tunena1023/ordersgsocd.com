@@ -9,6 +9,8 @@ const {
   graphFetch, siteListPath,
   jsonResponse
 } = require('./lib/graph');
+/* Paquetes -> sus servicios al aplicar (25/09/2026): no-op si ya vienen desarmados. */
+const { expandPackages } = require('./lib/package-contents');
 
 /* BUG REAL encontrado y arreglado (20/09/2026, ver el comentario
    completo en Admingsocd.com/admin-approve-order.js, misma revision):
@@ -104,6 +106,9 @@ exports.handler = async (event) => {
     if (snapshotRaw) {
       try {
         const snap = JSON.parse(snapshotRaw.substring('SERVICES:'.length));
+        /* Un snapshot viejo ('Created' de antes del 24/09) puede traer el
+           paquete como servicio: se desarma al restaurar. */
+        snap.services = await expandPackages(snap.services || [], f.ClientID);
 
         /* Borrar servicios actuales */
         const svcRows = await fetchByField(ORDER_SERVICES_LIST, 'OrderID', orderId);

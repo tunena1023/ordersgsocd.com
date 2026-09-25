@@ -33,6 +33,8 @@ const {
   graphFetch, siteListPath,
   jsonResponse
 } = require('./lib/graph');
+/* Paquetes -> sus servicios al aplicar (25/09/2026): no-op si ya vienen desarmados. */
+const { expandPackages } = require('./lib/package-contents');
 /* Aviso a la oficina de que el cliente confirmo (lib/notify.js,
    25/09/2026). Nunca truena. */
 const graph = require('./lib/graph');
@@ -227,6 +229,7 @@ exports.handler = async (event) => {
         }));
       }
 
+      proposed.services = await expandPackages(proposed.services, f.ClientID);
       const svcRows = await fetchByField(ORDER_SERVICES_LIST, 'OrderID', orderId);
       if (svcRows.length) {
         writes.push(Promise.all(svcRows.map(r => deleteListItem(ORDER_SERVICES_LIST, r.id))).then(() =>

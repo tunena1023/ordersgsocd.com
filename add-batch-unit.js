@@ -27,6 +27,8 @@ const {
   ORDERS_LIST, ORDER_SERVICES_LIST, ORDER_HISTORY_LIST, CLIENTS_LIST,
   createListItem, graphFetch, siteListPath, jsonResponse
 } = require('./lib/graph');
+/* Paquetes -> sus servicios al aplicar (25/09/2026): no-op si ya vienen desarmados. */
+const { expandPackages } = require('./lib/package-contents');
 /* Correos (lib/notify.js, 25/09/2026): mismo par que una orden nueva
    en submit-order.js -- "we received your order" al cliente y aviso a
    la oficina. Nunca truenan. */
@@ -164,8 +166,12 @@ exports.handler = async (event) => {
        sin preguntar de nuevo, tal como se confirmo. */
     try {
       const svcRows = await fetchByField(ORDER_SERVICES_LIST, 'OrderID', template.OrderID);
-      await Promise.all(svcRows.map(row => {
-        const f = row.fields;
+      /* Orden de muestra vieja con un paquete como servicio: se desarma. */
+      const copied = await expandPackages(svcRows.filter(r => r.fields).map(row => ({
+        Category: row.fields.Category || '', ServiceName: row.fields.ServiceName || '', SubOption: row.fields.SubOption || '',
+        Division: row.fields.Division || template.Division, Level: row.fields.Level || '', Quantity: row.fields.Quantity
+      })), b.clientId);
+      await Promise.all(copied.map(f => {
         return createListItem(ORDER_SERVICES_LIST, {
           Title:       f.ServiceName || '',
           OrderID:     orderId,
