@@ -22,7 +22,13 @@ const GS = {
     KEY: 'gs_client',
     get() { try { return JSON.parse(sessionStorage.getItem(this.KEY)); } catch (e) { return null; } },
     set(c) { sessionStorage.setItem(this.KEY, JSON.stringify(c)); },
-    clear() { sessionStorage.removeItem(this.KEY); }
+    clear() { sessionStorage.removeItem(this.KEY); },
+    /* Sign out de verdad: tambien borra la cookie firmada, para que el
+       dispositivo deje de estar recordado (logout.js). */
+    async signOut() {
+      this.clear();
+      try { await fetch('/api/logout', { method: 'POST' }); } catch (e) { /* igual se va al login */ }
+    }
   },
 
   /* Guard para páginas internas: sin sesión → login */
@@ -45,6 +51,15 @@ const GS = {
     });
     let data = {};
     try { data = await res.json(); } catch (e) { /* body no-JSON */ }
+    /* 25/09/2026: el servidor ya no le cree al navegador el Client ID --
+       exige la cookie de sesion firmada (lib/client-auth.js). Si ya no hay
+       sesion valida (vencio, se borro, o es un navegador que entro antes
+       de este cambio), de regreso al login. */
+    if (res.status === 401 && data && data.signin) {
+      GS.session.clear();
+      if (!/index\.html$|\/$/.test(location.pathname)) location.replace('index.html');
+      throw new Error(data.error || 'Please sign in again.');
+    }
     if (!res.ok) throw new Error(data.error || ('Request failed (' + res.status + ')'));
     return data;
   },

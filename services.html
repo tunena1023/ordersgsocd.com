@@ -944,7 +944,7 @@ async function createDraft() {
 
 $('btn-create-draft').addEventListener('click', createDraft);
 $('btn-view-drafts').addEventListener('click', () => { location.href = 'tracking.html#processing'; });
-$('btn-signout').addEventListener('click', () => { GS.session.clear(); location.href = 'index.html'; });
+$('btn-signout').addEventListener('click', async () => { await GS.session.signOut(); location.href = 'index.html'; });
 
 (function () {
   const tip = $('hover-tip');

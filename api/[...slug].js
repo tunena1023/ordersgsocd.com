@@ -2,6 +2,12 @@
    las funciones de la raiz, leyendo el nombre directo de la URL
    (mas confiable que depender del query param dinamico de Vercel). */
 const { toVercel } = require('../lib/vercel-adapter');
+/* 25/09/2026: toda peticion pasa por el candado (lib/client-guard.js):
+   sin sesion firmada -> 401; el Client ID sale de la sesion, nunca del
+   body; los ids de ordenes/contratos/contactos se revisan contra el
+   cliente. */
+const graph = require('../lib/graph');
+const { guard } = require('../lib/client-guard');
 
 const handlers = {
   'confirm-change':       require('../confirm-change').handler,
@@ -38,6 +44,8 @@ const handlers = {
   'undo-request':       require('../undo-request').handler,
   'update-client-profile': require('../update-client-profile').handler,
   'validate-client':    require('../validate-client').handler,
+  'verify-client':      require('../verify-client').handler,
+  'logout':             require('../logout').handler,
   'get-my-recurring':   require('../get-my-recurring').handler,
   'get-recurring-gallery': require('../get-recurring-gallery').handler,
   'request-recurring-change': require('../request-recurring-change').handler,
@@ -55,5 +63,6 @@ module.exports = async (req, res) => {
     res.status(404).json({ error: 'Unknown endpoint: ' + slug });
     return;
   }
+  if (await guard(graph, slug, req, res)) return;
   return toVercel(h)(req, res);
 };

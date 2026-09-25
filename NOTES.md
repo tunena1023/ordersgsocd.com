@@ -4,6 +4,44 @@ Este archivo existe para que cualquier chat de Claude (u otra persona) que entre
 a este repo después no tenga que adivinar el proceso, ni repetir preguntas ya
 resueltas, ni subir cosas sin permiso. Léelo completo antes de tocar código.
 
+## EN PREVIEW (25/09/2026): el portal ya no le cree al navegador el Client ID
+
+**El hueco:** cada función tomaba el Client ID que mandaba el navegador, y los IDs
+son consecutivos (GS-1001, GS-1002…). La auditoría encontró 14 funciones que
+actuaban sobre una orden, foto, contacto o contrato sin revisar que fuera del
+cliente (cancelar la orden de otro, ver su PDF o sus fotos, subirle fotos, etc.).
+
+**Cómo quedó (decidido con el dueño: "a los clientes no les gusta batallar con
+logins"; mini aprobado: https://claude.ai/artifact/XYFnaMfkfSFtrVYiznaEec):**
+- Se sigue entrando con el Client ID. SOLO la primera vez en cada dispositivo se
+  confirma el ZIP (el de la cuenta o el de un edificio) o los últimos 4 de un
+  teléfono registrado (el de la cuenta o un contacto tipo Phone). "Remember this
+  device" viene marcado: 180 días, se renueva cada vez que entra.
+- `lib/client-auth.js`: cookie firmada `gs_client_auth` (HttpOnly, Secure) con la
+  clave `CLIENT_SESSION_SECRET` (Vercel, una distinta en Production y en Preview;
+  sin ella nadie entra, falla cerrado). Pruebas: `node lib/client-auth.test.js`.
+- `lib/client-guard.js`, llamado desde `api/[...slug].js` antes de CUALQUIER
+  función:
+  - sin sesión → 401 (`GS.api` en shared.js regresa al login);
+  - el Client ID sale de la cookie y se escribe encima de clientId/ClientID;
+  - orderId, recurringServiceId, contactId y choiceId se revisan contra el
+    cliente → 403;
+  - se quitan OfficeCreated/ChangedBy.
+  Públicas: validate-client, verify-client, logout, register-client,
+  recover-client-id, submit-contact, site-image, get-services.
+- Nuevas: `verify-client.js` (paso 2) y `logout.js` (Sign out borra la cookie).
+  validate-client ya no regresa datos de la cuenta sin sesión.
+- 5 errores de ZIP/teléfono bloquean esa cuenta 1 hora y mandan correo a la
+  oficina. **Necesita 2 columnas nuevas en Clients: `LoginFailCount` (Number) y
+  `LoginLockedUntil` (Date and time).** Sin ellas, el login funciona igual, pero
+  sin bloqueo.
+- Al subirlo, todos los clientes que ya estaban adentro confirman su ZIP o
+  teléfono una vez.
+
+**Pendiente visto en la auditoría (no se tocó):** `site-image?name=` pasa el
+nombre directo a `driveItemByPath`; con diagonales podría leer otros archivos del
+drive. Revisar.
+
 ## SUBIDO A PRODUCCIÓN (25/09/2026): correos de notificación (reemplaza Power Automate)
 
 **Así quedó Vercel (25/09/2026, final, los 3 proyectos):**

@@ -18,6 +18,9 @@
 ============================================================ */
 
 const { CLIENTS_LIST, graphFetch, siteListPath, jsonResponse } = require('./lib/graph');
+/* Sesion firmada (lib/client-auth.js, 25/09/2026): quien se acaba de
+   registrar entra directo y este dispositivo queda recordado. */
+const { sessionCookie } = require('./lib/client-auth');
 
 async function fetchAll(listName) {
   let url = siteListPath(listName) + '?$expand=fields&$top=200';
@@ -88,7 +91,8 @@ exports.handler = async (event) => {
       })
     });
 
-    return jsonResponse(200, {
+    const setCookie = sessionCookie(clientId, true);
+    const ok = jsonResponse(200, {
       valid: true,
       clientId,
       businessName,
@@ -101,6 +105,8 @@ exports.handler = async (event) => {
       phone,
       showEstimatedTime: false // recien registrado -- siempre empieza apagado, se activa desde Developer
     });
+    ok.headers = Object.assign({}, ok.headers, { 'Set-Cookie': setCookie });
+    return ok;
 
   } catch (err) {
     return jsonResponse(500, { valid: false, error: err.message });

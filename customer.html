@@ -2023,8 +2023,8 @@ if (client) {
     } catch (e) { $('sidebar-orders-count').textContent = '0'; }
   }
 
-  function doSignout() {
-    GS.session.clear();
+  async function doSignout() {
+    await GS.session.signOut();
     location.href = 'index.html';
   }
 

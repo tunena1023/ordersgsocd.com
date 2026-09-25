@@ -92,6 +92,26 @@
   }
   .link-btn:hover { color: var(--black); }
 
+  /* Paso 2 del login (25/09/2026): solo la PRIMERA vez en cada dispositivo
+     se confirma el ZIP o los ultimos 4 del celular. Despues el dispositivo
+     queda recordado y se entra directo con el Client ID. */
+  #verify-step { display: none; }
+  .verify-client { display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+                   background: var(--off); border: 1px solid var(--border); padding: 10px 14px; margin-bottom: 18px; font-size: 13px; }
+  .verify-client b { font-weight: 600; }
+  .verify-client button { all: unset; cursor: pointer; font-size: 12px; color: var(--gold-dk); text-decoration: underline; }
+  .verify-choice { display: grid; grid-template-columns: 1fr 1fr; border: 1.5px solid var(--border); margin-bottom: 16px; }
+  .verify-choice button { all: unset; cursor: pointer; text-align: center; padding: 11px 8px; font-size: 12px; font-weight: 600; color: var(--gray); }
+  .verify-choice button + button { border-left: 1.5px solid var(--border); }
+  .verify-choice button[aria-pressed="true"] { background: var(--black); color: var(--gold); }
+  .verify-choice button:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+  .verify-remember { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; color: var(--gray); margin: 12px 0 18px; line-height: 1.45; cursor: pointer; }
+  .verify-remember input { margin-top: 2px; accent-color: var(--gold-dk); }
+  .verify-why { font-size: 11.5px !important; margin: 14px 0 0 !important; text-align: center; }
+  @media (max-width: 520px) {
+    #login-gate { margin: 32px 16px; padding: 32px 22px; }
+  }
+
   /* CONTACT MODAL */
   .contact-overlay {
     display: none; position: fixed; inset: 0; background: rgba(17,17,17,.55);
@@ -158,6 +178,7 @@ style="object-fit:contain">
 
 <!-- LOGIN GATE -->
 <div id="login-gate">
+ <div id="id-step">
   <h2>Client Access</h2>
   <p>Enter your client number to access your portal, place orders, and track your services.</p>
   <div class="field" style="margin-bottom:4px">
@@ -168,7 +189,28 @@ style="object-fit:contain">
   <p id="login-error" style="font-size:11px;color:#B33A3A;margin-top:10px"></p>
   <button class="link-btn" onclick="showRegister(true)">First Time? Register</button>
   <button class="link-btn" onclick="showRecover(true)">Forgot your client number?</button>
+ </div>
+
+ <div id="verify-step">
+  <h2>Confirm it's you</h2>
+  <p style="margin-bottom:18px">This is the first time you sign in on this device. Confirm one detail on your account and we'll remember this device next time.</p>
+  <div class="verify-client"><span>Client <b id="verify-client-id"></b></span><button type="button" onclick="backToClientId()">Change</button></div>
+  <div class="verify-choice" role="group" aria-label="What to confirm">
+    <button type="button" id="verify-zip-btn" aria-pressed="true" onclick="setVerifyMethod('zip')">ZIP code</button>
+    <button type="button" id="verify-phone-btn" aria-pressed="false" onclick="setVerifyMethod('phone')">Last 4 of phone</button>
+  </div>
+  <div class="field" style="margin-bottom:4px">
+    <label for="verify-input" id="verify-label">ZIP code on your account</label>
+    <input type="text" id="verify-input" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="e.g. 50309" onkeydown="if(event.key==='Enter') doVerify()" />
+  </div>
+  <label class="verify-remember"><input type="checkbox" id="verify-remember" checked /> <span>Remember this device. Uncheck it on a shared computer.</span></label>
+  <button class="gs-ofp-btn-primary" id="verify-btn" style="width:100%" onclick="doVerify()">Access Portal</button>
+  <p id="verify-error" style="font-size:11px;color:#B33A3A;margin-top:10px"></p>
+  <p class="verify-why">Any ZIP or phone saved on your account works. Not sure? Call us at (515) 473-5990.</p>
+ </div>
 </div>
+
+
 
 <!-- REGISTRATION GATE (New Client) -->
 <div id="register-gate" style="display:none; max-width: 440px; margin: 80px auto; padding: 48px 40px; border: 1px solid var(--border);">
@@ -304,6 +346,76 @@ async function submitRecovery() {
   }
 }
 
+/* ===== Paso 2: confirmar ZIP o ultimos 4 del celular (solo la primera
+   vez en cada dispositivo). El servidor decide si hace falta: si este
+   dispositivo ya esta recordado para ese Client ID, validate-client
+   deja entrar directo. ===== */
+let verifyClientId = '';
+let verifyMethod = 'zip';
+
+function showVerifyStep(clientId) {
+  verifyClientId = clientId;
+  document.getElementById('id-step').style.display = 'none';
+  document.getElementById('verify-step').style.display = 'block';
+  document.getElementById('verify-client-id').textContent = clientId;
+  document.getElementById('verify-error').textContent = '';
+  setVerifyMethod('zip');
+}
+
+function backToClientId() {
+  document.getElementById('verify-step').style.display = 'none';
+  document.getElementById('id-step').style.display = 'block';
+  document.getElementById('client-input').focus();
+}
+
+function setVerifyMethod(m) {
+  verifyMethod = m;
+  document.getElementById('verify-zip-btn').setAttribute('aria-pressed', m === 'zip');
+  document.getElementById('verify-phone-btn').setAttribute('aria-pressed', m === 'phone');
+  const input = document.getElementById('verify-input');
+  document.getElementById('verify-label').textContent = m === 'zip' ? 'ZIP code on your account' : 'Last 4 digits of a phone on your account';
+  input.placeholder = m === 'zip' ? 'e.g. 50309' : 'e.g. 0101';
+  input.maxLength = m === 'zip' ? 5 : 4;
+  input.value = '';
+  document.getElementById('verify-error').textContent = '';
+  input.focus();
+}
+
+async function doVerify() {
+  const input = document.getElementById('verify-input');
+  const errorEl = document.getElementById('verify-error');
+  const val = input.value.replace(/\D/g, '');
+  const need = verifyMethod === 'zip' ? 5 : 4;
+  if (val.length !== need) {
+    errorEl.textContent = verifyMethod === 'zip' ? 'Enter the 5-digit ZIP code.' : 'Enter the last 4 digits.';
+    return;
+  }
+  const btn = document.getElementById('verify-btn');
+  btn.disabled = true; btn.textContent = 'Checking…'; errorEl.textContent = '';
+  try {
+    const result = await GS.api('/verify-client', { method: 'POST', body: {
+      clientId: verifyClientId, method: verifyMethod, value: val,
+      remember: document.getElementById('verify-remember').checked
+    } });
+    if (result.locked) {
+      errorEl.textContent = 'Too many tries. For your security, try again in an hour or call us at (515) 473-5990.';
+      return;
+    }
+    if (!result.valid) {
+      errorEl.textContent = "That doesn't match our records." + (result.triesLeft != null ? ' ' + result.triesLeft + (result.triesLeft === 1 ? ' try' : ' tries') + ' left.' : '');
+      input.select();
+      return;
+    }
+    GS.session.set(result);
+    location.href = 'customer.html';
+  } catch (err) {
+    console.error(err);
+    errorEl.textContent = 'Error: ' + err.message;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Access Portal';
+  }
+}
+
 async function doLogin() {
   const val = document.getElementById('client-input').value.trim();
   const errorEl = document.getElementById('login-error');
@@ -313,10 +425,16 @@ async function doLogin() {
   btn.disabled = true; btn.textContent = 'Checking…'; errorEl.textContent = '';
   try {
     const result = await GS.api('/validate-client', { method: 'POST', body: { clientId: val } });
+    if (result.locked) {
+      errorEl.textContent = 'Too many tries. For your security, try again in an hour or call us at (515) 473-5990.';
+      return;
+    }
     if (!result.valid) {
       errorEl.textContent = 'Client number not found. New here? Use "First Time? Register" below.';
       return;
     }
+    /* Dispositivo nuevo: confirmar ZIP o celular antes de entrar. */
+    if (result.verify) { showVerifyStep(result.clientId); return; }
     GS.session.set(result);
     location.href = 'customer.html';
   } catch (err) {

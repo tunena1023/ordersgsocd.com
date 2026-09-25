@@ -1,15 +1,20 @@
 /* ============================================================
-   validate-client.js — login con ClientID.
-   Cambios vs la versión vieja:
-   - businessName se lee de Title (así lo escribe register-client;
-     fuera el campo/fallback BussinesName)
+   validate-client.js — paso 1 del login: el Client ID.
+   - businessName se lee de Title (así lo escribe register-client)
    - Trae y filtra en JavaScript (patrón probado; $filter sobre
      fields era poco confiable)
-   - Pagina resultados (@odata.nextLink) para no perder clientes
-     cuando la lista crezca de 200 filas
+   - Pagina resultados (@odata.nextLink)
+
+   Desde el 25/09/2026 (lib/client-auth.js): el Client ID solo ya NO
+   deja entrar. Si este dispositivo ya esta recordado para ese cliente
+   (cookie firmada), entra directo y la cookie se renueva. Si no,
+   responde { verify: true } y el navegador pide el ZIP o los ultimos 4
+   del telefono (verify-client.js). Nunca regresa datos de la cuenta
+   sin sesion valida.
 ============================================================ */
 
 const { CLIENTS_LIST, graphFetch, siteListPath, jsonResponse } = require('./lib/graph');
+const { readSession, sessionCookie, sameClient, lockedUntil, sessionPayload } = require('./lib/client-auth');
 
 /* Descarga TODOS los items de una lista siguiendo la paginación de Graph */
 async function fetchAll(listName) {
@@ -42,22 +47,18 @@ exports.handler = async (event) => {
     if (!item) return jsonResponse(200, { valid: false });
 
     const f = item.fields;
-    return jsonResponse(200, {
-      valid: true,
-      clientId: f.ClientID,
-      businessName: f.Title,              // el nombre del negocio vive en Title
-      contactPerson: f.ClientName || '',  // FIX confirmado con datos crudos de Graph (temp-inspect-client.js): la columna 'BusinessName' no existe de verdad, el dato real vive en ClientName
-      address: f.Address || '',
-      suite: f.Suite || '',
-      city: f.City || '',
-      zip: f.Zip || '',
-      contact: f.Contact || '',           // email
-      phone: f.Phone || '',
-      /* Si este cliente puede ver el tiempo estimado en sus ordenes --
-         se decide por cliente desde Developer > All Clients, apagado
-         por default. Se resuelve UNA vez aqui, no en cada endpoint. */
-      showEstimatedTime: f.ShowEstimatedTime === true || f.ShowEstimatedTime === 'true'
-    });
+
+    /* Dispositivo ya recordado para ESTE cliente: entra directo. */
+    const session = readSession(event);
+    if (session && sameClient(session.cid, f.ClientID)) {
+      const res = jsonResponse(200, sessionPayload(f));
+      res.headers = Object.assign({}, res.headers, { 'Set-Cookie': sessionCookie(f.ClientID, session.remember) });
+      return res;
+    }
+
+    if (lockedUntil(f)) return jsonResponse(200, { valid: false, locked: true });
+
+    return jsonResponse(200, { valid: true, verify: true, clientId: f.ClientID });
 
   } catch (err) {
     return jsonResponse(500, { valid: false, error: err.message });
