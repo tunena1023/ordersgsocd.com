@@ -71,25 +71,34 @@ exports.handler = async (event) => {
       });
     }
 
-    /* Crear el cliente */
+    /* Crear el cliente. SelfRegistered (Si/No, 25/09/2026): asi Admin
+       lo ensena en QuickBooks > New clients para darlo de alta alla. Si
+       la columna todavia no existe en SharePoint, se crea sin ella
+       (registrarse nunca debe fallar por eso). */
     const clientId = await generateNewClientId();
-    await graphFetch(siteListPath(CLIENTS_LIST), {
+    const fields = {
+      ClientID: clientId,
+      Title: businessName,
+      ClientName: contactPerson,
+      Address: address,
+      Suite: suite || '',
+      City: city,
+      Zip: zip,
+      Contact: contact,
+      Phone: phone
+    };
+    const create = f => graphFetch(siteListPath(CLIENTS_LIST), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        fields: {
-          ClientID: clientId,
-          Title: businessName,
-          ClientName: contactPerson,
-          Address: address,
-          Suite: suite || '',
-          City: city,
-          Zip: zip,
-          Contact: contact,
-          Phone: phone
-        }
-      })
+      body: JSON.stringify({ fields: f })
     });
+    try {
+      await create(Object.assign({ SelfRegistered: true }, fields));
+    } catch (e) {
+      if (!/SelfRegistered|not recognized|does not exist/i.test(e.message)) throw e;
+      console.warn('register-client: SelfRegistered column missing -- created without it');
+      await create(fields);
+    }
 
     const setCookie = sessionCookie(clientId, true);
     const ok = jsonResponse(200, {
