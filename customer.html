@@ -1584,7 +1584,7 @@
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.6/nav-premium/nav-premium.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.32.0/print-button/print-button.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.25.24/order-form-premium/order-form-premium.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@8a4738ee52ce14321f83cf040a577d089d96cf4d/order-history/order-history.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@d309c9378c9e5f97be227606c3ccf2c7706ddb71/order-history/order-history.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@71670c4e06fbb09c07fe248cf4a5a89c3399b384/camera-queue/camera-queue.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.0.0/lightbox/lightbox.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.30.0/order-card-header/order-card-header.js"></script>
@@ -6016,9 +6016,21 @@ if (client) {
        limite de tiempo -- un servicio se puede completar dias
        despues de asignado. */
     const PER_SERVICE_TYPES = ['Service Scheduled', 'Service Completed', 'Service Added', 'Service Removed', 'Service Change Requested'];
+    /* BUG encontrado (25/09/2026): save-service-assignment.js guarda el
+       'Service Scheduled' del primer servicio un instante ANTES que el
+       'Order Moved To Active', asi que ese primer servicio no tenia a
+       donde pegarse y salia como su propio punto. Los que caen justo
+       antes (hasta 30 min) se pegan tambien al punto "Assigned". */
+    const firstMove = events4.find(h => String(h.ChangeType || '') === 'Order Moved To Active');
+    const earlySvc = firstMove ? events4.filter(h => {
+      const gap = new Date(firstMove.ChangeDate) - new Date(h.ChangeDate);
+      return PER_SERVICE_TYPES.indexOf(String(h.ChangeType || '')) !== -1 && gap >= 0 && gap < 30 * 60000;
+    }) : [];
     const events5 = [];
     events4.forEach(h => {
       const type = String(h.ChangeType || '');
+      if (earlySvc.indexOf(h) !== -1) return;
+      if (h === firstMove && earlySvc.length) { events5.push(Object.assign({}, h, { _mergedRows: [h].concat(earlySvc) })); return; }
       if (PER_SERVICE_TYPES.indexOf(type) !== -1) {
         for (let i = events5.length - 1; i >= 0; i--) {
           if (String(events5[i].ChangeType || '') === 'Order Moved To Active') {
