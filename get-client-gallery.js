@@ -12,6 +12,8 @@
 ============================================================ */
 
 const { ORDERS_LIST, ORDER_SERVICES_LIST, listChildren, graphFetch, siteListPath, jsonResponse } = require('./lib/graph');
+const graph = require('./lib/graph');
+const orderDocs = require('./lib/order-docs');
 
 const PHOTOS_FOLDER = process.env.GRAPH_PHOTOS_FOLDER || 'TechPhotos';
 /* forzar build limpio -- 2026-09-13 */
@@ -173,7 +175,17 @@ exports.handler = async (event) => {
 
     const nonEmpty = groups.filter(Boolean).sort((a, b) => String(b.date).localeCompare(String(a.date)));
 
-    return jsonResponse(200, { groups: nonEmpty });
+    /* Documentos (Gallery > Docs, 25/09/2026): los de sus ordenes,
+       agrupados por orden con "Unit X · direccion". */
+    const byId = {};
+    orders.forEach(it => { byId[it.fields.OrderID || it.fields.Title || ''] = it.fields; });
+    const docs = await orderDocs.listDocs(graph, { clientId });
+    const docGroups = orderDocs.groupDocs(docs.filter(d => byId[d.orderId]), id => {
+      const f = byId[id] || {};
+      return [f.UnitNumber ? 'Unit ' + f.UnitNumber : '', f.Address || ''].filter(Boolean).join(' · ') || id;
+    });
+
+    return jsonResponse(200, { groups: nonEmpty, docGroups });
   } catch (e) {
     return jsonResponse(500, { error: e.message });
   }

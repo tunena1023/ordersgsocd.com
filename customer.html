@@ -210,6 +210,23 @@
 
   .property-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 18px; margin-bottom: 24px; }
 
+  /* Gallery | Docs (mismo estilo que los subtabs de Templates) */
+  .gal-subtabs { display: flex; border-bottom: 1px solid var(--border); margin: 4px 0 22px; }
+  .gal-subtab { padding: 10px 4px; margin-right: 28px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gray); cursor: pointer; border: none; border-bottom: 2px solid transparent; background: none; font-family: inherit; }
+  .gal-subtab.active { color: var(--black); border-bottom-color: var(--gold); }
+  .gal-subtab:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .gal-subview { display: none; }
+  .gal-subview.active { display: block; }
+  /* Documentos dentro de cada orden (todas las pantallas, no solo mobile) */
+  .order-docs-box { margin-top: 18px; }
+  .order-docs-box .client-photos-sub { margin-bottom: 8px; }
+  .order-docs-list:empty { display: none; }
+  .btn-add-doc { width: 100%; background: none; border: 1.5px solid var(--border); color: var(--black); padding: 11px; font-size: 11px; font-family: 'Inter', sans-serif; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; cursor: pointer; margin-top: 8px; }
+  .btn-add-doc:hover { border-color: var(--gold); }
+  .btn-add-doc:disabled { opacity: .5; cursor: default; }
+  .order-docs-msg { font-size: 12px; margin-top: 6px; }
+  .order-docs-msg.err { color: var(--red, #c0392b); }
+
   .mode-toggle { display: flex; border: 1.5px solid var(--border); margin-bottom: 20px; }
   .mode-toggle button {
     flex: 1; padding: 12px; border: none; background: var(--white); cursor: pointer;
@@ -1492,9 +1509,21 @@
 <div id="panel-gallery" class="panel">
   <div class="history-wrap">
     <h2>Gallery</h2>
-    <p class="list-sub">Photos from your orders, grouped by order.</p>
-    <div id="gallery-search-wrap"></div>
-    <div id="gallery-groups-list"><p class="empty-note">Loading…</p></div>
+    <!-- Gallery | Docs (25/09/2026, pedido del dueño) -->
+    <div class="gal-subtabs" role="tablist" aria-label="Gallery sections">
+      <button type="button" class="gal-subtab active" role="tab" aria-selected="true" data-galsub="photos" onclick="showGallerySub('photos')">Gallery</button>
+      <button type="button" class="gal-subtab" role="tab" aria-selected="false" data-galsub="docs" onclick="showGallerySub('docs')">Docs</button>
+    </div>
+    <div class="gal-subview active" id="galsub-photos">
+      <p class="list-sub">Photos from your orders, grouped by order.</p>
+      <div id="gallery-search-wrap"></div>
+      <div id="gallery-groups-list"><p class="empty-note">Loading…</p></div>
+    </div>
+    <div class="gal-subview" id="galsub-docs">
+      <p class="list-sub">PDF, Word and text files from your orders. Add one from any order with "Upload document".</p>
+      <div id="docs-search-wrap"></div>
+      <div id="docs-groups-list"><p class="empty-note">Loading…</p></div>
+    </div>
   </div>
 </div>
 
@@ -1560,6 +1589,7 @@
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.0.0/lightbox/lightbox.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.30.0/order-card-header/order-card-header.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@f9af97cecb79115d4a7d51705609b674d513bb89/gallery-groups/gallery-groups.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@3a752aba65890da6b375d3c9ee4bad034cf29dc1/doc-viewer/doc-viewer.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.26.0/photo-hover-preview/photo-hover-preview.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.8.0/order-badges/order-badges.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.40.0/order-tracker/order-tracker.js"></script>
@@ -3228,10 +3258,123 @@ if (client) {
     try {
       const res = await GS.api('/get-client-gallery', { method: 'POST', body: { clientId: client.clientId } });
       allGalleryGroups = res.groups || [];
+      /* Documentos (25/09/2026): el mismo endpoint trae los de todas las
+         ordenes del cliente, ya agrupados por orden. */
+      allDocGroups = res.docGroups || [];
     } catch (e) {
       allGalleryGroups = [];
+      allDocGroups = [];
     }
+    docsLoaded = true;
     renderGalleryPanel();
+    renderDocsPanel();
+    Object.keys(docsWaiting).forEach(renderOrderDocs);
+  }
+
+  /* ===== Documentos por orden (Gallery > Docs y "Upload document" en
+     cada orden). Todos los ve el cliente; el cliente solo borra los que
+     subio el (el servidor lo vuelve a revisar). Componente compartido:
+     gsocd-shared/doc-viewer. ===== */
+  let allDocGroups = [];
+  let docsLoaded = false;
+  const docsWaiting = {};
+
+  function showGallerySub(which) {
+    document.querySelectorAll('#panel-gallery .gal-subtab').forEach(b => {
+      const on = b.dataset.galsub === which;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    document.getElementById('galsub-photos').classList.toggle('active', which === 'photos');
+    document.getElementById('galsub-docs').classList.toggle('active', which === 'docs');
+  }
+
+  const docOpts = {
+    canDelete: d => d.by === 'Client',
+    onView: d => viewOrderDoc(d),
+    onDelete: d => deleteOrderDoc(d)
+  };
+
+  function renderDocsPanel() {
+    const wrap = document.getElementById('docs-search-wrap');
+    if (wrap && !document.getElementById('docs-search')) {
+      wrap.innerHTML = GSDocViewer.searchHtml('docs-search', 'Search by order number or file name…');
+      document.getElementById('docs-search').addEventListener('input', renderDocsPanel);
+    }
+    const q = ((document.getElementById('docs-search') || {}).value || '').trim().toLowerCase();
+    let groups = allDocGroups;
+    if (q) {
+      groups = groups.map(g => String(g.orderId || '').toLowerCase().includes(q) || String(g.clientLabel || '').toLowerCase().includes(q)
+        ? g : Object.assign({}, g, { docs: g.docs.filter(d => String(d.name || '').toLowerCase().includes(q)) }));
+    }
+    GSDocViewer.renderGroups('docs-groups-list', groups, Object.assign({
+      emptyMessage: q ? 'No documents match that search.' : 'No documents yet. Open an order and tap "Upload document".'
+    }, docOpts));
+  }
+
+  function docsForOrder(orderId) {
+    const g = allDocGroups.find(x => x.orderId === orderId);
+    return g ? g.docs : [];
+  }
+
+  function renderOrderDocs(orderId) {
+    const el = document.getElementById('order-docs-' + orderId);
+    if (!el) return;
+    if (!docsLoaded) { docsWaiting[orderId] = true; return; }
+    delete docsWaiting[orderId];
+    GSDocViewer.renderList(el, docsForOrder(orderId), Object.assign({ orderId }, docOpts));
+  }
+
+  async function viewOrderDoc(d) {
+    GSDocViewer.open({ name: d.name, loading: true });
+    try {
+      const res = await GS.api('/order-docs', { body: { action: 'view', orderId: d.orderId, docId: d.id } });
+      GSDocViewer.open({ name: d.name, viewUrl: res.viewUrl, downloadUrl: res.downloadUrl });
+    } catch (e) {
+      GSDocViewer.open({ name: d.name, error: 'Could not open this file: ' + e.message });
+    }
+  }
+
+  async function deleteOrderDoc(d) {
+    if (!confirm('Delete "' + d.name + '"? This can\'t be undone.')) return;
+    try {
+      await GS.api('/order-docs', { body: { action: 'delete', orderId: d.orderId, docId: d.id } });
+      allDocGroups = allDocGroups.map(g => g.orderId === d.orderId ? Object.assign({}, g, { docs: g.docs.filter(x => x.id !== d.id) }) : g);
+      renderDocsPanel();
+      renderOrderDocs(d.orderId);
+    } catch (e) {
+      alert('Could not delete it: ' + e.message);
+    }
+  }
+
+  function uploadOrderDoc(orderId) {
+    GSDocViewer.pickFile(async file => {
+      const btn = document.getElementById('order-docs-btn-' + orderId);
+      const msg = document.getElementById('order-docs-msg-' + orderId);
+      const say = (t, err) => { if (msg) { msg.textContent = t; msg.classList.toggle('err', !!err); } };
+      const bad = GSDocViewer.allowed(file);
+      if (bad) { say(bad, true); return; }
+      if (btn) btn.disabled = true;
+      say('Uploading ' + file.name + '… 0%');
+      try {
+        const res = await GSDocViewer.upload(file, {
+          start: f => GS.api('/order-docs', { body: { action: 'start-upload', orderId, fileName: f.name, size: f.size } }),
+          finish: (f, item) => GS.api('/order-docs', { body: { action: 'finish-upload', orderId, itemId: item.id, fileName: f.name } }),
+          onProgress: p => say('Uploading ' + file.name + '… ' + Math.round(p * 100) + '%')
+        });
+        const doc = res.doc;
+        let g = allDocGroups.find(x => x.orderId === orderId);
+        if (!g) { g = { orderId, clientLabel: res.clientLabel || '', date: doc.uploadedAt, docs: [] }; allDocGroups.unshift(g); }
+        g.docs = [doc].concat(g.docs);
+        say('Saved: ' + file.name);
+        renderOrderDocs(orderId);
+        renderDocsPanel();
+      } catch (e) {
+        say('Could not upload it: ' + e.message, true);
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    });
   }
 
   /* El hover-preview (.gs-gal-ph y .order-photo-thumb) ahora vive en
@@ -5245,6 +5388,7 @@ if (client) {
       bindActions(body, orderDetailCache[orderId].order);
       mountTracker(orderDetailCache[orderId].order, orderDetailCache[orderId].trackerSteps, 'tracker-mount-' + orderId);
       loadClientPhotosInto(orderId);
+      renderOrderDocs(orderId);
       return;
     }
 
@@ -5401,6 +5545,13 @@ if (client) {
               <div class="client-photo-thumbs" id="client-photo-thumbs-${escAttr(orderId)}"></div>
               <button type="button" class="btn-add-client-photo" onclick="startClientPhoto('${escAttr(orderId)}')">📷 Add Photo</button>
             </div>
+            <div class="order-docs-box">
+              <div class="client-photos-label">Documents</div>
+              <div class="client-photos-sub">PDF, Word or text files for this order (up to 25 MB).</div>
+              <div class="order-docs-list" id="order-docs-${escAttr(orderId)}"></div>
+              <button type="button" class="btn-add-doc" id="order-docs-btn-${escAttr(orderId)}" onclick="uploadOrderDoc('${escAttr(orderId)}')">📄 Upload document</button>
+              <div class="order-docs-msg" id="order-docs-msg-${escAttr(orderId)}" role="status"></div>
+            </div>
           </div>
           <div>
             <p class="detail-label">History</p>
@@ -5421,6 +5572,7 @@ if (client) {
       orderDetailCache[orderId] = { html: body.innerHTML, order: o, trackerSteps: trackerSteps, services: services };
       orderNeedsConfirmationCache[orderId] = isWaitingForClientConfirmation(history);
       loadClientPhotosInto(orderId);
+      renderOrderDocs(orderId);
     } catch (e) {
       body.innerHTML = '<p class="empty-note">Could not load details: ' + esc(e.message) + '</p>';
     }
