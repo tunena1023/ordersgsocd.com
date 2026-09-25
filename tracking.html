@@ -1141,7 +1141,8 @@ if (client) {
                 (s.NotCompletedReason ? ': ' + esc(s.NotCompletedReason) : '') + '</b>' : '';
           const label = svcSubLabel(s);
           const subText = (label ? esc(label) : '') + ncText;
-          svcRows.push({ cat: cat, name: esc(s.ServiceName || ''), sub: (label || nc) ? subText : '', sku: s.SubOption, lvl: s.Level, qty: s.Quantity, catReal: cat, svcNameRaw: s.ServiceName || '' });
+          svcRows.push({ cat: cat, name: esc(s.ServiceName || ''), sub: (label || nc) ? subText : '', sku: s.SubOption, lvl: s.Level, qty: s.Quantity, catReal: cat, svcNameRaw: s.ServiceName || '',
+            nc: nc, ncReason: s.NotCompletedReason || '', legacy: isSkuFormat(s.SubOption) ? '' : (s.SubOption || '') });
         });
       });
       const showTime = !!client.showEstimatedTime;
@@ -1163,38 +1164,24 @@ if (client) {
          oficina, sin sentido para el. */
       const showSvcStatus = !!(o.AssignByService === true || o.AssignByService === 'true') && !isPendingProposal;
       const svcTableHtml = svcRows.length
-        ? '<table class="svcreq-table"><thead><tr>' +
-          '<th>Category</th><th>Service</th><th>Detail</th>' +
-          (showTime ? '<th>Time</th>' : '') +
-          (showSvcStatus ? '<th>Status</th>' : '') +
-          '<th></th>' +
-          '</tr></thead><tbody>' +
-          svcRows.map(r => {
+        ? svcRows.map(r => {
             const baseMins = showTime ? GSEstimatedTime.svcMinutes(r.sku, r.lvl, serviceTimesCache) : null;
             const mins = baseMins != null ? baseMins * (Number(r.qty) || 1) : null;
-            const camBtn = '<button type="button" class="svc-row-cam" title="Add a photo for this service" ' +
+            const camHtml = '<button type="button" class="svc-row-cam" title="Add a photo for this service" style="flex-shrink:0" ' +
               'onclick="startClientServicePhoto(\'' + jsStr(orderId) + '\',\'' + jsStr(r.svcNameRaw) + '\')">' +
-              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>' +
+              '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>' +
               '</button>';
-            let statusCellHtml = '';
+            let statusHtml = '';
             if (showSvcStatus) {
               const a = svcAssignByKey[r.catReal + '|' + r.svcNameRaw];
               const isDone = a && a.WorkStatus === 'Completed';
               const scheduled = !!(a && a.AssignedTo && a.ScheduledDate);
               const label = isDone ? 'Completed' : (scheduled ? 'Assigned' : 'Not started');
               const color = isDone ? '#3E7A4C' : (scheduled ? 'var(--gold-dk)' : 'var(--gray)');
-              statusCellHtml = '<td data-label="Status" style="color:' + color + ';font-weight:600">' + label + '</td>';
+              statusHtml = '<span style="color:' + color + ';font-weight:600">' + label + '</span>';
             }
-            return '<tr>' +
-            '<td data-label="Category">' + r.cat + '</td>' +
-            '<td data-label="Service">' + (window.GSServiceTooltip ? GSServiceTooltip.nameHtml(r.sku, r.name) : r.name) + pkgIncludesFromOrder(data.order, r.sku) + '</td>' +
-            '<td data-label="Detail" style="color:' + (r.sub ? 'var(--black)' : 'var(--gray)') + '">' + (r.sub || '—') + '</td>' +
-            (showTime ? '<td data-label="Time">' + (mins != null ? esc(GSEstimatedTime.fmtDuration(mins)) : '') + '</td>' : '') +
-            statusCellHtml +
-            '<td data-label="">' + camBtn + '</td>' +
-            '</tr>';
-          }).join('') +
-          '</tbody></table>'
+            return svcLineRowHtml(r, { timeText: mins != null ? esc(GSEstimatedTime.fmtDuration(mins)) : '', statusHtml, camHtml, extraHtml: pkgIncludesFromOrder(data.order, r.sku) });
+          }).join('')
         : '<div style="font-size:12px;padding:10px 0">No services recorded.</div>';
       const svcHeaderHtml =
         '<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">' +
@@ -1365,6 +1352,32 @@ if (client) {
      nivel (si aplica, solo Janitorial) viene aparte en el campo Level.
      Ordenes viejas (antes de la migracion) siguen con SubOption como
      texto legible -- esas se muestran igual que siempre. */
+
+  /* 24/09/2026 (el dueño: "ese estilo, una linea por servicio y sin la
+     categoria, en todas partes... que no pierda sus funciones"): mismo
+     estilo que Admin (Approvals/Review/Active). Cada servicio en UN
+     renglon: nombre (con su tooltip), nivel o cantidad en pastilla,
+     tiempo, estatus si aplica, "not completed" si aplica, y la camarita a
+     la derecha. Lo que incluye un paquete sale debajo del nombre. Estilo
+     INLINE a proposito (ver la nota del 19/09: en el celular del dueño
+     las clases externas no pegaban bien). Nunca el SKU. */
+  function svcLineRowHtml(r, o) {
+    const pill = t => '<span style="display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:18px;padding:0 6px;border-radius:9px;font-size:10px;font-weight:700;color:var(--gold-dk);background:#F6EFD9;flex-shrink:0">' + t + '</span>';
+    const lvTxt = r.lvl ? esc(String(r.lvl).replace('Level ', 'L')) : (r.qty ? '\u00d7' + esc(r.qty) : '');
+    const bits = [];
+    if (r.legacy) bits.push('<span style="color:var(--gray)">' + esc(r.legacy) + '</span>');
+    if (o.timeText) bits.push('<span style="color:var(--gray)">' + o.timeText + '</span>');
+    if (o.statusHtml) bits.push(o.statusHtml);
+    if (r.nc) bits.push('<b style="color:#B06A2A">Not completed' + (r.ncReason ? ': ' + esc(r.ncReason) : '') + '</b>');
+    return '<div style="display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:10px;background:var(--white);padding:9px 12px;margin:6px 0">' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;font-size:13px">' +
+          '<span style="font-weight:600;font-size:14px">' + (window.GSServiceTooltip ? GSServiceTooltip.nameHtml(r.sku, r.name) : r.name) + '</span>' +
+          (lvTxt ? pill(lvTxt) : '') +
+          bits.join('<span style="color:#C9C3B6">\u00b7</span>') +
+        '</div>' + (o.extraHtml || '') +
+      '</div>' + (o.camHtml || '') + '</div>';
+  }
   function isSkuFormat(sub) { return /^\d{3}-\d+$/.test(String(sub || '')); }
   function svcSubLabel(s) {
     if (isSkuFormat(s.SubOption)) return s.Level || (s.Quantity ? 'Qty: ' + s.Quantity : '');

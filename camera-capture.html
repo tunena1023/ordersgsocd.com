@@ -83,6 +83,15 @@
     text-align: center; font-size: 11px; color: var(--gray); margin-top: 10px; min-height: 14px;
   }
   .status-line.warn { color: var(--gold-lt); }
+  .pc-pick { display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; padding: 24px;
+    width: min(460px, 90%); border: 1.5px dashed rgba(226,201,126,.55); border-radius: 14px; }
+  .pc-pick.drag { border-color: var(--gold); background: rgba(201,168,76,.08); }
+  .pc-pick svg { width: 44px; height: 44px; color: var(--gold-lt); }
+  .pc-pick p { margin: 0; font-size: 15px; font-weight: 600; }
+  .pc-pick-btn { background: var(--gold); color: var(--black); border: none; border-radius: 24px; padding: 12px 26px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .pc-pick-note { font-size: 11px; color: var(--gray); }
+  body.pc .pc-pick { display: flex; }
+  body.pc video, body.pc #shutter-btn { display: none; }
 </style>
 </head>
 <body>
@@ -98,6 +107,15 @@
       Could not open the camera — check that you gave permission, then reload this page.
     </div>
     <div class="counter-pill" id="counter-pill">0 / 10 photos</div>
+    <!-- 24/09/2026 (dueño): en computadora no se abre la camara; se escogen
+         fotos de la PC. En celular/tablet sigue la camara como siempre. -->
+    <div class="pc-pick" id="pc-pick">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.8"/><path d="M21 16l-5-5-9 9"/></svg>
+      <p>Add photos from your computer</p>
+      <button type="button" class="pc-pick-btn" id="pc-pick-btn">Choose photos</button>
+      <input type="file" id="pc-file" accept="image/*" multiple style="display:none">
+      <span class="pc-pick-note">Up to 10 photos. You can also drag them here.</span>
+    </div>
   </div>
 
   <div class="bottom-panel">
@@ -158,7 +176,11 @@
       document.getElementById('camera-error').style.display = 'block';
     }
   }
-  initCamera();
+  /* Celular o tablet (pantalla tactil) -> camara. Computadora -> escoger
+     fotos de la PC (mismo guardado/subida de siempre, via la cola). */
+  const isPhone = (window.matchMedia && matchMedia('(pointer: coarse)').matches) || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  if (isPhone) initCamera();
+  else document.body.classList.add('pc');
 
   function captureFrame() {
     const video = document.getElementById('video');
@@ -195,13 +217,17 @@
     if (btn.disabled) return;
     btn.disabled = true;
 
+    try { await sendImage(captureFrame()); }
+    finally { if (count < MAX_PHOTOS) btn.disabled = false; }
+  }
+
+  /* Guarda y sube UNA imagen (de la camara o de un archivo de la PC). */
+  async function sendImage(imageBase64) {
+    if (count >= MAX_PHOTOS) return;
     count++;
     document.getElementById('counter-pill').textContent = count + ' / ' + MAX_PHOTOS + ' photos';
-
-    const imageBase64 = captureFrame();
     const { thumb, status } = addThumb(imageBase64);
-
-    try {
+    {
       let endpoint, body, notReady = false;
       if (context === 'recurring-photo') {
         endpoint = '/upload-client-recurring-photo';
@@ -237,10 +263,45 @@
         meta: { orderId: orderId, recurringServiceId: recurringServiceId, draftKey: draftKey }
       });
       thumbById[id] = { thumb, status };
-    } finally {
-      if (count < MAX_PHOTOS) btn.disabled = false;
     }
   }
+
+  /* Archivos de la PC: se achican a max 1600px en JPEG (como la camara)
+     para que no pesen de mas, y se mandan uno por uno. */
+  function fileToJpeg(file) {
+    return new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onerror = () => reject(new Error('Could not read ' + file.name));
+      fr.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error(file.name + ' is not an image we can read'));
+        img.onload = () => {
+          const k = Math.min(1, 1600 / Math.max(img.width, img.height));
+          const c = document.createElement('canvas');
+          c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+          resolve(c.toDataURL('image/jpeg', 0.85));
+        };
+        img.src = fr.result;
+      };
+      fr.readAsDataURL(file);
+    });
+  }
+  async function addFiles(files) {
+    const list = Array.from(files || []).filter(f => /^image\//.test(f.type));
+    const room = MAX_PHOTOS - count;
+    if (list.length > room) document.getElementById('status-line').textContent = 'Only ' + room + ' more photo' + (room === 1 ? '' : 's') + ' fit — the rest were skipped.';
+    for (const f of list.slice(0, Math.max(0, room))) {
+      try { await sendImage(await fileToJpeg(f)); }
+      catch (e) { document.getElementById('status-line').textContent = e.message; }
+    }
+  }
+  document.getElementById('pc-pick-btn').addEventListener('click', () => document.getElementById('pc-file').click());
+  document.getElementById('pc-file').addEventListener('change', e => { addFiles(e.target.files); e.target.value = ''; });
+  const pick = document.getElementById('pc-pick');
+  ['dragenter', 'dragover'].forEach(ev => pick.addEventListener(ev, e => { e.preventDefault(); pick.classList.add('drag'); }));
+  ['dragleave', 'drop'].forEach(ev => pick.addEventListener(ev, e => { e.preventDefault(); pick.classList.remove('drag'); }));
+  pick.addEventListener('drop', e => addFiles(e.dataTransfer.files));
   document.getElementById('shutter-btn').addEventListener('click', capture);
 
   function onQueueChange(pending) {
