@@ -4,6 +4,15 @@ Este archivo existe para que cualquier chat de Claude (u otra persona) que entre
 a este repo después no tenga que adivinar el proceso, ni repetir preguntas ya
 resueltas, ni subir cosas sin permiso. Léelo completo antes de tocar código.
 
+## EN PREVIEW (25/09/2026): site-image ya no entrega cualquier archivo
+
+`site-image.js` es PÚBLICA (no pide sesión). `?name=` pasaba el texto directo a
+`driveItemByPath`, así que con una ruta se podía bajar CUALQUIER archivo del
+SharePoint (fotos y PDFs de órdenes). Ahora cada parámetro es un solo segmento
+(sin `/`, `\` ni `..`) y `?name=` solo entrega imágenes de la raíz (Logo.jpg,
+NavBackground.jpg, LoginBackground.jpg). Probado: esas 3 siguen funcionando; una
+ruta o un .pdf da 404.
+
 ## EN PREVIEW (25/09/2026): el portal ya no le cree al navegador el Client ID
 
 **El hueco:** cada función tomaba el Client ID que mandaba el navegador, y los IDs
