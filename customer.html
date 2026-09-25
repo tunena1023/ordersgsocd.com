@@ -674,6 +674,35 @@
   #panel-templates .tpl-svc-row:last-of-type { border-bottom: none; margin-bottom: 14px; }
   #panel-templates .tpl-svc-cat { color: var(--gold-dk); font-weight: 600; }
   #panel-templates .tpl-svc-sub { color: var(--gray); }
+  /* ===== Templates rediseño (24/09/2026, el dueño: "hay que rediseñarlos,
+     todavia tienen el diseño triste"): tarjetas del mismo estilo que "My
+     package" de New Order (al final SON esos templates). Una sola abierta:
+     a la izquierda con sus servicios; las demas cerradas a la derecha. ===== */
+  #panel-templates .tplx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  #panel-templates .tplx-split { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+  #panel-templates .tplx-side { display: flex; flex-direction: column; gap: 10px; }
+  #panel-templates .tplx-card { border: 1px solid var(--border); border-radius: 10px; background: var(--white); transition: border-color .15s, box-shadow .15s; }
+  #panel-templates .tplx-card:hover { border-color: #D8C68F; box-shadow: 0 2px 10px rgba(0,0,0,.05); }
+  #panel-templates .tplx-card.open { border-color: var(--gold); box-shadow: 0 4px 16px rgba(140,111,42,.12); }
+  #panel-templates .tplx-head { padding: 14px 16px; cursor: pointer; display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; }
+  #panel-templates .tplx-name { font-size: 15px; font-weight: 700; color: var(--black); line-height: 1.3; }
+  #panel-templates .tplx-meta { font-size: 12px; color: var(--gray); margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+  #panel-templates .tplx-prev { font-size: 12px; color: var(--gray); margin-top: 6px; line-height: 1.45; }
+  #panel-templates .tplx-tags { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; flex-shrink: 0; }
+  #panel-templates .tplx-tag { font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 3px 9px; border-radius: 20px; white-space: nowrap; background: #E6F2EF; color: #2F6F62; }
+  #panel-templates .tplx-tag.div { background: #F6EFD9; color: var(--gold-dk); }
+  #panel-templates .tplx-tag.shared { background: var(--off); color: var(--gray); }
+  #panel-templates .tplx-time { color: var(--gold-dk); font-weight: 600; }
+  #panel-templates .tplx-body { border-top: 1px solid #EFE6CF; padding: 6px 16px 14px; }
+  #panel-templates .tplx-foot { display: flex; align-items: center; gap: 8px; padding: 0 16px 14px; flex-wrap: wrap; }
+  #panel-templates .tplx-foot .tplx-use { width: auto; padding: 10px 18px; font-size: 11px; }
+  #panel-templates .tplx-foot .tplx-edit { width: auto; padding: 10px 16px; font-size: 11px; }
+  #panel-templates .tplx-del { margin-left: auto; background: none; border: none; color: #A6362D; font-family: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer; padding: 6px; }
+  #panel-templates .tplx-del:hover { text-decoration: underline; }
+  #panel-templates .tplx-empty { border: 1.5px dashed #E6D3A0; background: #FFFDF7; border-radius: 12px; padding: 28px 20px; text-align: center; color: var(--gray); font-size: 13px; }
+  #panel-templates .tplx-empty b { display: block; color: var(--black); font-size: 15px; margin-bottom: 4px; }
+  @media (max-width: 760px) { #panel-templates .tplx-split { grid-template-columns: 1fr; } }
+  @media (max-width: 560px) { #panel-templates .tplx-head { flex-direction: column; } #panel-templates .tplx-tags { justify-content: flex-start; order: -1; } }
   #panel-templates .btn-gold { background: var(--gold); color: var(--black); border: none; padding: 10px 22px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; cursor: pointer; font-family: inherit; }
   #panel-templates .btn-gold:hover { background: var(--gold-lt); }
   #panel-templates .btn-outline { background: var(--white); border: 1.5px solid var(--border); color: var(--black); padding: 9px 20px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; cursor: pointer; font-family: inherit; }
@@ -1319,7 +1348,7 @@
 
   <!-- ===== SAVED ===== -->
   <div class="subview active" id="subview-saved">
-    <button type="button" class="add-tpl-btn" onclick="startNewTemplate()">+ Add Template</button>
+    <button type="button" class="gs-ofp-btn-primary" style="width:auto;padding:11px 20px;font-size:11px;margin-bottom:18px" onclick="startNewTemplate()">+ New template</button>
     <div id="tpl-list"><p class="empty-note">Loading…</p></div>
   </div>
 
@@ -3494,34 +3523,57 @@ if (client) {
     }
   }
 
+  let tplOpenId = null;
+  function tplMinutes(t) {
+    if (!client.showEstimatedTime) return null;
+    let tot = 0, any = false;
+    (t.services || []).forEach(x => {
+      const m = lineMinutesFor(x.SubOption, x.Level || '', x.Quantity || '', null, serviceTimesCache);
+      if (m != null) { tot += m; any = true; }
+    });
+    return any ? tot : null;
+  }
   function renderTemplates() {
     const box = $('tpl-list');
     if (!templates.length) {
-      box.innerHTML = '<p class="empty-note">No templates saved yet — click "+ Add Template" above to build one.</p>';
+      box.innerHTML = '<div class="tplx-empty"><b>No templates yet</b>Save the services you order often and start a new order from them in one tap.</div>';
       return;
     }
-    box.innerHTML = templates.map(t => `
-      <div class="tpl-card-wrap">
-        <div class="tpl-card" onclick="toggleTplDetail('${t.id}')">
-          <div>
-            <div class="tpl-name">${esc(t.name)}</div>
-            <div class="tpl-meta"><span class="tpl-badge">${esc(t.division)}</span>${t.mine ? '' : '<span class="tpl-badge tpl-badge-shared">Shared</span>'}${t.services.length} service${t.services.length === 1 ? '' : 's'}</div>
-          </div>
-          <div class="tpl-actions">
-            ${t.mine ? '<button class="btn-text-danger" onclick="event.stopPropagation(); deleteTemplate(\'' + t.id + '\')">Delete</button>' : ''}
-            <button class="gs-ofp-btn-primary" onclick="event.stopPropagation(); useTemplate('${t.id}')">Use This Template</button>
-          </div>
-        </div>
-        <div class="tpl-detail" id="tpl-detail-${t.id}">
-          ${tplServiceListHtml(t.services)}
-          ${t.mine ? '<button type="button" class="gs-ofp-btn-secondary" onclick="editTemplate(\'' + t.id + '\')">Edit</button>' : ''}
-        </div>
-      </div>`).join('');
+    if (tplOpenId && !templates.some(t => String(t.id) === String(tplOpenId))) tplOpenId = null;
+    const card = t => {
+      const open = String(t.id) === String(tplOpenId);
+      const n = (t.services || []).length;
+      const mins = tplMinutes(t);
+      const names = (t.services || []).map(x => x.ServiceName).filter(Boolean);
+      const rows = open ? (t.services || []).map(x => svcLineRowHtml({ name: esc(x.ServiceName || ''), sku: x.SubOption, lvl: x.Level, qty: x.Quantity,
+          legacy: isSkuFormat(x.SubOption) ? '' : (x.SubOption || ''), nc: false }, {
+          timeText: client.showEstimatedTime ? (m => m != null ? esc(GSEstimatedTime.fmtDuration(m)) : '')(lineMinutesFor(x.SubOption, x.Level || '', x.Quantity || '', null, serviceTimesCache)) : '' })).join('') : '';
+      return '<div class="tplx-card' + (open ? ' open' : '') + '">' +
+        '<div class="tplx-head" onclick="tplToggle(\'' + escAttr(t.id) + '\')"><div style="min-width:0">' +
+          '<div class="tplx-name">' + esc(t.name) + '</div>' +
+          '<div class="tplx-meta"><span>' + n + (n === 1 ? ' service' : ' services') + '</span>' +
+            (mins != null ? '<span>\u00b7</span><span class="tplx-time">' + esc(GSEstimatedTime.fmtDuration(mins)) + '</span>' : '') + '</div>' +
+          (open ? '' : '<div class="tplx-prev">' + esc(names.slice(0, 3).join(', ')) + (names.length > 3 ? '\u2026' : '') + '</div>') +
+        '</div><div class="tplx-tags"><span class="tplx-tag div">' + esc(t.division || '') + '</span>' +
+          (t.mine ? '<span class="tplx-tag">My package</span>' : '<span class="tplx-tag shared">Shared</span>') + '</div></div>' +
+        (open ? '<div class="tplx-body">' + (rows || '<p class="empty-note">No services in this template.</p>') + '</div>' : '') +
+        '<div class="tplx-foot">' +
+          '<button type="button" class="gs-ofp-btn-primary tplx-use" onclick="useTemplate(\'' + escAttr(t.id) + '\')">Use</button>' +
+          (t.mine ? '<button type="button" class="gs-ofp-btn-secondary tplx-edit" onclick="editTemplate(\'' + escAttr(t.id) + '\')">Edit</button>' +
+            '<button type="button" class="tplx-del" onclick="deleteTemplate(\'' + escAttr(t.id) + '\')">Delete</button>' : '') +
+        '</div></div>';
+    };
+    const openT = templates.find(t => String(t.id) === String(tplOpenId));
+    if (!openT) { box.innerHTML = '<div class="tplx-grid">' + templates.map(card).join('') + '</div>'; return; }
+    const others = templates.filter(t => t !== openT);
+    box.innerHTML = '<div class="tplx-split"><div>' + card(openT) + '</div>' +
+      (others.length ? '<div class="tplx-side">' + others.map(card).join('') + '</div>' : '') + '</div>';
   }
+  function tplToggle(id) { tplOpenId = String(tplOpenId) === String(id) ? null : id; renderTemplates(); }
+  window.tplToggle = tplToggle;
 
-  /* Lista de solo lectura de lo que trae el template -- mismo criterio
-     visual que "Services Requested" en las ordenes reales, agrupado
-     por categoria. */
+  /* Lista de solo lectura de lo que trae el template (se quedo para quien
+     la use; la lista nueva usa svcLineRowHtml). */
   function tplServiceListHtml(services) {
     if (!services || !services.length) return '<p class="empty-note" style="padding:0 0 14px">No services in this template.</p>';
     return services.map(s =>
@@ -3626,7 +3678,12 @@ if (client) {
       mode: (isJan || isMixed) ? 'levels' : 'toggle',
       showSelectAll: false, /* quitado de todas partes (dueño, 24/09/2026) */
       groupByCategory: true,
-      tplPropertyType: tplPropertyType,
+      /* 24/09/2026: mismo selector que New Order (paquetes, Recurring/Units
+         si el cliente lo tiene, tarjetas, una abierta). BUG: antes pasaba
+         'tplPropertyType' (el picker espera 'propertyType'), asi que un
+         template Residential siempre se abria en Commercial. */
+      workToggle: !!window.gsRecurringAllowed && (isJan || isMixed), showPackages: true, workMode: 'units',
+      propertyType: tplPropertyType,
       initialSelected: tplSelected,
       initialLevels: tplSvcLevel,
       initialQuantities: tplQty,
