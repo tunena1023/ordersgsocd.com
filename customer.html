@@ -5311,8 +5311,13 @@ if (client) {
          en admin.html. Envuelta en overflow-x:auto por seguridad en
          pantallas angostas -- la tabla nunca empuja el ancho de la
          pagina completa, solo se desliza ella sola si hace falta. */
-      const svcTableHtml = svcRows.length
-        ? svcRows.map(r => {
+      /* Por persona (25/09/2026): en "Assign by service" los servicios ya
+         programados se agrupan por quien los hace y el dia. */
+      const svcGroupKey = r => {
+        const a = showSvcStatus ? svcAssignByKey[r.catReal + '|' + r.svcNameRaw] : null;
+        return a && a.AssignedTo && a.ScheduledDate ? String(a.AssignedTo).trim() + '|' + String(a.ScheduledDate).slice(0, 10) : '';
+      };
+      const svcRowHtml = r => {
             const mins = showTime ? lineMinutesFor(r.sku, r.lvl, r.qty, o, trackingServiceTimesCache) : null;
             const camHtml = '<button type="button" title="Add a photo for this service" onclick="startClientServicePhoto(\'' + jsStr(orderId) + '\',\'' + jsStr(r.svcNameRaw) + '\')" style="width:32px;height:32px;padding:0;border-radius:6px;border:1.5px solid var(--border);background:var(--white);color:var(--gray);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">' +
               '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg></button>';
@@ -5326,7 +5331,23 @@ if (client) {
               statusHtml = '<span style="color:' + color + ';font-weight:600">' + label + '</span>';
             }
             return svcLineRowHtml(r, { timeText: mins != null ? esc(GSEstimatedTime.fmtDuration(mins)) : '', statusHtml, camHtml, extraHtml: pkgIncludesFromOrder(o, r.sku) });
-          }).join('')
+      };
+      const svcGroupedHtml = () => {
+        const groups = {}, order = [];
+        svcRows.forEach(r => { const k = svcGroupKey(r); if (!groups[k]) { groups[k] = []; order.push(k); } groups[k].push(r); });
+        order.sort((x, y) => (x ? 1 : 0) - (y ? 1 : 0)); // lo no programado primero
+        const head = t => '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gold-dk);margin:14px 0 2px;padding-bottom:5px;border-bottom:1px solid var(--border)">' + t + '</div>';
+        return order.map(k => {
+          const list = groups[k];
+          const n = list.length + (list.length === 1 ? ' service' : ' services');
+          if (!k) return (order.length > 1 ? head('Not scheduled yet · ' + n) : '') + list.map(svcRowHtml).join('');
+          const who = k.split('|')[0], d = k.split('|')[1];
+          const day = new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          return head('\u{1F464} ' + esc(who) + ' \u00b7 ' + esc(day) + ' \u00b7 ' + n) + list.map(svcRowHtml).join('');
+        }).join('');
+      };
+      const svcTableHtml = svcRows.length
+        ? (showSvcStatus ? svcGroupedHtml() : svcRows.map(svcRowHtml).join(''))
         : '<div style="font-size:12px;padding:10px 0">No services recorded.</div>';
       const svcHeaderHtml =
         '<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">' +
