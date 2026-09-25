@@ -4,6 +4,24 @@ Este archivo existe para que cualquier chat de Claude (u otra persona) que entre
 a este repo después no tenga que adivinar el proceso, ni repetir preguntas ya
 resueltas, ni subir cosas sin permiso. Léelo completo antes de tocar código.
 
+## VELOCIDAD (25/09/2026): pedir a SharePoint solo lo necesario
+
+- `lib/list-query.js` (mismo archivo en los 3 repos): `fetchWhere`, `fetchByValues`
+  (en tandas de 15), `fetchById`, `fetchAllCached` (60 s, solo listas chiquitas). Si un
+  filtro falla (columna sin índice en una lista de más de 5,000), cae sola a la lista
+  completa: nunca regresa algo distinto, solo más lento.
+- `lib/gallery-scan.js`: las galerías solo abren las carpetas de orden que existen
+  (una consulta por cliente) y piden los servicios de todas juntas.
+- Admin: `admin-get-orders` acepta `scope` ('live' | 'closed' | 'all'). Admin pide
+  'live' al abrir y cada 30 s; 'closed' una vez en segundo plano (History/QuickBooks).
+- Cada cambio se probó contra la versión anterior con un SharePoint simulado: mismo
+  resultado exacto en todos los roles.
+- **Columnas a indexar en SharePoint** (List settings > Indexed columns):
+  Orders: Status, ClientID, OrderID, Division, BatchId · OrderServices: OrderID ·
+  OrderHistory: OrderID · Scheduling: OrderID, PayrollNumber · ServiceAssignments:
+  OrderID · RecurringAssignments: PayrollNumber · Clients: ClientID ·
+  OrderDocuments: OrderID, ClientID · PushSubscriptions: PayrollID.
+
 ## EN PREVIEW (25/09/2026): site-image ya no entrega cualquier archivo
 
 `site-image.js` es PÚBLICA (no pide sesión). `?name=` pasaba el texto directo a

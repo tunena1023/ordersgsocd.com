@@ -12,6 +12,8 @@
 ============================================================ */
 
 const { ORDERS_LIST, ORDER_SERVICES_LIST, listChildren, graphFetch, siteListPath, jsonResponse } = require('./lib/graph');
+const lq = require('./lib/list-query');
+const galleryScan = require('./lib/gallery-scan');
 const graph = require('./lib/graph');
 const orderDocs = require('./lib/order-docs');
 
@@ -67,12 +69,13 @@ function formatIsoDate(iso) {
    (columna "Scheduled Services" de Gallery, rediseño 19/09/2026) --
    ya no se puede saltar el query aunque ninguna foto traiga el
    prefijo svc-, la lista se necesita independiente de las fotos. */
-async function buildServiceCaptionsAndList(orderId, photoNames) {
+async function buildServiceCaptionsAndList(orderId, photoNames, svcRowsByOrder) {
   const svcNamesInPhotos = photoNames
     .map(n => (n.match(SVC_PHOTO_PREFIX) || [])[1])
     .filter(Boolean);
 
-  const rows = await fetchByField(ORDER_SERVICES_LIST, 'OrderID', orderId);
+  /* Servicios ya traidos de una vez para todas las ordenes (velocidad, 25/09/2026). */
+  const rows = (svcRowsByOrder && svcRowsByOrder[orderId]) || [];
   const bySafeName = {};
   const services = [];
   rows.forEach(it => {
@@ -136,14 +139,27 @@ exports.handler = async (event) => {
     const orderRows = await fetchByField(ORDERS_LIST, 'ClientID', clientId);
     const orders = orderRows.filter(it => it.fields);
 
-    const groups = await Promise.all(orders.map(async (it) => {
+    /* Velocidad (25/09/2026): solo se abren las ordenes que SI tienen
+       carpeta (una consulta por cliente, lib/gallery-scan.js), y los
+       servicios de todas se piden juntos en vez de uno por orden. */
+    const withFolders = await galleryScan.ordersWithFolders(orders, clientFolderName, PHOTOS_FOLDER);
+    const listed = await Promise.all(withFolders.map(async (it) => {
       const f = it.fields;
       const orderId = f.OrderID || f.Title || '';
       const folderPath = PHOTOS_FOLDER + '/' + clientFolderName(f) + '/' + orderId + '/Photos';
       const kids = await listChildren(folderPath);
       const photos = kids.filter(k => k.isFile).sort((a, b) => a.name.localeCompare(b.name));
-      if (!photos.length) return null;
-      const { captions, services } = await buildServiceCaptionsAndList(orderId, photos.map(p => p.name));
+      return photos.length ? { it, photos } : null;
+    }));
+    const found = listed.filter(Boolean);
+    const svcRowsByOrder = {};
+    (await lq.fetchByValues(ORDER_SERVICES_LIST, 'OrderID', found.map(x => x.it.fields.OrderID || x.it.fields.Title))).forEach(r => {
+      if (r.fields && r.fields.OrderID) (svcRowsByOrder[r.fields.OrderID] = svcRowsByOrder[r.fields.OrderID] || []).push(r);
+    });
+    const groups = await Promise.all(found.map(async ({ it, photos }) => {
+      const f = it.fields;
+      const orderId = f.OrderID || f.Title || '';
+      const { captions, services } = await buildServiceCaptionsAndList(orderId, photos.map(p => p.name), svcRowsByOrder);
       return {
         orderId,
         division: f.Division || '',
