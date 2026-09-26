@@ -150,6 +150,17 @@ exports.handler = async (event) => {
       } catch (e) { logError = e.message; }
     }
 
+    /* QuickBooks al instante (26/09/2026): si cambio algo que tambien vive
+       en QuickBooks, se le avisa a Admin (lib/qb-notify.js). Nunca bloquea
+       ni hace fallar el guardado. */
+    const QB_LABELS = ['Business Name', 'Contact Person', 'Contact Email', 'Phone', 'Address', 'Suite', 'City', 'Zip'];
+    if (changes.some(c => QB_LABELS.includes(c.label))) {
+      await require('./lib/qb-notify').notifyClientChanged(b.clientId, {
+        reason: 'client-portal',
+        gsmsBefore: { businessName: f.Title || '', contactPerson: f.ClientName || '', email: f.Contact || '', phone: f.Phone || '', address: f.Address || '', suite: f.Suite || '', city: f.City || '', zip: f.Zip || '' }
+      });
+    }
+
     return jsonResponse(200, {
       success: true,
       businessName:  patch.Title        !== undefined ? patch.Title        : f.Title,

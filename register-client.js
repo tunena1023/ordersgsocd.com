@@ -100,6 +100,9 @@ exports.handler = async (event) => {
       await create(fields);
     }
 
+    /* Cliente nuevo -> QuickBooks al instante, via Admin (lib/qb-notify.js). */
+    await require('./lib/qb-notify').notifyClientChanged(clientId, { reason: 'new-client' });
+
     const setCookie = sessionCookie(clientId, true);
     const ok = jsonResponse(200, {
       valid: true,
