@@ -1,0 +1,1 @@
+{ "name": "client-guide", "private": true, "dependencies": { "pdf-lib": "^1.17.1", "playwright": "^1.56.0" } }
