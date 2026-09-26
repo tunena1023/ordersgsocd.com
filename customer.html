@@ -1588,6 +1588,8 @@
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@71670c4e06fbb09c07fe248cf4a5a89c3399b384/camera-queue/camera-queue.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.0.0/lightbox/lightbox.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.30.0/order-card-header/order-card-header.js"></script>
+<!-- Filas de botones de las tarjetas (26/09/2026): mismo acomodo en los 3 portales. -->
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@e41c4c23fb7205e762adfea2a49d1dfd9f381fcc/action-row/action-row.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@f9af97cecb79115d4a7d51705609b674d513bb89/gallery-groups/gallery-groups.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@3a752aba65890da6b375d3c9ee4bad034cf29dc1/doc-viewer/doc-viewer.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.26.0/photo-hover-preview/photo-hover-preview.js"></script>
@@ -3462,7 +3464,7 @@ if (client) {
               '<div class="client-photo-thumbs">' + clientPhotosHtml + '</div>' +
               '<button class="gs-ofp-btn-secondary" onclick="addClientPhoto(\'' + c.id + '\')">+ Add Photo</button><br>' +
               '<span class="gallery-link" onclick="openGallery(\'' + c.id + '\')">📷 View Gallery (photos from staff)</span>' +
-              '<div class="btn-actions"><button class="gs-ofp-btn-secondary" id="rc-change-btn-' + c.id + '" onclick="rcToggleChangePanel(\'' + c.id + '\')">Request a Change</button></div>' +
+              '<div class="btn-actions gs-act-row"><button class="gs-ofp-btn-secondary" id="rc-change-btn-' + c.id + '" onclick="rcToggleChangePanel(\'' + c.id + '\')">Request a Change</button></div>' +
             '</div>' +
             '<div><p class="detail-label">History</p>' + historyHtml + '</div>' +
             '<div class="col-right" id="sidepanel-' + c.id + '"></div>' +
@@ -3630,7 +3632,7 @@ if (client) {
       '<div style="margin-top:14px">' +
         '<textarea id="rc-general-note-' + id + '" placeholder="Anything else we should know? (optional)" style="width:100%;min-height:56px;padding:10px;border:1.5px solid var(--border);border-radius:5px;font-family:inherit;font-size:12.5px;box-sizing:border-box;resize:vertical"></textarea>' +
       '</div>' +
-      '<div class="btn-actions" style="margin-top:14px">' +
+      '<div class="btn-actions gs-act-row" style="margin-top:14px">' +
         '<button class="gs-ofp-btn-primary" onclick="rcSendChangeRequest(\'' + id + '\')">Send to Office</button>' +
         '<button class="gs-ofp-btn-secondary" onclick="rcToggleChangePanel(\'' + id + '\')">Cancel</button>' +
       '</div>';
@@ -3781,7 +3783,7 @@ if (client) {
         '</div><div class="tplx-tags"><span class="tplx-tag div">' + esc(t.division || '') + '</span>' +
           (t.mine ? '<span class="tplx-tag">My package</span>' : '<span class="tplx-tag shared">Shared</span>') + '</div></div>' +
         (open ? '<div class="tplx-body">' + (rows || '<p class="empty-note">No services in this template.</p>') + '</div>' : '') +
-        '<div class="tplx-foot">' +
+        '<div class="tplx-foot gs-act-row">' +
           '<button type="button" class="gs-ofp-btn-primary tplx-use" onclick="useTemplate(\'' + escAttr(t.id) + '\')">Use</button>' +
           /* Edit (y Delete) solo en la tarjeta ABIERTA (el dueño, 24/09/2026:
              "el boton de Edit nomas lo debe tener el que esta abierto"). */
@@ -5223,7 +5225,7 @@ if (client) {
                 <div><div class="field-caption">Started</div><div class="field-value">${fmtDateTime(o.createdDateTime)}</div></div>
                 <div><div class="field-caption">Last edited</div><div class="field-value">${o.lastModifiedDateTime ? fmtDateTime(o.lastModifiedDateTime) : '—'}</div></div>
               </div>
-              <div class="order-actions">
+              <div class="order-actions gs-act-row">
                 <button class="gs-ofp-btn-primary" onclick="continueDraft('${escAttr(orderId)}')">Continue</button>
                 <button class="gs-ofp-btn-danger" onclick="openDeleteDraft('${escAttr(orderId)}')">Delete draft</button>
               </div>
@@ -5561,7 +5563,7 @@ if (client) {
           <p class="detail-label">Order Tracker</p>
           ${cancelledBannerHtml(o)}
           <div id="tracker-mount-${escAttr(orderId)}"></div>
-          <div class="order-actions">${actionButtonsFor(o, history, data.document || null)}</div>
+          <div class="order-actions gs-act-row">${actionButtonsFor(o, history, data.document || null)}</div>
         </div>
         <div class="col-right" id="sidepanel-${escAttr(orderId)}"></div>
         </div>`;
