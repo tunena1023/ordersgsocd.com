@@ -201,6 +201,13 @@
   /* Solo mobile -- confirmado con el usuario: fotos del cliente NUNCA
      existen en desktop, ni ocultas, no existen. */
   .gs-mobile-only { display: none; }
+  .order-cam-btn { all: unset; box-sizing: border-box; cursor: pointer; width: 28px; height: 34px; border-radius: 3px; border: 1.5px solid var(--border); color: var(--black); background: var(--white); align-items: center; justify-content: center; }
+  .order-cam-btn svg { width: 16px; height: 16px; }
+  .order-cam-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .order-cam-btn.gs-mobile-only { display: none; }
+  @media (max-width: 860px) { .order-cam-btn.gs-mobile-only { display: inline-flex; } }
+  .order-docs-icons { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .order-docs-icons:empty { display: none; }
   @media (max-width: 860px) { .gs-mobile-only { display: block; } }
 
   .client-photo-thumbs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
@@ -1589,9 +1596,9 @@
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.0.0/lightbox/lightbox.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.30.0/order-card-header/order-card-header.js"></script>
 <!-- Filas de botones de las tarjetas (26/09/2026): mismo acomodo en los 3 portales. -->
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@e41c4c23fb7205e762adfea2a49d1dfd9f381fcc/action-row/action-row.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@68efbd7643c8f3d28c047c3267f6ba3c9d002bd5/action-row/action-row.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@f9af97cecb79115d4a7d51705609b674d513bb89/gallery-groups/gallery-groups.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@3a752aba65890da6b375d3c9ee4bad034cf29dc1/doc-viewer/doc-viewer.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@de10f09db292e153863b91f7de93552b833c3878/doc-viewer/doc-viewer.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.26.0/photo-hover-preview/photo-hover-preview.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.8.0/order-badges/order-badges.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/tunena1023/gsocd-shared@v1.40.0/order-tracker/order-tracker.js"></script>
@@ -3310,7 +3317,7 @@ if (client) {
         ? g : Object.assign({}, g, { docs: g.docs.filter(d => String(d.name || '').toLowerCase().includes(q)) }));
     }
     GSDocViewer.renderGroups('docs-groups-list', groups, Object.assign({
-      emptyMessage: q ? 'No documents match that search.' : 'No documents yet. Open an order and tap "Upload document".'
+      emptyMessage: q ? 'No documents match that search.' : 'No documents yet. Open an order and tap + next to its buttons.'
     }, docOpts));
   }
 
@@ -3319,12 +3326,38 @@ if (client) {
     return g ? g.docs : [];
   }
 
+  /* Tira chiquita en la fila de botones de la orden (26/09/2026, igual que
+     Admin, pieza de gsocd-shared/doc-viewer): camara (solo telefono),
+     "+" para subir documento, un icono por documento y "Gallery ->".
+     Los iconos abren Gallery > Docs filtrado a esa orden (ahi se ven,
+     se abren y se borran). */
+  function orderStripHtml(orderId) {
+    const id = jsStr(orderId);
+    return '<span class="gs-doc-strip gs-act-cell">' +
+      '<button type="button" class="order-cam-btn gs-act-keep gs-mobile-only" title="Add a photo" aria-label="Add a photo" onclick="startClientPhoto(\'' + id + '\')">' +
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="13.5" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></button>' +
+      GSDocViewer.addButtonHtml("uploadOrderDoc('" + id + "', this)") +
+      '<span class="order-docs-icons" id="order-docs-' + escAttr(orderId) + '"></span>' +
+      GSDocViewer.stripMsgHtml() +
+    '</span>';
+  }
+
+  function openOrderDocsInGallery(orderId) {
+    showTab('gallery');
+    showGallerySub('docs');
+    renderDocsPanel();
+    const q = document.getElementById('docs-search');
+    if (q) { q.value = orderId; renderDocsPanel(); }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  window.openOrderDocsInGallery = openOrderDocsInGallery;
+
   function renderOrderDocs(orderId) {
     const el = document.getElementById('order-docs-' + orderId);
     if (!el) return;
     if (!docsLoaded) { docsWaiting[orderId] = true; return; }
     delete docsWaiting[orderId];
-    GSDocViewer.renderList(el, docsForOrder(orderId), Object.assign({ orderId }, docOpts));
+    el.innerHTML = GSDocViewer.iconsHtml(docsForOrder(orderId), "openOrderDocsInGallery('" + jsStr(orderId) + "')");
   }
 
   async function viewOrderDoc(d) {
@@ -3349,10 +3382,9 @@ if (client) {
     }
   }
 
-  function uploadOrderDoc(orderId) {
+  function uploadOrderDoc(orderId, btn) {
     GSDocViewer.pickFile(async file => {
-      const btn = document.getElementById('order-docs-btn-' + orderId);
-      const msg = document.getElementById('order-docs-msg-' + orderId);
+      const msg = btn && btn.parentNode.querySelector('.gs-doc-strip-msg');
       const say = (t, err) => { if (msg) { msg.textContent = t; msg.classList.toggle('err', !!err); } };
       const bad = GSDocViewer.allowed(file);
       if (bad) { say(bad, true); return; }
@@ -3369,6 +3401,7 @@ if (client) {
         if (!g) { g = { orderId, clientLabel: res.clientLabel || '', date: doc.uploadedAt, docs: [] }; allDocGroups.unshift(g); }
         g.docs = [doc].concat(g.docs);
         say('Saved: ' + file.name);
+        setTimeout(() => { if (msg && msg.textContent === 'Saved: ' + file.name) msg.textContent = ''; }, 5000);
         renderOrderDocs(orderId);
         renderDocsPanel();
       } catch (e) {
@@ -5541,19 +5574,11 @@ if (client) {
             ${o.Notes ? '<p class="meta-line" style="margin-bottom:14px">Notes: ' + esc(o.Notes) + '</p>' : ''}
             ${noticeHtml}
             ${svcHeaderHtml}
-            <div class="client-photos-box gs-mobile-only">
-              <div class="client-photos-label">Photos</div>
-              <div class="client-photos-sub">Something come up? Add a photo to let us know.</div>
-              <div class="client-photo-thumbs" id="client-photo-thumbs-${escAttr(orderId)}"></div>
-              <button type="button" class="btn-add-client-photo" onclick="startClientPhoto('${escAttr(orderId)}')">📷 Add Photo</button>
-            </div>
-            <div class="order-docs-box">
-              <div class="client-photos-label">Documents</div>
-              <div class="client-photos-sub">PDF, Word or text files for this order (up to 25 MB).</div>
-              <div class="order-docs-list" id="order-docs-${escAttr(orderId)}"></div>
-              <button type="button" class="btn-add-doc" id="order-docs-btn-${escAttr(orderId)}" onclick="uploadOrderDoc('${escAttr(orderId)}')">📄 Upload document</button>
-              <div class="order-docs-msg" id="order-docs-msg-${escAttr(orderId)}" role="status"></div>
-            </div>
+            <!-- 26/09/2026 (dueño: "ahorrar espacio"): ya no hay cajas "Photos" ni
+                 "Documents" aqui; la camara, el "+" de documentos y sus iconos van
+                 en la fila de botones de abajo (orderStripHtml). Aqui solo quedan
+                 las miniaturas de las fotos que el cliente ya subio. -->
+            <div class="client-photo-thumbs gs-mobile-only" id="client-photo-thumbs-${escAttr(orderId)}"></div>
           </div>
           <div>
             <p class="detail-label">History</p>
@@ -5563,7 +5588,7 @@ if (client) {
           <p class="detail-label">Order Tracker</p>
           ${cancelledBannerHtml(o)}
           <div id="tracker-mount-${escAttr(orderId)}"></div>
-          <div class="order-actions gs-act-row">${actionButtonsFor(o, history, data.document || null)}</div>
+          <div class="order-actions gs-act-row">${actionButtonsFor(o, history, data.document || null)}${orderStripHtml(orderId)}</div>
         </div>
         <div class="col-right" id="sidepanel-${escAttr(orderId)}"></div>
         </div>`;
