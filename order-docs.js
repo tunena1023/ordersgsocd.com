@@ -44,6 +44,9 @@ exports.handler = async (event) => {
     }
     return jsonResponse(400, { error: 'Unknown action.' });
   } catch (e) {
+    /* El detalle de SharePoint (nombres de columnas) solo lo ve la oficina en
+       Admin y en los logs; el cliente ve un mensaje general. */
+    if (e.code === 'DOC_LIST') return jsonResponse(500, { error: 'The document could not be saved. Please try again later.' });
     return jsonResponse(e.status || 500, { error: e.message });
   }
 };
